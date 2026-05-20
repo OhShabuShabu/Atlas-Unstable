@@ -1,0 +1,18 @@
+prefer-no-csd
+
+cursor {
+    xcursor-theme "oreo_black_cursors"
+    xcursor-size 32
+}
+hotkey-overlay {
+    skip-at-startup
+}
+
+include "./binds.kdl"
+include "./env.kdl"
+include "./inputs.kdl"
+include "./layout.kdl"
+include "./outputs.kdl"
+include "./startup.kdl"
+include "./window-rules.kdl"
+include "./animations/pop-drop.kdl"

@@ -1,0 +1,89 @@
+{
+  "general": {
+    "accentColor": "DEFAULT_ACCENT_COLOR",
+    "checkForMillenniumUpdates": true,
+    "checkForPluginAndThemeUpdates": true,
+    "injectCSS": true,
+    "injectJavascript": true,
+    "millenniumUpdateChannel": "stable",
+    "onMillenniumUpdate": 1,
+    "shouldShowThemePluginUpdateNotifications": true
+  },
+  "misc": {
+    "hasShownWelcomeModal": true
+  },
+  "notifications": {
+    "showNotifications": true,
+    "showPluginNotifications": true,
+    "showUpdateNotifications": true
+  },
+  "themes": {
+    "activeTheme": "Steam",
+    "allowedScripts": true,
+    "allowedStyles": true,
+    "conditions": {
+      "Steam": {
+        "Community - Profile pages header": "no",
+        "Community - VAC-Ban visibility": "Show",
+        "General - Achievement Notification": "no",
+        "General - Always show sidebar": "Enabled",
+        "General - Big Picture Mode button": "no",
+        "General - Font": "Be Vietnam Pro (default)",
+        "General - Friend icon": "no",
+        "General - Friend list button": "no",
+        "General - Game Overlay": "no",
+        "General - Mica & Acrylic plugin support": "no",
+        "General - Navigation buttons": "no",
+        "General - News button": "no",
+        "General - Notification button": "no",
+        "General - Sidebar only on hover": "no",
+        "General - Steam VR button": "no",
+        "General - System accent colors": "no",
+        "General - Userpannel": "no",
+        "General - Wallet balance": "no",
+        "General - Window Controls": "Show",
+        "Library - Add shelf button": "no",
+        "Library - Always show game infos": "no",
+        "Library - Banner Infos": "no",
+        "Library - Banner position": "Middle (default)",
+        "Library - Bigger banner": "no",
+        "Library - Darken not installed games": "yes",
+        "Library - Game cover shiny effect": "no",
+        "Library - Game info box artwork": "no",
+        "Library - Sidebar on left": "no",
+        "Library - Steam-Custom-Artworks Support": "no",
+        "Library - What's New": "Compact",
+        "Store - Broadcast": "no",
+        "Store - Digital product info": "no",
+        "Store - Follow the creators": "no",
+        "Store - Footer": "no",
+        "Store - Info sidebar on right": "no",
+        "Store - Landing Header": "no",
+        "Store - Recommendations": "no",
+        "Store - URL bar": "no",
+        "Store - Write a Review": "no"
+      }
+    },
+    "themeColors": {
+      "Steam": {
+        "--st-accent-1": "102, 108, 255",
+        "--st-accent-2": "135, 140, 255",
+        "--st-background": "10, 10, 10",
+        "--st-blue": "75, 137, 239",
+        "--st-blue-hover": "100, 154, 242",
+        "--st-color-1": "17, 17, 17",
+        "--st-color-2": "30, 30, 30",
+        "--st-color-3": "20, 20, 20",
+        "--st-color-4": "24, 24, 24",
+        "--st-color-5": "38, 41, 44",
+        "--st-color-6": "38, 38, 41",
+        "--st-green": "36, 166, 90",
+        "--st-green-hover": "39, 185, 100",
+        "--st-red": "240, 74, 74",
+        "--st-red-hover": "242, 99, 99",
+        "--st-yellow": "239, 141, 75",
+        "--st-yellow-hover": "239, 141, 75"
+      }
+    }
+  }
+}

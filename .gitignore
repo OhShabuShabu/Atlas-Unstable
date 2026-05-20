@@ -1,0 +1,45 @@
+*.log
+*.lock
+
+# Nix/NixOS build artifacts
+result
+result-*
+.envrc
+.direnv
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+*.age
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Stale generated config
+generated.nix
+
+# Browser runtime artifacts (recreated on launch)
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.lz4
+.mozlz4
+
+# Compressed archives (keep extracted versions only)
+*.zip
+*.tar.gz
+
+# Core dumps
+core.*
+
+# Python bytecode
+__pycache__/
+*.pyc

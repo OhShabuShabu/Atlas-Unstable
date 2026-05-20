@@ -1,0 +1,36 @@
+window-rule {
+    match app-id=r#"^steam$"#
+    open-maximized true
+}
+window-rule {
+    match app-id=r#"^Mullvad Browser$"#
+    open-maximized true
+}
+
+window-rule {
+    match app-id=r#"^org\.wezfurlong\.wezterm$"#
+    default-column-width {}
+}
+
+window-rule {
+    match app-id=r#"firefox$"# title="^Picture-in-Picture$"
+    open-floating true
+}
+window-rule {
+  geometry-corner-radius 5
+  clip-to-geometry true
+}
+window-rule {
+    match title="^clock$"
+    open-floating true
+    default-floating-position x=10 y=10 relative-to="top"
+    default-column-width { fixed 460; }
+    default-window-height { fixed 160; }
+}
+window-rule {
+    match title="^btop$"
+    open-floating true
+    default-floating-position x=10 y=10 relative-to="bottom"
+    default-column-width { fixed 1000; }
+    default-window-height { fixed 600; }
+}
