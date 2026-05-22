@@ -59,10 +59,10 @@ let
     "net.ipv4.conf.all.send_redirects" = 0;
     "net.ipv4.conf.default.send_redirects" = 0;
     "net.ipv4.icmp_echo_ignore_all" = 1;       # INFO: Ignore ICMP echo requests
-    # WARN: Docker and libvirt override this to 1 at runtime via mkForce
-    #       Setting mkDefault so Docker/libvirt can override without conflict
-    "net.ipv4.conf.all.forwarding" = 0;       # INFO: Disable IP forwarding (overridden by Docker/libvirt)
-    "net.ipv6.conf.all.forwarding" = 0;
+    # WARN: Docker and libvirt need IP forwarding for NAT networking
+    #       Setting mkForce to ensure it stays on across service restarts
+    "net.ipv4.conf.all.forwarding" = lib.mkForce 1;
+    "net.ipv6.conf.all.forwarding" = lib.mkForce 1;
     "net.ipv4.conf.default.accept_source_route" = 0;  # INFO: Disable source routing
     "net.ipv4.conf.all.accept_source_route" = 0;
     "net.ipv6.conf.all.accept_source_route" = 0;

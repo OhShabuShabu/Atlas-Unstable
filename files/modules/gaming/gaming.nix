@@ -15,5 +15,6 @@
     steamcmd
     mangohud
     goverlay
+    parsec-bin
   ];
 }

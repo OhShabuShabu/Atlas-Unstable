@@ -204,6 +204,10 @@
   # Enable polkit system-wide for graphical auth popup
   security.polkit.enable = true;
 
+  # RealtimeKit — gives PipeWire/WirePlumber realtime scheduling priority
+  # Without this, audio may glitch, crackle, or break under load
+  security.rtkit.enable = true;
+
 
   # ============================================================================
   # SECTION 9: ADVANCED SECURITY HARDENING (Hardened Profile)
@@ -476,6 +480,23 @@
     alsa.enable = true;
     alsa.support32Bit = true;
     pulse.enable = true;
+    wireplumber.enable = true;
+    wireplumber.extraConfig = {
+      "11-analog-default" = {
+        "monitor.alsa.rules" = [
+          {
+            matches = [
+              {
+                "device.name" = "~alsa_card.pci-0000_00_1f.3";
+              }
+            ];
+            "apply-properties" = {
+              "device.profile" = "output:analog-stereo+input:analog-stereo";
+            };
+          }
+        ];
+      };
+    };
   };
 
 

@@ -29,6 +29,9 @@ in
     allowedTCPPorts = defaultTcpPorts;
     allowedUDPPortRanges = defaultUdpPorts;
     allowedUDPPorts = [];
+
+    # Trust the libvirt bridge so VMs can reach the host (DNS, DHCP, etc.)
+    trustedInterfaces = [ "virbr0" ];
     
     # FIX: Enable connection tracking for stateful firewall
     checkReversePath = "strict";  # Reverse path filtering

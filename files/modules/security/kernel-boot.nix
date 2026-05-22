@@ -37,6 +37,7 @@ let
     # "random.trust_cpu=off"              # INFO: Don't trust CPU RNG entropy
     # "random.trust_bootloader=off"       # INFO: Don't trust bootloader RNG entropy
     "console=tty0"                      # INFO: Restrict console to main display
+    "intel_iommu=on"                    # INFO: Enable Intel IOMMU (VT-d)
   ];
 
   # INFO: Modules to block via modprobe (returns /bin/false)
