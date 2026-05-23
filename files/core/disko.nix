@@ -25,7 +25,7 @@
 
     disk.main = {
       type = "disk";
-      device = "/dev/REPLACE_ME";  # overridden by install.sh via jq
+      device = "/dev/REPLACE_ME";  # overridden at runtime by install.sh
       content = {
         type = "gpt";
         partitions = {
@@ -39,7 +39,7 @@
             };
           };
           swap = {
-            size = "68G";
+            size = "8G";
             content = {
               type = "swap";
               resumeDevice = true;

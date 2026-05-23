@@ -125,7 +125,7 @@ cat > /tmp/disko-config.nix <<EOF
             };
           };
           swap = {
-            size = "68G";
+            size = "8G";
             content = {
               type = "swap";
               resumeDevice = true;
@@ -199,7 +199,6 @@ echo ""
 
 nixos-install --flake "$ROOTDIR#atlas-installer" \
   --root "$TARGET" \
-  --store "$TARGET" \
   --no-root-passwd \
   --option max-jobs 2 \
   --option substituters "https://cache.nixos.org"
