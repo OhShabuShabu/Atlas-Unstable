@@ -46,11 +46,7 @@
     # Enable systemd initrd (required for LUKS)
     initrd.systemd.enable = true;
 
-    # LUKS encrypted root and swap devices
-    initrd.luks.devices = {
-      "luks-9e21658b-4fcf-4f61-b95b-6e53e78880ca".device = "/dev/disk/by-uuid/9e21658b-4fcf-4f61-b95b-6e53e78880ca";
-      "luks-9f6c7cfc-4ae0-42c1-b4a3-80723993f898".device = "/dev/disk/by-uuid/9f6c7cfc-4ae0-42c1-b4a3-80723993f898";
-    };
+    # LUKS is managed by disko module (see disko.nix)
 
     # Plymouth boot splash
     plymouth = {

@@ -33,6 +33,10 @@ in
     daemon.settings = {
       TemporaryDirectory = "/var/lib/clamav/tmp";
       OnAccessIncludePath = [ "/home" "/tmp" "/var" "/srv" ];
+      OnAccessExcludePath = [
+        "/home/yusa/.steam"
+        "/home/yusa/.local/share/Steam"
+      ];
       OnAccessPrevention = false;
       OnAccessExtraScanning = true;
       OnAccessExcludeRootUID = true;
@@ -73,6 +77,8 @@ in
         $CLAMSCAN --recursive --detect-pua=yes \
           --exclude-dir="/proc" --exclude-dir="/sys" --exclude-dir="/dev" \
           --exclude-dir="$QUARANTINE" \
+          --exclude-dir="/home/yusa/.steam" \
+          --exclude-dir="/home/yusa/.local/share/Steam" \
           --move="$QUARANTINE" \
           --log="$LOG_FILE" $SCAN_DIRS 2>&1 | tail -50 >> "$LOG_FILE"
 
