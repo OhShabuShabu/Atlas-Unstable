@@ -102,7 +102,7 @@ echo "=== Step 2: Partitioning $DISK ==="
 echo ""
 
 # Evaluate standalone disko config, replace device, run pinned disko
-nix-instantiate --eval --json files/core/disko-config-json.nix \
+nix-instantiate --eval --json --strict files/core/disko-config-json.nix \
   --extra-experimental-features "nix-command" \
   | sed "s|/dev/REPLACE_DISK|$DISK|g" \
   > /tmp/disko-config.json
