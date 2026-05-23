@@ -12,14 +12,26 @@
       url = "github:noctalia-dev/noctalia-shell";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    preservation = {
+      url = "github:nix-community/preservation";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
-  outputs = inputs @ { self, nixpkgs, home-manager, noctalia, ... }: {
+  outputs = inputs @ { self, nixpkgs, home-manager, noctalia, disko, preservation, ... }: {
     formatter.x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.nixpkgs-fmt;
     nixosConfigurations.atlas = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       specialArgs = { inherit inputs noctalia; };
       modules = [
+        disko.nixosModules.disko
+        preservation.nixosModules.default
         ./files/core/configuration.nix
+        ./files/core/disko.nix
+        ./files/core/preservation.nix
         home-manager.nixosModules.home-manager
         {
           home-manager = {
