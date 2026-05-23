@@ -73,7 +73,7 @@ TOTAL_MEM=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo)
 
 # Free up space on the live ISO
 echo "Clearing nix garbage on live ISO..."
-nix-collect-garbage --option max-jobs 2 2>/dev/null || true
+nix-collect-garbage 2>/dev/null || true
 
 # Expand live ISO writable store so nix has room to build
 for MP in /nix/.rw-store / ; do
@@ -168,7 +168,6 @@ EOF
 # Build and run disko from pinned nixpkgs
 nix run "nixpkgs#disko" \
   --extra-experimental-features "nix-command flakes" \
-  --max-jobs 2 \
   -- --mode disko /tmp/disko-config.nix
 
 echo ""
@@ -201,5 +200,4 @@ echo ""
 nixos-install --flake "$ROOTDIR#atlas-installer" \
   --root "$TARGET" \
   --no-root-passwd \
-  --option max-jobs 2 \
   --option substituters "https://cache.nixos.org"
