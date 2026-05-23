@@ -65,17 +65,23 @@ if [[ "$CONFIRM" != "YES" ]]; then
   exit 1
 fi
 
-# Create swap file if memory is low
+# Create swap if total RAM is under 8G (nix eval is memory-heavy)
 TOTAL_MEM=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo)
-if [[ "$TOTAL_MEM" -lt 4096 ]]; then
+if [[ "$TOTAL_MEM" -lt 8192 ]]; then
+  SWAP_SIZE=$((TOTAL_MEM * 2))M
   echo ""
-  echo "Low memory detected (${TOTAL_MEM}MB). Creating 4G swap file..."
-  fallocate -l 4G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=4096
+  echo "Low memory detected (${TOTAL_MEM}MB). Creating ${SWAP_SIZE}B swap file..."
+  fallocate -l "$SWAP_SIZE" /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=$((TOTAL_MEM * 2))
   chmod 600 /swapfile
   mkswap /swapfile
   swapon /swapfile
   echo "Swap enabled."
 fi
+
+# Free cached memory before the heavy nix evaluation
+echo ""
+echo "Freeing page cache..."
+sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
 
 echo ""
 echo "=== Running disko-install ==="
