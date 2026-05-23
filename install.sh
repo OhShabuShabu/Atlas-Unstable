@@ -197,6 +197,7 @@ echo ""
 echo "=== Step 4: Installing NixOS ==="
 echo ""
 
+export DISKO_DEVICE="$DISK"
 nixos-install --flake "$ROOTDIR#atlas-installer" \
   --root "$TARGET" \
   --no-root-passwd \

@@ -1,4 +1,10 @@
-{
+{ config, lib, pkgs, ... }:
+
+let
+  diskDevice = let
+    env = builtins.getEnv "DISKO_DEVICE";
+  in if env != "" then env else "/dev/REPLACE_ME";
+in {
   fileSystems = {
     "/nix".neededForBoot = true;
     "/persistent".neededForBoot = true;
@@ -25,7 +31,7 @@
 
     disk.main = {
       type = "disk";
-      device = "/dev/REPLACE_ME";  # overridden at runtime by install.sh
+      device = diskDevice;
       content = {
         type = "gpt";
         partitions = {
