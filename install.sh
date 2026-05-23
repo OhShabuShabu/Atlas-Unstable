@@ -98,7 +98,7 @@ echo "=== Partitioning and installing ==="
 echo ""
 
 nix --extra-experimental-features "nix-command flakes" \
-  --max-jobs 0 \
+  --max-jobs 2 \
   run 'github:nix-community/disko/latest#disko-install' -- \
   --flake "$ROOTDIR#atlas-installer" \
   --disk main "$DISK"
