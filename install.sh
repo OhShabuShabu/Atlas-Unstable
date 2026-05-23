@@ -67,27 +67,27 @@ fi
 
 # Create swap if total RAM is under 8G (nix eval is memory-heavy)
 TOTAL_MEM=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo)
+
+# Expand live ISO writable store (default tmpfs is often too small)
+for MP in /nix/.rw-store / ; do
+  if mountpoint -q "$MP" 2>/dev/null; then
+    FS_TYPE=$(findmnt -n -o FSTYPE "$MP")
+    if [[ "$FS_TYPE" == "tmpfs" ]]; then
+      NEW_SIZE=$((TOTAL_MEM * 2 / 3))M
+      mount -o remount,size="$NEW_SIZE" "$MP" 2>/dev/null && echo "Expanded $MP to $NEW_SIZE"
+    fi
+  fi
+done
+
+# Create swap if no swap active and low memory
 if [[ "$TOTAL_MEM" -lt 8192 ]] && ! swapon --show | grep -q .; then
   echo ""
   echo "Low memory detected (${TOTAL_MEM}MB). Creating compressed swap..."
-  ROOT_FS=$(findmnt -n -o FSTYPE /)
-  if [[ "$ROOT_FS" == "tmpfs" ]]; then
-    # Live ISO — use zram (compressed RAM, more efficient than file swap on tmpfs)
-    modprobe zram 2>/dev/null || true
-    echo "$((TOTAL_MEM / 2))M" > /sys/block/zram0/disksize 2>/dev/null || true
-    mkswap /dev/zram0 2>/dev/null || true
-    swapon /dev/zram0 -p 10 2>/dev/null || true
-    echo "zram swap enabled ($((TOTAL_MEM / 2))MB, compressed)."
-  else
-  else
-    # Persistent root — create swap file
-    SWAP_SIZE=$((TOTAL_MEM * 2))M
-    fallocate -l "$SWAP_SIZE" /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=$((TOTAL_MEM * 2))
-    chmod 600 /swapfile
-    mkswap /swapfile
-    swapon /swapfile
-    echo "Swap file enabled (${SWAP_SIZE}B)."
-  fi
+  modprobe zram 2>/dev/null || true
+  echo "$((TOTAL_MEM / 2))M" > /sys/block/zram0/disksize 2>/dev/null || true
+  mkswap /dev/zram0 2>/dev/null || true
+  swapon /dev/zram0 -p 10 2>/dev/null || true
+  echo "zram swap enabled ($((TOTAL_MEM / 2))MB, compressed)."
 fi
 
 # Free cached memory before the heavy nix evaluation
