@@ -13,7 +13,7 @@ if ! command -v nix &>/dev/null; then
   exit 1
 fi
 
-if [[ -n "$DISPLAY" || -n "$WAYLAND_DISPLAY" ]]; then
+if [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]]; then
   echo "WARNING: Running from a desktop session. The install uses a lot of memory"
   echo "and GNOME may kill the terminal (OOM). Switch to a TTY first:"
   echo "  Ctrl+Alt+F3   then run:  sudo ./install.sh"
