@@ -101,16 +101,22 @@ echo ""
 echo "=== Step 2: Partitioning $DISK ==="
 echo ""
 
+# Build pinned disko binary from our flake.lock
+DISKO_REV=$(grep -A5 '"disko"' flake.lock | grep '"rev"' | head -1 | cut -d'"' -f4)
+
+nix build "github:nix-community/disko/$DISKO_REV#disko" \
+  --extra-experimental-features "nix-command flakes" \
+  --max-jobs 2
+
+DISKO_BIN=./result/bin/disko
+
 # Evaluate standalone disko config, replace device, run pinned disko
 nix-instantiate --eval --json --strict files/core/disko-config-json.nix \
   --extra-experimental-features "nix-command" \
   | sed "s|/dev/REPLACE_DISK|$DISK|g" \
   > /tmp/disko-config.json
 
-nix run ".#nixosConfigurations.atlas-installer.config.system.build.disko" \
-  --extra-experimental-features "nix-command flakes" \
-  --max-jobs 2 \
-  -- --mode disko /tmp/disko-config.json
+"$DISKO_BIN" --mode disko /tmp/disko-config.json
 
 echo ""
 echo "=== Step 3: Mounting target ==="
