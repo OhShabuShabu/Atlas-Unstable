@@ -3,6 +3,11 @@ set -euo pipefail
 
 ROOTDIR="$(cd "$(dirname "$0")" && pwd)"
 
+AUTO=0
+if [[ "${1:-}" == "-y" || "${1:-}" == "--yes" ]]; then
+  AUTO=1
+fi
+
 if [[ $EUID -ne 0 ]]; then
   echo "Must be run as root (you're in a NixOS live ISO, use sudo)." >&2
   exit 1
@@ -13,7 +18,7 @@ if ! command -v nix &>/dev/null; then
   exit 1
 fi
 
-if [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]]; then
+if [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]] && [[ $AUTO -eq 0 ]]; then
   echo "WARNING: Running from a desktop session. The install uses a lot of memory"
   echo "and GNOME may kill the terminal (OOM). Switch to a TTY first:"
   echo "  Ctrl+Alt+F3   then run:  sudo ./install.sh"
@@ -34,36 +39,35 @@ if [[ ${#AVAILABLE[@]} -eq 0 ]]; then
   exit 1
 fi
 
-echo "Available disks:"
-for i in "${!AVAILABLE[@]}"; do
-  DEV="${AVAILABLE[$i]}"
-  SIZE=$(lsblk -dno SIZE "$DEV" 2>/dev/null || echo "?")
-  MODEL=$(lsblk -dno MODEL "$DEV" 2>/dev/null || echo "")
-  echo "  $((i+1)). $DEV  ($SIZE)  $MODEL"
-done
-echo ""
-
-DISK=""
-while [[ -z "$DISK" ]]; do
-  read -rp "Select disk number [1-${#AVAILABLE[@]}]: " SEL
-  if [[ "$SEL" =~ ^[0-9]+$ ]] && [[ "$SEL" -ge 1 ]] && [[ "$SEL" -le "${#AVAILABLE[@]}" ]]; then
-    DISK="${AVAILABLE[$((SEL-1))]}"
-  else
-    echo "Invalid selection." >&2
-  fi
-done
+if [[ ${#AVAILABLE[@]} -eq 1 ]]; then
+  DISK="${AVAILABLE[0]}"
+  echo "Disk: $DISK  ($(lsblk -dno SIZE "$DISK" 2>/dev/null || echo "?"))"
+elif [[ $AUTO -eq 1 ]]; then
+  DISK="${AVAILABLE[0]}"
+  echo "WARNING: Multiple disks, using first: $DISK"
+else
+  echo "Available disks:"
+  for i in "${!AVAILABLE[@]}"; do
+    DEV="${AVAILABLE[$i]}"
+    SIZE=$(lsblk -dno SIZE "$DEV" 2>/dev/null || echo "?")
+    MODEL=$(lsblk -dno MODEL "$DEV" 2>/dev/null || echo "")
+    echo "  $((i+1)). $DEV  ($SIZE)  $MODEL"
+  done
+  echo ""
+  while [[ -z "${DISK:-}" ]]; do
+    read -rp "Select disk number [1-${#AVAILABLE[@]}]: " SEL
+    if [[ "$SEL" =~ ^[0-9]+$ ]] && [[ "$SEL" -ge 1 ]] && [[ "$SEL" -le "${#AVAILABLE[@]}" ]]; then
+      DISK="${AVAILABLE[$((SEL-1))]}"
+    else
+      echo "Invalid selection." >&2
+    fi
+  done
+fi
 
 echo ""
 echo "Selected: $DISK"
 echo ""
 lsblk "$DISK"
-echo ""
-echo "WARNING: ALL DATA on $DISK will be DESTROYED."
-read -rp 'Type "YES" to continue: ' CONFIRM
-if [[ "$CONFIRM" != "YES" ]]; then
-  echo "Aborted."
-  exit 1
-fi
 
 TOTAL_MEM=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo)
 

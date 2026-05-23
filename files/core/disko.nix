@@ -25,7 +25,7 @@
 
     disk.main = {
       type = "disk";
-      device = "/dev/nvme0n1";
+      device = "/dev/REPLACE_ME";  # overridden by install.sh via jq
       content = {
         type = "gpt";
         partitions = {
