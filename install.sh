@@ -101,22 +101,68 @@ echo ""
 echo "=== Step 2: Partitioning $DISK ==="
 echo ""
 
-# Build pinned disko binary from our flake.lock
-DISKO_REV=$(grep -A5 '"disko"' flake.lock | grep '"rev"' | head -1 | cut -d'"' -f4)
+# Write the disko config as JSON directly (no Nix eval needed)
+cat > /tmp/disko-config.json <<EOF
+{
+  "disk": {
+    "main": {
+      "type": "disk",
+      "device": "$DISK",
+      "content": {
+        "type": "gpt",
+        "partitions": {
+          "esp": {
+            "size": "1G",
+            "type": "EF00",
+            "content": {
+              "type": "filesystem",
+              "format": "vfat",
+              "mountpoint": "/boot"
+            }
+          },
+          "swap": {
+            "size": "68G",
+            "content": {
+              "type": "swap",
+              "resumeDevice": true
+            }
+          },
+          "root": {
+            "size": "100%",
+            "content": {
+              "type": "luks",
+              "name": "crypt",
+              "settings": {
+                "allowDiscards": true
+              },
+              "content": {
+                "type": "btrfs",
+                "extraArgs": ["-f"],
+                "subvolumes": {
+                  "/nix": { "mountOptions": ["subvol=nix", "noatime"], "mountpoint": "/nix" },
+                  "/persistent": { "mountOptions": ["subvol=persistent", "noatime"], "mountpoint": "/persistent" },
+                  "/home": { "mountOptions": ["subvol=home", "noatime"], "mountpoint": "/home" },
+                  "/var": { "mountOptions": ["subvol=var", "noatime"], "mountpoint": "/var" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "nodev": {
+    "/": { "fsType": "tmpfs", "mountOptions": ["size=25%", "mode=755"] },
+    "/tmp": { "fsType": "tmpfs", "mountOptions": ["size=25%", "mode=1777"] }
+  }
+}
+EOF
 
-nix build "github:nix-community/disko/$DISKO_REV#disko" \
+# Build and run disko from pinned nixpkgs
+nix run "nixpkgs#disko" \
   --extra-experimental-features "nix-command flakes" \
-  --max-jobs 2
-
-DISKO_BIN=./result/bin/disko
-
-# Evaluate standalone disko config, replace device, run pinned disko
-nix-instantiate --eval --json --strict files/core/disko-config-json.nix \
-  --extra-experimental-features "nix-command" \
-  | sed "s|/dev/REPLACE_DISK|$DISK|g" \
-  > /tmp/disko-config.json
-
-"$DISKO_BIN" --mode disko /tmp/disko-config.json
+  --max-jobs 2 \
+  -- --mode disko /tmp/disko-config.json
 
 echo ""
 echo "=== Step 3: Mounting target ==="
