@@ -13,7 +13,22 @@
   boot.kernelModules = [ "kvm-intel" ];
   boot.extraModulePackages = [ ];
 
-  # fileSystems and swapDevices are managed by disko module (see disko.nix)
+  fileSystems."/" =
+    { device = "/dev/mapper/luks-9e21658b-4fcf-4f61-b95b-6e53e78880ca";
+      fsType = "ext4";
+    };
+
+  boot.initrd.luks.devices."luks-9e21658b-4fcf-4f61-b95b-6e53e78880ca".device = "/dev/disk/by-uuid/9e21658b-4fcf-4f61-b95b-6e53e78880ca";
+
+  fileSystems."/boot" =
+    { device = "/dev/disk/by-uuid/121D-E2E5";
+      fsType = "vfat";
+      options = [ "fmask=0077" "dmask=0077" ];
+    };
+
+  swapDevices =
+    [ { device = "/dev/mapper/luks-9f6c7cfc-4ae0-42c1-b4a3-80723993f898"; }
+    ];
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
