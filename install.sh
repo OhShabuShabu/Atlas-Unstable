@@ -94,11 +94,46 @@ echo "Freeing page cache..."
 sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
 
 echo ""
-echo "=== Partitioning and installing ==="
+echo "=== Step 1: Building disko script (from pinned flake input) ==="
 echo ""
 
-nix --extra-experimental-features "nix-command flakes" \
-  --max-jobs 2 \
-  run 'github:nix-community/disko/latest#disko-install' -- \
-  --flake "$ROOTDIR#atlas-installer" \
-  --disk main "$DISK"
+nix build ".#nixosConfigurations.atlas-installer.config.system.build.diskoScript" \
+  --extra-experimental-features "nix-command flakes" \
+  --max-jobs 2
+
+echo ""
+echo "=== Step 2: Partitioning $DISK ==="
+echo ""
+
+./result/bin/disko
+
+echo ""
+echo "=== Step 3: Mounting target ==="
+echo ""
+
+TARGET=/mnt
+
+LUKS_PART=$(lsblk -lno PATH,FSTYPE "$DISK" | grep crypto_LUKS | awk '{print $1}')
+BOOT_PART=$(lsblk -lno PATH,FSTYPE "$DISK" | grep vfat | awk '{print $1}')
+
+echo "LUKS root:  $LUKS_PART"
+echo "ESP boot:   $BOOT_PART"
+echo ""
+
+cryptsetup open "$LUKS_PART" crypt
+
+mount -t btrfs -o subvol=nix,noatime /dev/mapper/crypt "$TARGET/nix"
+mount -t btrfs -o subvol=persistent,noatime /dev/mapper/crypt "$TARGET/persistent"
+mount -t btrfs -o subvol=home,noatime /dev/mapper/crypt "$TARGET/home"
+mount -t btrfs -o subvol=var,noatime /dev/mapper/crypt "$TARGET/var"
+mount "$BOOT_PART" "$TARGET/boot"
+
+echo ""
+echo "=== Step 4: Installing NixOS ==="
+echo ""
+
+nixos-install --flake "$ROOTDIR#atlas-installer" \
+  --root "$TARGET" \
+  --no-root-passwd \
+  --option max-jobs 2 \
+  --option substituters "https://cache.nixos.org"
