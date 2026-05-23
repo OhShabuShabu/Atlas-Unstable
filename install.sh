@@ -13,6 +13,18 @@ if ! command -v nix &>/dev/null; then
   exit 1
 fi
 
+if [[ -n "$DISPLAY" || -n "$WAYLAND_DISPLAY" ]]; then
+  echo "WARNING: Running from a desktop session. The install uses a lot of memory"
+  echo "and GNOME may kill the terminal (OOM). Switch to a TTY first:"
+  echo "  Ctrl+Alt+F3   then run:  sudo ./install.sh"
+  echo ""
+  read -rp 'Continue anyway? (y/N): ' ANS
+  if [[ "$ANS" != "y" && "$ANS" != "Y" ]]; then
+    echo "Aborted."
+    exit 1
+  fi
+fi
+
 echo "=== Atlas Installer ==="
 echo ""
 
@@ -53,11 +65,24 @@ if [[ "$CONFIRM" != "YES" ]]; then
   exit 1
 fi
 
+# Create swap file if memory is low
+TOTAL_MEM=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo)
+if [[ "$TOTAL_MEM" -lt 4096 ]]; then
+  echo ""
+  echo "Low memory detected (${TOTAL_MEM}MB). Creating 4G swap file..."
+  fallocate -l 4G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=4096
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  echo "Swap enabled."
+fi
+
 echo ""
 echo "=== Running disko-install ==="
 echo ""
 
 nix --extra-experimental-features "nix-command flakes" \
+  --max-jobs 1 --cores 0 \
   run 'github:nix-community/disko/latest#disko-install' -- \
   --flake "$ROOTDIR#atlas-installer" \
   --disk main "$DISK"
