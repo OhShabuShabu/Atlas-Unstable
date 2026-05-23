@@ -101,18 +101,16 @@ echo ""
 echo "=== Step 2: Partitioning $DISK ==="
 echo ""
 
-# Extract disko config as JSON, modify the device, then run pinned disko
-nix eval ".#nixosConfigurations.atlas-installer.config.disko.devices" \
-  --json \
-  --extra-experimental-features "nix-command flakes" \
+# Evaluate standalone disko config, replace device, run pinned disko
+nix-instantiate --eval --json files/core/disko-config-json.nix \
+  --extra-experimental-features "nix-command" \
+  | sed "s|/dev/REPLACE_DISK|$DISK|g" \
   > /tmp/disko-config.json
-
-jq ".disk.main.device = \"$DISK\"" /tmp/disko-config.json > /tmp/disko-config-modified.json
 
 nix run ".#nixosConfigurations.atlas-installer.config.system.build.disko" \
   --extra-experimental-features "nix-command flakes" \
   --max-jobs 2 \
-  -- --mode disko /tmp/disko-config-modified.json
+  -- --mode disko /tmp/disko-config.json
 
 echo ""
 echo "=== Step 3: Mounting target ==="
