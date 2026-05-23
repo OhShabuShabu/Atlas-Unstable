@@ -101,60 +101,60 @@ echo ""
 echo "=== Step 2: Partitioning $DISK ==="
 echo ""
 
-# Write the disko config as JSON directly (no Nix eval needed)
-cat > /tmp/disko-config.json <<EOF
+# Write the disko config as Nix (disko evaluates configs via nix-instantiate)
+cat > /tmp/disko-config.nix <<EOF
 {
-  "disk": {
-    "main": {
-      "type": "disk",
-      "device": "$DISK",
-      "content": {
-        "type": "gpt",
-        "partitions": {
-          "esp": {
-            "size": "1G",
-            "type": "EF00",
-            "content": {
-              "type": "filesystem",
-              "format": "vfat",
-              "mountpoint": "/boot"
-            }
-          },
-          "swap": {
-            "size": "68G",
-            "content": {
-              "type": "swap",
-              "resumeDevice": true
-            }
-          },
-          "root": {
-            "size": "100%",
-            "content": {
-              "type": "luks",
-              "name": "crypt",
-              "settings": {
-                "allowDiscards": true
-              },
-              "content": {
-                "type": "btrfs",
-                "extraArgs": ["-f"],
-                "subvolumes": {
-                  "/nix": { "mountOptions": ["subvol=nix", "noatime"], "mountpoint": "/nix" },
-                  "/persistent": { "mountOptions": ["subvol=persistent", "noatime"], "mountpoint": "/persistent" },
-                  "/home": { "mountOptions": ["subvol=home", "noatime"], "mountpoint": "/home" },
-                  "/var": { "mountOptions": ["subvol=var", "noatime"], "mountpoint": "/var" }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  },
-  "nodev": {
-    "/": { "fsType": "tmpfs", "mountOptions": ["size=25%", "mode=755"] },
-    "/tmp": { "fsType": "tmpfs", "mountOptions": ["size=25%", "mode=1777"] }
-  }
+  disk.main = {
+    type = "disk";
+    device = "$DISK";
+    content = {
+      type = "gpt";
+      partitions = {
+        esp = {
+          size = "1G";
+          type = "EF00";
+          content = {
+            type = "filesystem";
+            format = "vfat";
+            mountpoint = "/boot";
+          };
+        };
+        swap = {
+          size = "68G";
+          content = {
+            type = "swap";
+            resumeDevice = true;
+          };
+        };
+        root = {
+          size = "100%";
+          content = {
+            type = "luks";
+            name = "crypt";
+            settings.allowDiscards = true;
+            content = {
+              type = "btrfs";
+              extraArgs = ["-f"];
+              subvolumes = {
+                "/nix" = { mountOptions = ["subvol=nix" "noatime"]; mountpoint = "/nix"; };
+                "/persistent" = { mountOptions = ["subvol=persistent" "noatime"]; mountpoint = "/persistent"; };
+                "/home" = { mountOptions = ["subvol=home" "noatime"]; mountpoint = "/home"; };
+                "/var" = { mountOptions = ["subvol=var" "noatime"]; mountpoint = "/var"; };
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+  nodev."/" = {
+    fsType = "tmpfs";
+    mountOptions = ["size=25%" "mode=755"];
+  };
+  nodev."/tmp" = {
+    fsType = "tmpfs";
+    mountOptions = ["size=25%" "mode=1777"];
+  };
 }
 EOF
 
@@ -162,7 +162,7 @@ EOF
 nix run "nixpkgs#disko" \
   --extra-experimental-features "nix-command flakes" \
   --max-jobs 2 \
-  -- --mode disko /tmp/disko-config.json
+  -- --mode disko /tmp/disko-config.nix
 
 echo ""
 echo "=== Step 3: Mounting target ==="
