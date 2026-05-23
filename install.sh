@@ -28,7 +28,7 @@ fi
 echo "=== Atlas Installer ==="
 echo ""
 
-AVAILABLE=($(lsblk -dpno NAME 2>/dev/null | grep -E '/dev/(sd|nvme|vd|mmcblk)' || true))
+AVAILABLE=($(lsblk -dpno NAME,TYPE 2>/dev/null | awk '/disk/ {print $1}'))
 if [[ ${#AVAILABLE[@]} -eq 0 ]]; then
   echo "No disks detected." >&2
   exit 1
@@ -94,18 +94,21 @@ echo "Freeing page cache..."
 sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
 
 echo ""
-echo "=== Step 1: Building disko script (from pinned flake input) ==="
-echo ""
-
-nix build ".#nixosConfigurations.atlas-installer.config.system.build.diskoScript" \
-  --extra-experimental-features "nix-command flakes" \
-  --max-jobs 2
-
-echo ""
 echo "=== Step 2: Partitioning $DISK ==="
 echo ""
 
-./result
+# Extract disko config as JSON, modify the device, then run pinned disko
+nix eval ".#nixosConfigurations.atlas-installer.config.disko.devices" \
+  --json \
+  --extra-experimental-features "nix-command flakes" \
+  > /tmp/disko-config.json
+
+jq ".disk.main.device = \"$DISK\"" /tmp/disko-config.json > /tmp/disko-config-modified.json
+
+nix run ".#nixosConfigurations.atlas-installer.config.system.build.disko" \
+  --extra-experimental-features "nix-command flakes" \
+  --max-jobs 2 \
+  -- --mode disko /tmp/disko-config-modified.json
 
 echo ""
 echo "=== Step 3: Mounting target ==="
@@ -120,7 +123,9 @@ echo "LUKS root:  $LUKS_PART"
 echo "ESP boot:   $BOOT_PART"
 echo ""
 
-cryptsetup open "$LUKS_PART" crypt
+if ! cryptsetup status crypt &>/dev/null; then
+  cryptsetup open "$LUKS_PART" crypt
+fi
 
 mount -t btrfs -o subvol=nix,noatime /dev/mapper/crypt "$TARGET/nix"
 mount -t btrfs -o subvol=persistent,noatime /dev/mapper/crypt "$TARGET/persistent"
