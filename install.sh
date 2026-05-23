@@ -71,12 +71,16 @@ lsblk "$DISK"
 
 TOTAL_MEM=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo)
 
+# Free up space on the live ISO
+echo "Clearing nix garbage on live ISO..."
+nix-collect-garbage --option max-jobs 2 2>/dev/null || true
+
 # Expand live ISO writable store so nix has room to build
 for MP in /nix/.rw-store / ; do
   if mountpoint -q "$MP" 2>/dev/null; then
     FS_TYPE=$(findmnt -n -o FSTYPE "$MP")
     if [[ "$FS_TYPE" == "tmpfs" ]]; then
-      NEW_SIZE=$((TOTAL_MEM * 3 / 4))M
+      NEW_SIZE=$((TOTAL_MEM * 9 / 10))M
       mount -o remount,size="$NEW_SIZE" "$MP" 2>/dev/null && echo "Expanded $MP to $NEW_SIZE"
     fi
   fi
@@ -195,6 +199,7 @@ echo ""
 
 nixos-install --flake "$ROOTDIR#atlas-installer" \
   --root "$TARGET" \
+  --store "$TARGET" \
   --no-root-passwd \
   --option max-jobs 2 \
   --option substituters "https://cache.nixos.org"
