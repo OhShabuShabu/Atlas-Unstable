@@ -105,7 +105,7 @@ echo ""
 echo "=== Step 2: Partitioning $DISK ==="
 echo ""
 
-./result/bin/disko
+./result
 
 echo ""
 echo "=== Step 3: Mounting target ==="
