@@ -46,7 +46,9 @@
     # Enable systemd initrd (required for LUKS)
     initrd.systemd.enable = true;
 
-    # LUKS is managed by disko module (see disko.nix)
+    # LUKS devices and fileSystems are provided by either:
+    #   - current-system.nix (for `nixos-rebuild switch --flake .#atlas`)
+    #   - disko.nix       (for fresh install via `.#atlas-installer`)
 
     # Plymouth boot splash
     plymouth = {

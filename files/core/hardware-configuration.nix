@@ -13,7 +13,7 @@
   boot.kernelModules = [ "kvm-intel" ];
   boot.extraModulePackages = [ ];
 
-  # fileSystems and swapDevices are managed by disko module (see disko.nix)
+  # fileSystems defined in current-system.nix (atlas) or disko.nix (atlas-installer)
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;

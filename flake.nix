@@ -23,29 +23,58 @@
   };
   outputs = inputs @ { self, nixpkgs, home-manager, noctalia, disko, preservation, ... }: {
     formatter.x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.nixpkgs-fmt;
-    nixosConfigurations.atlas = nixpkgs.lib.nixosSystem {
-      system = "x86_64-linux";
-      specialArgs = { inherit inputs noctalia; };
-      modules = [
-        disko.nixosModules.disko
-        preservation.nixosModules.default
-        ./files/core/configuration.nix
-        ./files/core/disko.nix
-        ./files/core/preservation.nix
-        home-manager.nixosModules.home-manager
-        {
-          home-manager = {
-            useGlobalPkgs = true;
-            useUserPackages = true;
-            users.yusa = { pkgs, ... }: {
-              imports = [
-                noctalia.homeModules.default
-                ./files/core/home.nix
-              ];
+
+    nixosConfigurations = {
+      # Current running system — uses existing ext4 layout
+      atlas = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        specialArgs = { inherit inputs noctalia; };
+        modules = [
+          preservation.nixosModules.default
+          ./files/core/configuration.nix
+          ./files/core/current-system.nix
+          ./files/core/preservation.nix
+          home-manager.nixosModules.home-manager
+          {
+            home-manager = {
+              useGlobalPkgs = true;
+              useUserPackages = true;
+              users.yusa = { pkgs, ... }: {
+                imports = [
+                  noctalia.homeModules.default
+                  ./files/core/home.nix
+                ];
+              };
             };
-          };
-        }
-      ];
+          }
+        ];
+      };
+
+      # Fresh install target — uses disko (wipes disk)
+      atlas-installer = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        specialArgs = { inherit inputs noctalia; };
+        modules = [
+          disko.nixosModules.disko
+          preservation.nixosModules.default
+          ./files/core/configuration.nix
+          ./files/core/disko.nix
+          ./files/core/preservation.nix
+          home-manager.nixosModules.home-manager
+          {
+            home-manager = {
+              useGlobalPkgs = true;
+              useUserPackages = true;
+              users.yusa = { pkgs, ... }: {
+                imports = [
+                  noctalia.homeModules.default
+                  ./files/core/home.nix
+                ];
+              };
+            };
+          }
+        ];
+      };
     };
   };
 }
