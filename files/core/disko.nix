@@ -7,6 +7,7 @@ let
 in {
   # Plymouth hides LUKS password prompt in UEFI VMs
   boot.plymouth.enable = lib.mkForce false;
+  boot.kernelParams = [ "console=tty1" "nomodeset" ];
 
   fileSystems = {
     "/nix".neededForBoot = true;
