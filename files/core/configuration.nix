@@ -53,24 +53,24 @@
     #   - current-system.nix (for `nixos-rebuild switch --flake .#atlas`)
     #   - disko.nix       (for fresh install via `.#atlas-installer`)
 
-    # Plymouth boot splash — Nibar animated theme
+    # Plymouth boot splash — Yorha NieR:Automata theme
     plymouth = {
       enable = true;
-      theme = "nibar";
+      theme = "yorha";
       themePackages = with pkgs; [
         (pkgs.stdenv.mkDerivation {
-          pname = "plymouth-nibar-theme";
+          pname = "plymouth-yorha-theme";
           version = "1.0";
           src = pkgs.fetchFromGitHub {
-            owner = "anaysharma";
-            repo = "nibar-plymouth-theme";
-            rev = "ab2d144efc936548eb9270d43720c295851f5936";
-            sha256 = "sha256-KK9BCFVUg5vTY9LsJ7s+hAO8S9eeoDzxpHuvigxWzsk=";
+            owner = "antspartanelite";
+            repo = "Custom-Nier-Boot";
+            rev = "689b010ea1f1e6f5cf5a4c9366b88c415e911b56";
+            sha256 = "sha256-8JqqJkP5QOX2jJouOhLHR6CjfJmg7Lo0PFeB9h3Drgs=";
           };
           installPhase = ''
             mkdir -p $out/share/plymouth/themes
-            cp -r $src/nibar $out/share/plymouth/themes/nibar
-            substituteInPlace $out/share/plymouth/themes/nibar/nibar.plymouth \
+            cp -r "$src/Plymouth Theme/yorha" $out/share/plymouth/themes/yorha
+            substituteInPlace $out/share/plymouth/themes/yorha/yorha.plymouth \
               --replace-fail "/usr/share" "$out/share"
           '';
         })
