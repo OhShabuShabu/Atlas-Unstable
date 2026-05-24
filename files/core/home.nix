@@ -168,8 +168,7 @@ in {
       font-family = Monocraft
       font-size = 13
       command = ${pkgs.nushell}/bin/nu
-      background-opacity = 0.95
-      background-blur = 1
+      background-opacity = 1
       window-padding-x = 10
       window-padding-y = 10
       cursor-style = bar
@@ -187,7 +186,6 @@ in {
       animation = "typewriter"
       animation_duration_ms = 1500
       centered = true
-      width = 72
       border = false
       vertical_padding = 0
       show_translation = ["english"]
