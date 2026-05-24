@@ -1,6 +1,5 @@
 { config, pkgs, lib, ... }:
-
-in {
+{
   # INFO: Home Manager imports
   imports = [
     ../modules/dev/dev.nix

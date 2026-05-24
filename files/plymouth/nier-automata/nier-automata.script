@@ -1,0 +1,104 @@
+// Nier Automata Plymouth Theme
+// Background: moon/desert scene from qylock SDDM theme by Darkkal44
+
+// Screen dimensions
+screen.w = Window.GetWidth(0);
+screen.h = Window.GetHeight(0);
+screen.half.w = screen.w / 2;
+screen.half.h = screen.h / 2;
+
+// State
+question = null;
+answer = null;
+message = null;
+bullets = null;
+prompt = null;
+
+// Bullet image for password entry
+bullet.image = Image.Text("*", 0.9, 0.9, 0.95);
+
+// ------- Background ----------
+Window.SetBackgroundTopColor(0.0, 0.0, 0.0);
+Window.SetBackgroundBottomColor(0.0, 0.0, 0.0);
+
+bg_image = Image("bg.png");
+bg_sprite = Sprite();
+bg_sprite.SetZ(-100);
+
+// Scale background to fill screen
+scaled_bg = bg_image.Scale(screen.w, screen.h);
+bg_sprite.SetImage(scaled_bg);
+
+// ------- Throbber Animation ----------
+for (i = 0; i < 12; i++)
+  throbber_image[i] = Image("throbber-" + i + ".png");
+
+throbber_sprite = Sprite();
+
+// Position: bottom center-right area
+throbber_sprite.SetX(screen.w - 50 - 12);
+throbber_sprite.SetY(screen.h - 50 - 12);
+
+frame = 0;
+
+fun refresh_callback()
+  {
+    throbber_sprite.SetImage(throbber_image[frame]);
+    frame = (frame + 1) % 12;
+  }
+
+Plymouth.SetRefreshFunction(refresh_callback);
+
+// ------- Password Dialog ----------
+fun DisplayQuestionCallback(prompt_text, entry) {
+    question = null;
+    answer = null;
+
+    if (entry == "")
+        entry = "<answer>";
+
+    question.image = Image.Text(prompt_text, 0.9, 0.9, 0.95);
+    question.sprite = Sprite(question.image);
+    question.sprite.SetX(screen.half.w - question.image.GetWidth() / 2);
+    question.sprite.SetY(screen.h - 5 * question.image.GetHeight());
+
+    answer.image = Image.Text(entry, 0.9, 0.9, 0.95);
+    answer.sprite = Sprite(answer.image);
+    answer.sprite.SetX(screen.half.w - answer.image.GetWidth() / 2);
+    answer.sprite.SetY(screen.h - 3 * answer.image.GetHeight());
+}
+Plymouth.SetDisplayQuestionFunction(DisplayQuestionCallback);
+
+fun DisplayPasswordCallback(nil, bulletCount) {
+    totalWidth = bulletCount * bullet.image.GetWidth();
+    startPos = screen.half.w - totalWidth / 2;
+
+    prompt.image = Image.Text("Enter Password", 0.9, 0.9, 0.95);
+    prompt.sprite = Sprite(prompt.image);
+    prompt.sprite.SetX(screen.half.w - prompt.image.GetWidth() / 2);
+    prompt.sprite.SetY(screen.h - 5 * prompt.image.GetHeight());
+
+    bullets = null;
+    for (i = 0; i < bulletCount; i++) {
+        bullets[i].sprite = Sprite(bullet.image);
+        bullets[i].sprite.SetX(startPos + i * bullet.image.GetWidth());
+        bullets[i].sprite.SetY(screen.h - 3 * bullet.image.GetHeight());
+    }
+}
+Plymouth.SetDisplayPasswordFunction(DisplayPasswordCallback);
+
+fun DisplayNormalCallback() {
+    bullets = null;
+    prompt = null;
+    message = null;
+    question = null;
+    answer = null;
+}
+Plymouth.SetDisplayNormalFunction(DisplayNormalCallback);
+
+fun MessageCallback(text) {
+    message.image = Image.Text(text, 0.9, 0.9, 0.95);
+    message.sprite = Sprite(message.image);
+    message.sprite.SetPosition(screen.half.w - message.image.GetWidth() / 2, message.image.GetHeight());
+}
+Plymouth.SetMessageFunction(MessageCallback);

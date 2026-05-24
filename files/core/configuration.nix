@@ -50,14 +50,19 @@
     #   - current-system.nix (for `nixos-rebuild switch --flake .#atlas`)
     #   - disko.nix       (for fresh install via `.#atlas-installer`)
 
-    # Plymouth boot splash
+    # Plymouth boot splash — NieR: Automata themed
     plymouth = {
       enable = true;
-      theme = "rings";
+      theme = "nier-automata";
       themePackages = with pkgs; [
-        # Only install rings theme (save space)
-        (adi1090x-plymouth-themes.override {
-          selected_themes = [ "rings" ];
+        (pkgs.stdenv.mkDerivation {
+          pname = "plymouth-theme-nier-automata";
+          version = "1.0";
+          src = ./../plymouth/nier-automata;
+          installPhase = ''
+            mkdir -p $out/share/plymouth/themes/nier-automata
+            cp -r $src/* $out/share/plymouth/themes/nier-automata/
+          '';
         })
       ];
     };
