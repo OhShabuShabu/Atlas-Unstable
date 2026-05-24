@@ -220,6 +220,15 @@ nixos-install --flake "$ROOTDIR#atlas-installer" \
   --option substituters "$SUBSTITUTERS"
 
 echo ""
+echo "=== Step 5: Copying config to installed system ==="
+echo ""
+
+mkdir -p "$TARGET/home/yusa"
+cp -r "$ROOTDIR" "$TARGET/home/yusa/atlas"
+chown -R 1000:100 "$TARGET/home/yusa/atlas" 2>/dev/null || true
+echo "Config copied to /home/yusa/atlas"
+
+echo ""
 echo "=== Install complete! ==="
 echo "Reboot and remove the install media."
-echo ""
+echo "After boot, use: sudo nixos-rebuild switch --flake /home/yusa/atlas#atlas"
