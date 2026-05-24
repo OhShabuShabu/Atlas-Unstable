@@ -186,13 +186,10 @@ in {
       [display]
       animation = "typewriter"
       animation_duration_ms = 1500
-      border = true
-      rounded_border = true
       centered = true
-      show_translation = ["english", "romaji"]
+      show_translation = ["english"]
       quote_color = "#a3be8c"
       translation_color = "dim"
-      border_color = "#be8ca3"
     '';
 
     # Mullvad browser profile
