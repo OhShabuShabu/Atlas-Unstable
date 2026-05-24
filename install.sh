@@ -220,29 +220,6 @@ nixos-install --flake "$ROOTDIR#atlas-installer" \
   --option substituters "$SUBSTITUTERS"
 
 echo ""
-echo "=== Step 5: Setting user passwords ==="
-echo ""
-
-if [[ $AUTO -eq 1 ]]; then
-  ROOT_PW="root"
-  YUSA_PW="atlas"
-  echo "Passwords set to root:root / yusa:atlas (change on first login)."
-else
-  echo "Enter password for root:"
-  read -s ROOT_PW
-  echo ""
-  echo "Enter password for yusa:"
-  read -s YUSA_PW
-  echo ""
-fi
-
-ROOT_HASH=$(nix run nixpkgs#mkpasswd -- -m sha-512 "$ROOT_PW" 2>/dev/null)
-YUSA_HASH=$(nix run nixpkgs#mkpasswd -- -m sha-512 "$YUSA_PW" 2>/dev/null)
-
-sed -i "s|^root:[^:]*:|root:${ROOT_HASH}:|" "$TARGET/etc/shadow"
-sed -i "s|^yusa:[^:]*:|yusa:${YUSA_HASH}:|" "$TARGET/etc/shadow"
-
-echo ""
 echo "=== Install complete! ==="
 echo "Reboot and remove the install media."
 echo ""

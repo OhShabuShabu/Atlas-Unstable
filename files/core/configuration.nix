@@ -161,9 +161,14 @@
   # SECTION 6: USER CONFIGURATION
   # ============================================================================
   # Main user account
+  users.users.root = {
+    initialPassword = "root";
+  };
+
   users.users.yusa = {
     isNormalUser = true;
     description = "yusa";
+    initialPassword = "atlas";
     extraGroups = [
       "networkmanager"
       "wheel"
