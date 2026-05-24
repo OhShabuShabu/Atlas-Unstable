@@ -1,0 +1,19 @@
+{ pkgs, lib, ... }:
+
+{
+  imports = [ ];
+
+  hardware.graphics = {
+    enable = true;
+    extraPackages = with pkgs; [
+      intel-media-driver
+      vaapiIntel
+      vaapiVdpau
+      libvdpau-va-gl
+    ];
+  };
+
+  environment.systemPackages = with pkgs; [
+    intel-gpu-tools
+  ];
+}

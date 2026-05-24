@@ -15,6 +15,12 @@
     # INFO: Core system modules
     ./hardware-configuration.nix
 
+    # INFO: Hardware-specific modules (GPU, CPU, audio — auto-imported)
+    ../hardware/default.nix
+
+    # INFO: System profile (hostname, timezone, locale — auto-imported)
+    ../profiles/default.nix
+
     # INFO: Security modules (imports submodules automatically)
     ../modules/security/default.nix
 

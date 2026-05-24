@@ -1,0 +1,8 @@
+{ config, pkgs, lib, ... }:
+
+{
+  imports = [ ];
+
+  networking.hostName = "nixos";
+  time.timeZone = "UTC";
+}
