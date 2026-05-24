@@ -214,11 +214,15 @@ echo ""
 
 if [[ $AUTO -eq 1 ]]; then
   echo "root:root" | nixos-enter --root "$TARGET" --command 'chpasswd' 2>/dev/null || true
-  echo "yusa:atlas" | nixos-enter --root "$TARGET" --command 'chpasswd' 2>/dev/null || true
-  echo "root/yusa passwords set to \"root\"/\"atlas\" (change on first login)."
+  echo "yusa:atlas"   | nixos-enter --root "$TARGET" --command 'chpasswd' 2>/dev/null || true
+  echo "Passwords set to root:root / yusa:atlas (change on first login)."
 else
-  nixos-enter --root "$TARGET" --command 'passwd root'
-  nixos-enter --root "$TARGET" --command 'passwd yusa'
+  echo "Set root password:"
+  read -s ROOT_PW
+  echo "root:$ROOT_PW" | nixos-enter --root "$TARGET" --command 'chpasswd'
+  echo "Set yusa password:"
+  read -s YUSA_PW
+  echo "yusa:$YUSA_PW" | nixos-enter --root "$TARGET" --command 'chpasswd'
 fi
 
 echo ""
