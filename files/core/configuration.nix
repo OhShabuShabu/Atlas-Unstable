@@ -384,10 +384,11 @@
   # Enable Niri (Wayland compositor)
   programs.niri.enable = true;
 
-  # Display manager
-  # Display manager (X11 backend — Wayland gives black screen in VM)
-  services.xserver.enable = true;
-  services.displayManager.sddm.enable = true;
+  # Display manager (Wayland backend; machine-id must be persisted during install)
+  services.displayManager.sddm = {
+    enable = true;
+    wayland.enable = true;
+  };
 
   # Preservation handles machine-id persistence via initrd + boot service
   systemd.services.systemd-machine-id-commit.enable = false;

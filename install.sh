@@ -220,7 +220,14 @@ nixos-install --flake "$ROOTDIR#atlas-installer" \
   --option substituters "$SUBSTITUTERS"
 
 echo ""
-echo "=== Step 5: Copying config to installed system ==="
+echo "=== Step 5: Persisting machine-id ==="
+echo ""
+
+mkdir -p "$TARGET/persistent/etc"
+cp "$TARGET/etc/machine-id" "$TARGET/persistent/etc/machine-id" 2>/dev/null || true
+
+echo ""
+echo "=== Step 6: Copying config to installed system ==="
 echo ""
 
 mkdir -p "$TARGET/home/yusa"
