@@ -46,6 +46,9 @@
     # Enable systemd initrd (required for LUKS)
     initrd.systemd.enable = true;
 
+    # Load AMD GPU driver in initrd so Plymouth uses KMS at native resolution
+    initrd.kernelModules = [ "amdgpu" ];
+
     # LUKS devices and fileSystems are provided by either:
     #   - current-system.nix (for `nixos-rebuild switch --flake .#atlas`)
     #   - disko.nix       (for fresh install via `.#atlas-installer`)
@@ -67,8 +70,7 @@
 
     # Kernel parameters
     kernelParams = [
-      # Force HD framebuffer for Plymouth
-      "video=1920x1080@60"
+      "video=1920x1080"
 
       # Boot options
       "quiet"
