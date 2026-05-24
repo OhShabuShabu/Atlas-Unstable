@@ -10,6 +10,7 @@ BOLD='\033[1m'; DIM='\033[2m'; NC='\033[0m'
 # ─── Config ─────────────────────────────────────────────────────────────────
 AUTO=0
 CACHE_URL=""
+DOWNLOAD_MODULES=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -y|--yes)   AUTO=1; shift ;;
@@ -27,7 +28,7 @@ fail()   { echo -e "  ${RED}✗${NC} $1"; }
 header() { echo -e "\n${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"; echo -e "${BOLD}${CYAN}  $1${NC}"; echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"; }
 spacer() { echo ""; }
 
-TOTAL_STEPS=7
+TOTAL_STEPS=8
 SCRIPT_START=$(date +%s)
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -286,24 +287,73 @@ info "Running nixos-install (this will take 5-30 minutes)..."
 export DISKO_DEVICE="$DISK"
 echo "$LUKS_UUID" > "$ROOTDIR/.luk-uuid"
 
-trap 'rm -f "$ROOTDIR/.luk-uuid"' EXIT
+  trap 'rm -f "$ROOTDIR/.luk-uuid"' EXIT
 
-if [[ -n "$CACHE_URL" ]]; then
-  SUBSTITUTERS="$CACHE_URL https://cache.nixos.org"
-else
-  SUBSTITUTERS="https://cache.nixos.org"
-fi
+  if [[ -n "$CACHE_URL" ]]; then
+    SUBSTITUTERS="$CACHE_URL https://cache.nixos.org"
+  else
+    SUBSTITUTERS="https://cache.nixos.org"
+  fi
 
-nixos-install --flake "$ROOTDIR#atlas-installer" \
-  --root "$TARGET" \
-  --no-root-passwd \
-  --option substituters "$SUBSTITUTERS"
-ok "NixOS base system installed"
+  nixos-install --flake "$ROOTDIR#atlas-installer" \
+    --root "$TARGET" \
+    --no-root-passwd \
+    --option substituters "$SUBSTITUTERS"
+  ok "NixOS base system installed"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # STEP 7: Optional Modules
+  # ═══════════════════════════════════════════════════════════════════════════
+  step 7 "Optional Modules (Gaming, Dev, Privacy, etc.)"
+  spacer
+
+  MODULES_URL="https://github.com/OhShabuShabu/Atlas-Modules"
+  MODULES_TARGET="$TARGET/home/yusa/atlas-modules"
+  DOWNLOAD_MODULES=0
+
+  if [[ "$AUTO" -eq 1 ]]; then
+    info "Auto-mode enabled — skipping optional modules download"
+  else
+    echo -e "  ${BOLD}Optional modules${NC} provide gaming (Steam, Minecraft),"
+    echo -e "  development tools (Neovim, bun, VSCodium), privacy (Mullvad VPN),"
+    echo -e "  virtualization (Docker, libvirt), performance tuning, Flatpak,"
+    echo -e "  and more."
+    spacer
+    echo -e "  Source: ${DIM}$MODULES_URL${NC}"
+    spacer
+    echo -e "  ${YELLOW}Without them: system still works with core desktop + security${NC}"
+    spacer
+    read -rp "$(echo -e ${CYAN}"  Download optional modules? (y/N): "${NC})" ANS
+    if [[ "$ANS" == "y" || "$ANS" == "Y" ]]; then
+      DOWNLOAD_MODULES=1
+    fi
+  fi
+
+  if [[ "$DOWNLOAD_MODULES" -eq 1 ]]; then
+    info "Cloning optional modules to target system..."
+    mkdir -p "$(dirname "$MODULES_TARGET")"
+    if command -v git &>/dev/null; then
+      git clone --depth=1 "$MODULES_URL" "$MODULES_TARGET" 2>&1 | sed 's/^/    /'
+    else
+      nix run nixpkgs#git -- clone --depth=1 "$MODULES_URL" "$MODULES_TARGET" 2>&1 | sed 's/^/    /'
+    fi
+    chown -R 1000:100 "$MODULES_TARGET" 2>/dev/null || true
+    ok "Optional modules cloned to $MODULES_TARGET"
+
+    # Switch flake input to local path so rebuilds use the on-disk copy
+    info "Updating flake.nix to use local modules path..."
+    sed -i 's|url = "github:OhShabuShabu/Atlas-Modules";|url = "/home/yusa/atlas-modules";|' \
+      "$TARGET/home/yusa/atlas/flake.nix"
+    ok "Flake now points to local modules path"
+  else
+    info "Skipping optional modules — flake will fetch from $MODULES_URL on rebuild"
+  fi
+  ok "Modules setup complete"
 
 # ═══════════════════════════════════════════════════════════════════════════
-# STEP 7: Finalizing
+# STEP 8: Finalizing
 # ═══════════════════════════════════════════════════════════════════════════
-step 7 "Finalizing Installation"
+step 8 "Finalizing Installation"
 spacer
 
 info "Persisting machine-id..."
@@ -327,7 +377,15 @@ echo -e "  ${BOLD}Next steps:${NC}"
 echo -e "    1. ${CYAN}Reboot${NC} and remove the install media"
 echo -e "    2. Boot into your new system"
 echo -e "    3. Log in with ${YELLOW}username: yusa${NC} / ${YELLOW}password: atlas${NC}"
-echo -e "    4. After login, apply the full configuration:"
-echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/atlas#atlas${NC}"
+if [[ "$DOWNLOAD_MODULES" -eq 1 ]]; then
+  echo -e "    4. After login, apply the full configuration:"
+  echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/atlas#atlas${NC}"
+else
+  echo -e "    4. After login, apply the full configuration:"
+  echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/atlas#atlas${NC}"
+  echo -e "    5. To add optional modules later:"
+  echo -e "       ${DIM}git clone --depth=1 https://github.com/OhShabuShabu/Atlas-Modules /home/yusa/atlas-modules${NC}"
+  echo -e "       Then change flake.nix to use local path or rebuild with GitHub URL"
+fi
 spacer
 echo -e "  ${DIM}For detailed documentation, see: /home/yusa/atlas/README.md${NC}"

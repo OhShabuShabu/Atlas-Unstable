@@ -77,13 +77,13 @@ To add a user-level package:
 
 ### Enabling/Disabling Modules
 
-Each feature is implemented as a module. To disable:
+Each feature is implemented as a module. Optional modules live in a separate repo at `/home/yusa/atlas-modules` (imported via flake input). To disable:
 
 1. Edit `files/core/configuration.nix`
-2. Comment out the module import (line starting with `../modules/`)
+2. Comment out the module import (line starting with `inputs.atlas-modules.nixosModules.`)
 3. Rebuild: `sudo nixos-rebuild switch --flake .#atlas`
 
-**WARNING**: Some modules are interdependent. Check `files/modules/*/README.md` for dependencies.
+**WARNING**: Some modules are interdependent. Check module READMEs for dependencies.
 
 ## Troubleshooting
 
@@ -114,33 +114,40 @@ Each feature is implemented as a module. To disable:
 
 See documentation in each module:
 - `files/modules/security/README.md` — Security modules
-- `files/modules/dev/README.md` — Development tools
-- `files/modules/gaming/README.md` — Gaming setup
-- `files/modules/privacy/README.md` — Privacy features
+- `/home/yusa/atlas-modules/dev/README.md` — Development tools
+- `/home/yusa/atlas-modules/gaming/README.md` — Gaming setup
+- `/home/yusa/atlas-modules/privacy/README.md` — Privacy features
 
 ## Structure
 
 ```
 atlas/
 ├── flake.nix                           # Nix flake inputs + outputs
-└── files/
-    ├── core/
-    │   ├── configuration.nix           # System-level config
-    │   ├── home.nix                    # Home Manager user config
-    │   └── hardware-configuration.nix  # Hardware-specific settings
-    ├── config/
-    │   ├── niri/                       # WM config (keybinds, layout, animations)
-    │   ├── vicinae/                    # Launcher config
-    │   └── .icons/                     # Cursor themes
-    ├── modules/
-    │   ├── security/                   # Snout, ClamAV, AIDE, auditd, kernel, firewall
-    │   ├── dev/                        # Neovim, development tools
-    │   ├── gaming/                     # Steam, Millennium theming
-    │   ├── privacy/                    # Mullvad VPN + browser
-    │   ├── flatpak.nix                 # Flatpak packages
-    │   └── minecraft.nix               # PrismLauncher config
-    ├── audio/                          # Sound effects
-    └── bin/                            # Scripts (startup, motivate, fix_rgb_color)
+├── files/
+│   ├── core/
+│   │   ├── configuration.nix           # System-level config
+│   │   ├── home.nix                    # Home Manager user config
+│   │   └── hardware-configuration.nix  # Hardware-specific settings
+│   ├── config/
+│   │   ├── niri/                       # WM config (keybinds, layout, animations)
+│   │   ├── vicinae/                    # Launcher config
+│   │   └── .icons/                     # Cursor themes
+│   ├── modules/
+│   │   └── security/                   # Snout, ClamAV, AIDE, auditd, kernel, firewall
+│   ├── hardware/                       # CPU/GPU/audio auto-configs
+│   ├── profiles/                       # System profiles (atlas, generic)
+│   ├── audio/                          # Sound effects
+│   └── bin/                            # Scripts (startup, motivate, fix_rgb_color)
+│
+├── Optional modules (separate repo):   /home/yusa/atlas-modules/
+│   ├── dev/                            # Neovim, development tools
+│   ├── gaming/                         # Steam, Millennium theming
+│   ├── privacy/                        # Mullvad VPN + browser
+│   ├── flatpak.nix                     # Flatpak packages
+│   ├── minecraft.nix                   # PrismLauncher config
+│   ├── performance.nix                 # CPU governor, Nix optimization
+│   ├── tools.nix                       # CLI utilities
+│   └── virtualisation.nix              # Docker, Podman, libvirt
 ```
 
 ## Security Hardening

@@ -1,11 +1,5 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, inputs, ... }:
 {
-  # INFO: Home Manager imports
-  imports = [
-    ../modules/dev/dev.nix
-    ../modules/tools.nix
-    # NOTE: browser config is in privacy/privacy.nix
-  ];
 
   home.username = "yusa";
   home.homeDirectory = "/home/yusa";
@@ -154,10 +148,10 @@
       resize-overlay = never
     '';
 
-    # Mullvad browser profile
-    ".local/share/mullvad-browser/profiles.ini".source          = ../modules/privacy/mullvadbrowser/profiles.ini;
-    ".local/share/mullvad-browser/installs.ini".source          = ../modules/privacy/mullvadbrowser/installs.ini;
-    ".local/share/mullvad-browser/ipg7sh9x.default-release-1".source = ../modules/privacy/mullvadbrowser/ipg7sh9x.default-release-1;
+    # Mullvad browser profile (from external atlas-modules repo)
+    ".local/share/mullvad-browser/profiles.ini".source          = "${inputs.atlas-modules}/privacy/mullvadbrowser/profiles.ini";
+    ".local/share/mullvad-browser/installs.ini".source          = "${inputs.atlas-modules}/privacy/mullvadbrowser/installs.ini";
+    ".local/share/mullvad-browser/ipg7sh9x.default-release-1".source = "${inputs.atlas-modules}/privacy/mullvadbrowser/ipg7sh9x.default-release-1";
 
   };
   programs.home-manager.enable = true;

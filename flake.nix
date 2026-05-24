@@ -20,6 +20,9 @@
       url = "github:nix-community/preservation";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    atlas-modules = {
+      url = "github:OhShabuShabu/Atlas-Modules";
+    };
   };
   outputs = inputs @ { self, nixpkgs, home-manager, noctalia, disko, preservation, ... }: {
     formatter.x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.nixpkgs-fmt;
@@ -39,9 +42,12 @@
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
-              users.yusa = { pkgs, ... }: {
+              extraSpecialArgs = { inherit inputs; };
+              users.yusa = { pkgs, inputs, ... }: {
                 imports = [
                   noctalia.homeModules.default
+                  inputs.atlas-modules.homeModules.dev
+                  inputs.atlas-modules.homeModules.tools
                   ./files/core/home.nix
                 ];
               };
@@ -65,9 +71,12 @@
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
-              users.yusa = { pkgs, ... }: {
+              extraSpecialArgs = { inherit inputs; };
+              users.yusa = { pkgs, inputs, ... }: {
                 imports = [
                   noctalia.homeModules.default
+                  inputs.atlas-modules.homeModules.dev
+                  inputs.atlas-modules.homeModules.tools
                   ./files/core/home.nix
                 ];
               };

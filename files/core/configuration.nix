@@ -30,15 +30,13 @@
     # INFO: Snout security monitoring daemon
     ../modules/security/snout.nix
 
-    # INFO: Performance module
-    ../modules/performance.nix
-
-    # INFO: Feature modules
-    ../modules/privacy/privacy.nix
-    ../modules/gaming/gaming.nix
-    ../modules/virtualisation.nix
-    ../modules/minecraft.nix
-    ../modules/flatpak.nix
+    # INFO: Feature modules (from external atlas-modules repo)
+    inputs.atlas-modules.nixosModules.performance
+    inputs.atlas-modules.nixosModules.privacy
+    inputs.atlas-modules.nixosModules.gaming
+    inputs.atlas-modules.nixosModules.virtualisation
+    inputs.atlas-modules.nixosModules.minecraft
+    inputs.atlas-modules.nixosModules.flatpak
   ];
 
 

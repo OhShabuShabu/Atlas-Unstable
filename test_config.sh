@@ -10,7 +10,7 @@
 set -uo pipefail
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
-BASE="/home/yusa/Atlas"; PASS=0; FAIL=0; WARN=0
+BASE="/home/yusa/Atlas"; ATLAS_MODULES="/home/yusa/atlas-modules"; PASS=0; FAIL=0; WARN=0
 
 header() { echo -e "\n${CYAN}════════════════════════════════════════${NC}"; echo -e "${CYAN}  $1${NC}"; echo -e "${CYAN}════════════════════════════════════════${NC}"; }
 pass() { PASS=$((PASS+1)); echo -e "  ${GREEN}✓${NC} $1"; }
@@ -33,6 +33,7 @@ header "1. FLAKE STRUCTURE"
 grep -q 'nixpkgs.*nixos-unstable' "$BASE/flake.nix" && pass "nixpkgs pinned to nixos-unstable" || fail "nixpkgs not pinned to nixos-unstable"
 grep -q 'home-manager.*master' "$BASE/flake.nix" && pass "home-manager pinned to master" || fail "home-manager not pinned to master"
 grep -q 'noctalia' "$BASE/flake.nix" && pass "noctalia flake input present" || fail "noctalia missing from flake inputs"
+grep -q 'atlas-modules' "$BASE/flake.nix" && pass "atlas-modules flake input present" || fail "atlas-modules missing from flake inputs"
 python3 -c "import json; json.load(open('$BASE/flake.lock'))" 2>/dev/null && pass "flake.lock is valid JSON" || fail "flake.lock is not valid JSON"
 
 # ============================================================================
@@ -51,10 +52,6 @@ declare -a REQUIRED_FILES=(
   "files/modules/security/password-policy.nix" "files/modules/security/service-hardening.nix"
   "files/modules/security/telemetry.nix" "files/modules/security/auditd-config.nix"
   "files/modules/security/process-accounting.nix"
-  "files/modules/dev/dev.nix" "files/modules/gaming/gaming.nix"
-  "files/modules/gaming/millennium/config.json" "files/modules/privacy/privacy.nix"
-  "files/modules/flatpak.nix" "files/modules/minecraft.nix" "files/modules/performance.nix"
-  "files/modules/tools.nix" "files/modules/virtualisation.nix"
   "files/config/niri/config.kdl" "files/config/niri/binds.kdl" "files/config/niri/env.kdl"
   "files/config/niri/inputs.kdl" "files/config/niri/layout.kdl" "files/config/niri/outputs.kdl"
   "files/config/niri/startup.kdl" "files/config/niri/window-rules.kdl"
@@ -67,14 +64,14 @@ for f in "${REQUIRED_FILES[@]}"; do
   [ -f "$BASE/$f" ] && pass "$f exists" || fail "$f MISSING"
 done
 [ -d "$BASE/files/config/.icons" ] && pass ".icons directory exists" || warn ".icons directory missing"
-[ -f "$BASE/files/modules/dev/dev.nix" ] && pass "Neovim dev module exists" || fail "Neovim dev module missing"
 
 # ============================================================================
 # 3. NIX SYNTAX
 # ============================================================================
 header "3. NIX SYNTAX"
 NIX_FILES=$(find "$BASE" -name '*.nix' -not -path '*/flake.lock' | sort)
-for nf in $NIX_FILES; do
+ATLAS_MODULES_NIX=$(find "$ATLAS_MODULES" -name '*.nix' -not -path '*/.git/*' -not -path '*/flake.lock' | sort)
+for nf in $NIX_FILES $ATLAS_MODULES_NIX; do
   REL="${nf#$BASE/}"
   nix-instantiate --parse "$nf" 2>/dev/null && pass "$REL parses" || fail "$REL PARSE ERROR"
 done
@@ -208,7 +205,7 @@ for f in clamav snout; do
   mlgrep "$BASE/files/modules/security/$f.nix" 'notifications.nix' && pass "$f: imports notifications" || fail "$f: missing notification library import"
 done
 mlgrep "$BASE/files/modules/security/snort.nix" 'notify-send' && pass "snort: has notify-send" || fail "snort: missing notify-send"
-mlgrep "$BASE/files/modules/privacy/privacy.nix" 'notifications.nix' && pass "privacy.nix: imports notifications" || fail "privacy.nix: missing notification library import"
+mlgrep "$ATLAS_MODULES/privacy/privacy.nix" 'notifications.nix' && pass "privacy.nix: imports notifications" || fail "privacy.nix: missing notification library import"
 
 # ============================================================================
 # 8. NIRI WM CONFIG
@@ -273,27 +270,27 @@ mlgrep "$HM" 'shellrc\.nu' && pass "home.nix sources shellrc.nu" || fail "shellr
 # 12. GAMING CONFIG
 # ============================================================================
 header "12. GAMING"
-GAMING="$BASE/files/modules/gaming/gaming.nix"
+GAMING="$ATLAS_MODULES/gaming/gaming.nix"
 mlgrep "$GAMING" 'steam.*enable\s*=\s*true' && pass "Steam enabled" || fail "Steam not enabled"
 mlgrep "$GAMING" 'mangohud' && pass "MangoHUD for Steam" || fail "MangoHUD not configured"
 mlgrep "$GAMING" 'enable32Bit\s*=\s*true' && pass "32-bit graphics enabled" || fail "32-bit graphics not enabled"
 mlgrep "$HM" 'MANGOHUD' && pass "MANGOHUD env var set" || warn "MANGOHUD env var not set"
-python3 -c "import json; json.load(open('$BASE/files/modules/gaming/millennium/config.json'))" 2>/dev/null && \
+python3 -c "import json; json.load(open('$ATLAS_MODULES/gaming/millennium/config.json'))" 2>/dev/null && \
   pass "Millennium config is valid JSON" || fail "Millennium config is not valid JSON"
-mlgrep "$BASE/files/modules/minecraft.nix" 'prismlauncher' && pass "PrismLauncher configured" || fail "PrismLauncher not configured"
-mlgrep "$BASE/files/modules/minecraft.nix" 'blockbench' && pass "Blockbench configured" || fail "Blockbench not configured"
+mlgrep "$ATLAS_MODULES/minecraft.nix" 'prismlauncher' && pass "PrismLauncher configured" || fail "PrismLauncher not configured"
+mlgrep "$ATLAS_MODULES/minecraft.nix" 'blockbench' && pass "Blockbench configured" || fail "Blockbench not configured"
 
 # ============================================================================
 # 13. PRIVACY CONFIG
 # ============================================================================
 header "13. PRIVACY"
-PRIV="$BASE/files/modules/privacy/privacy.nix"
+PRIV="$ATLAS_MODULES/privacy/privacy.nix"
 mlgrep "$PRIV" 'mullvad-vpn.*enable\s*=\s*true' && pass "Mullvad VPN enabled" || fail "Mullvad VPN not enabled"
 mlgrep "$PRIV" 'mullvad-browser' && pass "Mullvad Browser in packages" || fail "Mullvad Browser not in packages"
 mlgrep "$PRIV" 'metadata-cleaner' && pass "Metadata cleaner service" || fail "Metadata cleaner missing"
 mlgrep "$PRIV" 'metadata-watcher' && pass "Metadata watcher service" || fail "Metadata watcher missing"
-[ -f "$BASE/files/modules/privacy/mullvadbrowser/profiles.ini" ] && pass "Mullvad profiles.ini exists" || warn "Mullvad profiles.ini missing"
-[ -d "$BASE/files/modules/privacy/mullvadbrowser/ipg7sh9x.default-release-1" ] && pass "Mullvad browser profile dir exists" || warn "Mullvad browser profile dir missing"
+[ -f "$ATLAS_MODULES/privacy/mullvadbrowser/profiles.ini" ] && pass "Mullvad profiles.ini exists" || warn "Mullvad profiles.ini missing"
+[ -d "$ATLAS_MODULES/privacy/mullvadbrowser/ipg7sh9x.default-release-1" ] && pass "Mullvad browser profile dir exists" || warn "Mullvad browser profile dir missing"
 mlgrep "$BASE/files/modules/security/network-privacy.nix" 'macAddress.*random' && pass "WiFi MAC randomization enabled" || fail "WiFi MAC randomization not enabled"
 mlgrep "$BASE/files/modules/security/telemetry.nix" 'avahi.*false' && pass "Avahi disabled" || fail "Avahi not disabled"
 mlgrep "$BASE/files/modules/security/telemetry.nix" 'geoclue2.*false' && pass "Geoclue disabled" || fail "Geoclue not disabled"
@@ -302,7 +299,7 @@ mlgrep "$BASE/files/modules/security/telemetry.nix" 'geoclue2.*false' && pass "G
 # 14. VIRTUALIZATION
 # ============================================================================
 header "14. VIRTUALIZATION"
-VIRT="$BASE/files/modules/virtualisation.nix"
+VIRT="$ATLAS_MODULES/virtualisation.nix"
 mlgrep "$VIRT" 'docker.*enable\s*=\s*true' && pass "Docker enabled" || fail "Docker not enabled"
 # NOTE: rootless Docker disabled; falls back to standard Docker daemon
 mlgrep "$VIRT" 'podman.*enable\s*=\s*true' && pass "Podman enabled" || fail "Podman not enabled"
@@ -314,7 +311,7 @@ mlgrep "$VIRT" 'distrobox' && pass "Distrobox configured" || fail "Distrobox not
 # 15. PERFORMANCE
 # ============================================================================
 header "15. PERFORMANCE"
-PERF="$BASE/files/modules/performance.nix"
+PERF="$ATLAS_MODULES/performance.nix"
 mlgrep "$PERF" 'tcp_bbr' && pass "TCP BBR module loaded" || fail "TCP BBR not loaded"
 mlgrep "$PERF" 'cpuFreqGovernor.*performance' && pass "CPU governor = performance" || fail "CPU governor not performance"
 mlgrep "$PERF" 'auto-optimise-store.*true' && pass "Nix auto-optimise store" || fail "Nix auto-optimise not enabled"
@@ -324,7 +321,7 @@ mlgrep "$PERF" 'gc.*automatic\s*=\s*true' && pass "Nix GC automatic" || fail "Ni
 # 16. FLATPAK
 # ============================================================================
 header "16. FLATPAK"
-FLAT="$BASE/files/modules/flatpak.nix"
+FLAT="$ATLAS_MODULES/flatpak.nix"
 mlgrep "$FLAT" 'services\.flatpak.*enable\s*=\s*true' && pass "Flatpak enabled" || fail "Flatpak not enabled"
 mlgrep "$FLAT" 'flathub' && pass "Flathub repository configured" || fail "Flathub not configured"
 for app in Discord Telegram Vesktop bottles Steam; do
@@ -335,11 +332,11 @@ done
 # 17. DEV MODULE
 # ============================================================================
 header "17. DEVELOPMENT"
-DEV="$BASE/files/modules/dev/dev.nix"
+DEV="$ATLAS_MODULES/dev/dev.nix"
 for tool in neovim opencode bun claude-code; do
   mlgrep "$DEV" "$tool" && pass "dev: $tool" || fail "dev: $tool not configured"
 done
-mlgrep "$BASE/files/modules/dev/dev.nix" 'LazyVim' && pass "Neovim LazyVim configured" || fail "Neovim LazyVim not configured"
+mlgrep "$ATLAS_MODULES/dev/dev.nix" 'LazyVim' && pass "Neovim LazyVim configured" || fail "Neovim LazyVim not configured"
 
 # ============================================================================
 # 18. SYSTEM PACKAGES
@@ -363,11 +360,14 @@ header "19. IMPORTS CONSISTENCY"
 for mod in kernel-sysctl kernel-boot process-accounting firewall banner service-hardening telemetry password-policy network-privacy aide clamav auditd-config quarantine; do
   grep -q "./$mod" "$BASE/files/modules/security/default.nix" && pass "security/default.nix imports $mod" || fail "security/default.nix missing import: $mod"
 done
-for mod in hardware-configuration security snort snout performance privacy gaming virtualisation minecraft flatpak; do
+for mod in hardware-configuration security snort snout; do
   mlgrep "$CFG" "$mod" && pass "configuration.nix imports $mod" || warn "configuration.nix import not found: $mod"
 done
+for mod in performance privacy gaming virtualisation minecraft flatpak; do
+  mlgrep "$CFG" "atlas-modules.nixosModules.$mod" && pass "configuration.nix imports atlas-modules:$mod" || warn "configuration.nix missing atlas-modules import: $mod"
+done
 for imp in dev tools; do
-  mlgrep "$HM" "$imp" && pass "home.nix imports $imp" || warn "home.nix import not found: $imp"
+  mlgrep "$BASE/flake.nix" "atlas-modules.homeModules.$imp" && pass "flake.nix imports atlas-modules:$imp" || warn "flake.nix missing atlas-modules import: $imp"
 done
 
 # ============================================================================
@@ -381,7 +381,7 @@ declare -a SERVICES=(
   "polkit-gnome-authentication-agent-1"
 )
 for svc in "${SERVICES[@]}"; do
-  if grep -qr "$svc" "$BASE/files/" --include='*.nix' 2>/dev/null; then
+  if grep -qr "$svc" "$BASE/files/" --include='*.nix' 2>/dev/null || grep -qr "$svc" "$ATLAS_MODULES/" --include='*.nix' 2>/dev/null; then
     pass "Service defined: $svc"
   else
     fail "Service NOT FOUND: $svc"
