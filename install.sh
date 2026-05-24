@@ -330,13 +330,12 @@ if [[ "$AUTO" -eq 0 ]]; then
     elif [[ "$PW1" != "$PW2" ]]; then
       echo -e "  ${YELLOW}Passwords do not match.${NC}"
     else
-      USER_PASSWORD="$PW1"
       break
     fi
   done
-  echo "$USER_PASSWORD" | chroot "$TARGET" passwd yusa 2>/dev/null || \
+  printf "%s\n%s\n" "$PW1" "$PW1" | chroot "$TARGET" passwd yusa && \
+    ok "Password set for user yusa" || \
     echo -e "  ${YELLOW}passwd command failed — password will be 'atlas' (default)${NC}"
-  ok "Password set for user yusa"
 else
   info "Auto-mode — using default password: atlas"
 fi
