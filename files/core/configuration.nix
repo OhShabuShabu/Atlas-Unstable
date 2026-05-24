@@ -569,10 +569,11 @@
         cp -r $src/themes/nier-automata/* $out/share/sddm/themes/nier-automata/
       '';
     })
-    qt6.qt6declarative
-    qt6.qt6svg
-    qt6.qt6multimedia
-    qt6.qt6multimedia-ffmpeg
+    qt6.qtdeclarative
+    qt6.qtsvg
+    qt6.qtmultimedia
+    gst_all_1.gst-plugins-base
+    gst_all_1.gst-plugins-good
 
     # System trash manager
     trashy
