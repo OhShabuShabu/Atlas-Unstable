@@ -317,6 +317,30 @@ cp -r "$ROOTDIR" "$TARGET/home/yusa/atlas"
 chown -R 1000:100 "$TARGET/home/yusa/atlas" 2>/dev/null || true
 ok "Config copied to /home/yusa/atlas"
 
+if [[ "$AUTO" -eq 0 ]]; then
+  spacer
+  echo -e "  ${BOLD}Set a password for user 'yusa':${NC}"
+  while :; do
+    read -rsp "  ${CYAN}Password:${NC} " PW1
+    echo
+    read -rsp "  ${CYAN}Confirm:${NC} " PW2
+    echo
+    if [[ -z "$PW1" ]]; then
+      echo -e "  ${YELLOW}Password cannot be empty.${NC}"
+    elif [[ "$PW1" != "$PW2" ]]; then
+      echo -e "  ${YELLOW}Passwords do not match.${NC}"
+    else
+      USER_PASSWORD="$PW1"
+      break
+    fi
+  done
+  echo "$USER_PASSWORD" | chroot "$TARGET" passwd yusa 2>/dev/null || \
+    echo -e "  ${YELLOW}passwd command failed — password will be 'atlas' (default)${NC}"
+  ok "Password set for user yusa"
+else
+  info "Auto-mode — using default password: atlas"
+fi
+
 # ═══════════════════════════════════════════════════════════════════════════
 # STEP 8: Optional Modules (multi-select)
 # ═══════════════════════════════════════════════════════════════════════════
@@ -430,13 +454,10 @@ spacer
 echo -e "  ${BOLD}Next steps:${NC}"
 echo -e "    1. ${CYAN}Reboot${NC} and remove the install media"
 echo -e "    2. Boot into your new system"
-echo -e "    3. Log in with ${YELLOW}username: yusa${NC} / ${YELLOW}password: atlas${NC}"
-if [[ ${#SELECTED_MODULES[@]} -gt 0 ]]; then
-  echo -e "    4. After login, apply the full configuration:"
-  echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/atlas#atlas${NC}"
-else
-  echo -e "    4. After login, apply the full configuration:"
-  echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/atlas#atlas${NC}"
+echo -e "    3. Log in with ${YELLOW}username: yusa${NC}"
+echo -e "    4. After login, apply the full configuration:"
+echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/atlas#atlas${NC}"
+if [[ ${#SELECTED_MODULES[@]} -eq 0 ]]; then
   echo -e "    5. To add optional modules later:"
   echo -e "       ${DIM}git clone --depth=1 https://github.com/OhShabuShabu/Atlas-Modules /home/yusa/atlas-modules${NC}"
   echo -e "       Then change flake.nix to use local path or rebuild with GitHub URL"
