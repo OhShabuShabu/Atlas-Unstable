@@ -86,7 +86,7 @@
 
     # Kernel parameters
     kernelParams = [
-      "video=1920x1080"
+      "video=1920x1080@60"
 
       # Boot options
       "quiet"
