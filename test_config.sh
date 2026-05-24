@@ -50,7 +50,7 @@ declare -a REQUIRED_FILES=(
   "files/modules/security/banner.nix" "files/modules/security/network-privacy.nix"
   "files/modules/security/password-policy.nix" "files/modules/security/service-hardening.nix"
   "files/modules/security/telemetry.nix" "files/modules/security/auditd-config.nix"
-  "files/modules/security/process-accounting.nix" "files/modules/security/strong-keyring.nix"
+  "files/modules/security/process-accounting.nix"
   "files/modules/dev/dev.nix" "files/modules/gaming/gaming.nix"
   "files/modules/gaming/millennium/config.json" "files/modules/privacy/privacy.nix"
   "files/modules/flatpak.nix" "files/modules/minecraft.nix" "files/modules/performance.nix"
@@ -181,16 +181,16 @@ mlgrep "$AIDE" 'aide-check' && pass "AIDE check service" || fail "AIDE check ser
 mlgrep "$AIDE" 'OnCalendar.*15:00:00' && pass "Daily AIDE check at 3pm" || fail "AIDE timer not set"
 
 SNOUT="$BASE/files/modules/security/snout.nix"
-mlgrep "$SNOUT" 'systemd\.services\.snout-daemon' && pass "Snout daemon service" || fail "Snout daemon service missing"
-mlgrep "$SNOUT" 'notify-send' && pass "Snout uses notify-send" || fail "Snout missing notify-send"
-mlgrep "$SNOUT" 'inotifywait' && pass "Snout uses inotify" || fail "Snout missing inotify"
+mlgrep "$SNOUT" 'systemd\.paths\.snout-watcher' && pass "Snout watcher path unit" || fail "Snout watcher path unit missing"
+mlgrep "$SNOUT" 'notify-user' && pass "Snout uses notify-user" || fail "Snout missing notify-user"
+mlgrep "$SNOUT" 'clamscan' && pass "Snout uses clamscan" || fail "Snout missing clamscan"
 mlgrep "$SNOUT" 'NoNewPrivileges\s*=\s*true' && pass "Snout: NoNewPrivileges" || fail "Snout: NoNewPrivileges missing"
 
 QUAR="$BASE/files/modules/security/quarantine.nix"
 mlgrep "$QUAR" '/etc/quarantine' && pass "Quarantine directory configured" || fail "Quarantine not configured"
 
 # Misc modules exist
-for mod in strong-keyring password-policy auditd-config process-accounting telemetry banner network-privacy service-hardening; do
+for mod in password-policy auditd-config process-accounting telemetry banner network-privacy service-hardening; do
   [ -f "$BASE/files/modules/security/$mod.nix" ] && pass "security/$mod.nix exists" || fail "security/$mod.nix MISSING"
 done
 
@@ -202,11 +202,13 @@ grep -q 'YESCRYPT' "$BASE/files/modules/security/password-policy.nix" && pass "Y
 # ============================================================================
 header "7. NOTIFICATION SYSTEM"
 mlgrep "$HM" 'libnotify' && pass "libnotify in home packages" || fail "libnotify missing from home packages"
-for f in clamav snout snort; do
-  mlgrep "$BASE/files/modules/security/$f.nix" 'notify-send' && pass "$f: notify-send" || fail "$f: notify-send missing"
-  mlgrep "$BASE/files/modules/security/$f.nix" 'DBUS_SESSION_BUS_ADDRESS' && pass "$f: DBUS pattern" || fail "$f: missing DBUS pattern"
+mlgrep "$BASE/files/lib/notifications.nix" 'notify-send' && pass "notifications library: notify-send" || fail "notifications library missing notify-send"
+mlgrep "$BASE/files/lib/notifications.nix" 'DBUS_SESSION_BUS_ADDRESS' && pass "notifications library: DBUS pattern" || fail "notifications library missing DBUS pattern"
+for f in clamav snout; do
+  mlgrep "$BASE/files/modules/security/$f.nix" 'notifications.nix' && pass "$f: imports notifications" || fail "$f: missing notification library import"
 done
-mlgrep "$BASE/files/modules/privacy/privacy.nix" 'notify-send' && pass "privacy.nix: notify-send" || fail "privacy.nix: notify-send missing"
+mlgrep "$BASE/files/modules/security/snort.nix" 'notify-send' && pass "snort: has notify-send" || fail "snort: missing notify-send"
+mlgrep "$BASE/files/modules/privacy/privacy.nix" 'notifications.nix' && pass "privacy.nix: imports notifications" || fail "privacy.nix: missing notification library import"
 
 # ============================================================================
 # 8. NIRI WM CONFIG
@@ -358,7 +360,7 @@ grep -q 'snort' "$BASE/files/modules/security/snort.nix" && pass "security packa
 # 19. IMPORTS CONSISTENCY
 # ============================================================================
 header "19. IMPORTS CONSISTENCY"
-for mod in kernel-sysctl kernel-boot process-accounting firewall banner service-hardening telemetry password-policy network-privacy aide clamav strong-keyring auditd-config quarantine; do
+for mod in kernel-sysctl kernel-boot process-accounting firewall banner service-hardening telemetry password-policy network-privacy aide clamav auditd-config quarantine; do
   grep -q "./$mod" "$BASE/files/modules/security/default.nix" && pass "security/default.nix imports $mod" || fail "security/default.nix missing import: $mod"
 done
 for mod in hardware-configuration security snort snout performance privacy gaming virtualisation minecraft flatpak; do
@@ -373,7 +375,7 @@ done
 # ============================================================================
 header "20. SYSTEMD SERVICES"
 declare -a SERVICES=(
-  "snout-daemon" "snort-daemon" "snort-monitor" "clamav-daily-scan" "clamav-daemon"
+  "snout-watcher.path" "snout-watcher.service" "snort-daemon" "snort-monitor" "clamav-daily-scan" "clamav-daemon"
   "aide-init" "aide-check" "quarantine-setup" "quarantine-sanitizer" "metadata-cleaner"
   "metadata-watcher" "setup-mullvad-dirs" "flatpak-repo"
   "polkit-gnome-authentication-agent-1"
@@ -397,7 +399,7 @@ grep -q 'snout-scan' "$NUSHELL" && pass "Alias: snout-scan" || fail "Alias: snou
 grep -q 'snortctl' "$NUSHELL" && pass "Alias: snortctl" || fail "Alias: snortctl missing"
 grep -q 'audit-tail' "$BASE/files/modules/security/auditd-config.nix" && pass "Alias: audit-tail" || fail "Alias: audit-tail missing"
 grep -q 'pa-report' "$BASE/files/modules/security/process-accounting.nix" && pass "Alias: pa-report" || fail "Alias: pa-report missing"
-grep -q 'pkcs11-list' "$BASE/files/modules/security/strong-keyring.nix" && pass "Alias: pkcs11-list" || fail "Alias: pkcs11-list missing"
+
 
 # ============================================================================
 # 22. APP LAUNCHER
@@ -424,9 +426,9 @@ mlgrep "$BASE/files/modules/security/service-hardening.nix" 'Service Hardening G
 # 24. CROSS-REFERENCE CONSISTENCY
 # ============================================================================
 header "24. CROSS-REFERENCE CONSISTENCY"
-mlgrep "$SNOUT" 'after.*clamav-daemon' && pass "Snout depends on ClamAV" || fail "Snout not dependent on ClamAV"
+mlgrep "$SNOUT" 'clamscan' && pass "Snout scans with ClamAV" || fail "Snout missing ClamAV scan"
 mlgrep "$BASE/files/modules/security/snort.nix" 'after.*snort-daemon' && pass "Snort monitor depends on snort-daemon" || fail "Snort monitor dependency missing"
-mlgrep "$QUAR" 'before.*snout-daemon' && pass "Quarantine setup before Snout" || fail "Quarantine dependency missing"
+mlgrep "$QUAR" 'before.*quarantine-sanitizer' && pass "Quarantine setup before sanitizer" || fail "Quarantine dependency missing"
 mlgrep "$CFG" 'docker' && pass "User in docker group" || fail "User not in docker group"
 mlgrep "$VIRT" 'libvirtd' && pass "User in libvirtd group" || fail "User not in libvirtd group"
 mlgrep "$CFG" 'alsa\.support32Bit\s*=\s*true' && pass "ALSA 32-bit enabled" || fail "ALSA 32-bit not enabled"

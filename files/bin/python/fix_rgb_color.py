@@ -16,7 +16,7 @@ def fix_color(hex_color):
     if 0 < s < 1.0 and v > 0.2:
         s = 1.0
     
-    r, g, b = colorsys.hsv_to_rgb(h, s, v,)
+    r, g, b = colorsys.hsv_to_rgb(h, s, v)
     
     r = min(255, int(r * 255))
     g = min(255, int(g * 255))

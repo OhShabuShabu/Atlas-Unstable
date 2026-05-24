@@ -32,12 +32,5 @@
     dates = "weekly";
   };
 
-  # INFO: ============================================================================
-  # SECTION 4: BOOT PERFORMANCE
-  # ============================================================================
-  boot = {
-    kernelParams = [ "quiet" "loglevel=3" ];
-    initrd.verbose = false;
-    consoleLogLevel = 0;
-  };
+
 }

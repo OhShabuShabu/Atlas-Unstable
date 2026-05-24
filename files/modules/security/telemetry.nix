@@ -5,8 +5,6 @@
     # ============================================================================
     # INFO: Disable services that may leak privacy data
     services = {
-        # WARN: dbus-broker can break Noctalia/Niri desktop shell compatibility
-        # dbus.implementation = "broker";
         logrotate.enable = true;
         journald = {
             # Store logs in memory (prevents disk-based forensics)

@@ -1,4 +1,4 @@
-{ pkgs, lib, ... }:
+{ pkgs, ... }:
 
 let
   notifications = import ../../lib/notifications.nix { inherit pkgs; };
@@ -20,17 +20,18 @@ let
         echo "AIDE:"
         [ -f /var/lib/aide/aide.db.gz ] && echo "  Database: present" || echo "  Database: not initialized"
         echo "Snout daemon:"
-        systemctl is-active --quiet snout-daemon 2>/dev/null && echo "  Running" || echo "  Stopped"
+        systemctl is-active --quiet snout-watcher.path 2>/dev/null && echo "  Running" || echo "  Stopped"
         echo "Recent events:"
         if [ -f /var/log/snout/events.log ]; then
           ${pkgs.coreutils}/bin/tail -10 /var/log/snout/events.log 2>/dev/null || true
         fi
         ;;
       status)
-        systemctl status snout-daemon 2>/dev/null || echo "snout-daemon not running"
+        systemctl status snout-watcher.path 2>/dev/null || echo "snout-watcher not running"
+        systemctl status snout-watcher.service 2>/dev/null || true
         ;;
       logs)
-        journalctl -fu snout-daemon
+        tail -f /var/log/snout/events.log 2>/dev/null || echo "No events log yet"
         ;;
       *)
         echo "Usage: snout <scan|status|logs>"
@@ -38,69 +39,55 @@ let
         ;;
     esac
   '';
-
-  snoutDaemon = pkgs.writeShellScriptBin "snout-daemon" ''
-    set -e
-    LOG_DIR="/var/log/snout"
-    EVENTS_LOG="$LOG_DIR/events.log"
-    mkdir -p "$LOG_DIR"
-
-    log_event() {
-      echo "[$(date '+%Y-%m-%d %H:%M:%S')] [''${1:-INFO}] ''${2:-}" >> "$EVENTS_LOG"
-    }
-
-    notify_user() {
-      ${notifyScript}/bin/notify-user "$@" 2>/dev/null || true
-    }
-
-    log_event "INFO" "Snout daemon starting"
-
-    if command -v ${pkgs.inotify-tools}/bin/inotifywait &>/dev/null; then
-      log_event "INFO" "Watching /etc/quarantine for new files"
-      while true; do
-        event=$(${pkgs.inotify-tools}/bin/inotifywait -q -e create,moved_to --format '%w%f' /etc/quarantine 2>/dev/null) || break
-        log_event "ALERT" "File quarantined: $event"
-        notify_user "critical" "Quarantine" "New file: $(basename "$event")"
-        result=$(${pkgs.clamav}/bin/clamscan --quiet "$event" 2>/dev/null || echo "FOUND")
-        if echo "$result" | grep -q "FOUND"; then
-          log_event "THREAT" "Threat in: $event"
-          notify_user "critical" "Snout Security" "Threat in quarantine: $(basename "$event")"
-        else
-          log_event "INFO" "Clean: $event"
-        fi
-      done
-    else
-      log_event "WARN" "inotify not available, polling every 60s"
-      while true; do
-        before=$(ls -la /etc/quarantine 2>/dev/null | md5sum)
-        sleep 60
-        after=$(ls -la /etc/quarantine 2>/dev/null | md5sum)
-        if [ "$before" != "$after" ]; then
-          log_event "ALERT" "Quarantine modified"
-          notify_user "critical" "Quarantine" "Changes in /etc/quarantine"
-        fi
-      done
-    fi
-  '';
 in
 
 {
-  environment.systemPackages = [ snoutBin snoutDaemon ];
+  environment.systemPackages = [ snoutBin ];
 
   systemd.tmpfiles.rules = [
     "d /var/log/snout 0750 root root -"
   ];
 
-  systemd.services.snout-daemon = {
-    description = "Snout Security Monitoring Daemon";
-    after = [ "network.target" "clamav-daemon.service" ];
-    wants = [ "clamav-daemon.service" ];
+  systemd.paths.snout-watcher = {
     wantedBy = [ "multi-user.target" ];
+    pathConfig = {
+      PathModified = [ "/etc/quarantine" ];
+      Unit = "snout-watcher.service";
+    };
+  };
+
+  systemd.services.snout-watcher = {
     serviceConfig = {
-      Type = "simple";
-      ExecStart = "${snoutDaemon}/bin/snout-daemon";
-      Restart = "on-failure";
-      RestartSec = 5;
+      Type = "oneshot";
+      ExecStart = pkgs.writeShellScript "snout-watcher.sh" ''
+        set -e
+        LOG_DIR="/var/log/snout"
+        EVENTS_LOG="$LOG_DIR/events.log"
+        mkdir -p "$LOG_DIR"
+
+        log_event() {
+          echo "[$(date '+%Y-%m-%d %H:%M:%S')] [''${1:-INFO}] ''${2:-}" >> "$EVENTS_LOG"
+        }
+
+        NOTIFY="${notifyScript}/bin/notify-user"
+        QUARANTINE="/etc/quarantine"
+
+        for file in "$QUARANTINE"/*; do
+          [ -f "$file" ] || continue
+          [ "$(basename "$file")" = "README.txt" ] && continue
+
+          log_event "ALERT" "File quarantined: $file"
+          "$NOTIFY" critical "Quarantine" "New file: $(basename "$file")"
+
+          result=$(${pkgs.clamav}/bin/clamscan --quiet "$file" 2>/dev/null || echo "FOUND")
+          if echo "$result" | grep -q "FOUND"; then
+            log_event "THREAT" "Threat in: $file"
+            "$NOTIFY" critical "Snout Security" "Threat: $(basename "$file")"
+          else
+            log_event "INFO" "Clean: $file"
+          fi
+        done
+      '';
       User = "root";
       NoNewPrivileges = true;
       ProtectSystem = "full";

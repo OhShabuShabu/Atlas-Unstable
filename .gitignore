@@ -15,6 +15,9 @@ result-*
 .DS_Store
 Thumbs.db
 
+# VM disk images
+*.qcow2
+
 # Secrets
 *.age
 

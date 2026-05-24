@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ pkgs, ... }:
 
 let
   username = "yusa";
@@ -68,41 +68,46 @@ in
     };
   };
 
-  systemd.services.metadata-watcher = {
-    description = "Real-time metadata cleaner for new media files";
-    after = [ "network.target" ];
+  systemd.paths.metadata-watcher = {
     wantedBy = [ "multi-user.target" ];
+    pathConfig = {
+      PathModified = [
+        "/home/yusa/Pictures"
+        "/home/yusa/Downloads"
+        "/home/yusa/Videos"
+        "/home/yusa/Documents"
+        "/home/yusa/Desktop"
+      ];
+      Unit = "metadata-watcher.service";
+    };
+  };
+
+  systemd.services.metadata-watcher = {
+    after = [ "network.target" ];
     serviceConfig = {
-      Type = "simple";
+      Type = "oneshot";
       ExecStart = pkgs.writeShellScript "metadata-watcher.sh" ''
         set -e
         NOTIFY="${notifyUser}/bin/notify-user"
         EXIF="${pkgs.exiftool}/bin/exiftool"
-        INOTIFY="${pkgs.inotify-tools}/bin/inotifywait"
 
-        dirs="$userHome/Pictures $userHome/Downloads $userHome/Videos $userHome/Documents $userHome/Desktop"
-        existing=""
-        for d in $dirs; do
-          [ -d "$d" ] && existing="$existing $d"
+        CLEANED=0
+        for dir in /home/yusa/Pictures /home/yusa/Downloads /home/yusa/Videos /home/yusa/Documents /home/yusa/Desktop; do
+          [ -d "$dir" ] || continue
+          count=$($EXIF -overwrite_original -all= -gps:all= -makernotes:all= \
+            -Thumbnail-Image= -XMP-iptcCore:all= -Software= -Artist= \
+            -Copyright= -SerialNumber= -CameraSerialNumber= -OwnerName= \
+            -r -ext jpg -ext jpeg -ext png -ext gif -ext tiff -ext webp \
+            -ext mp4 -ext mov -ext avi -ext mkv \
+            -m -mmin -5 \
+            "$dir" 2>/dev/null | grep -c "image files updated" || echo 0)
+          CLEANED=$((CLEANED + count))
         done
 
-        while true; do
-          file=$($INOTIFY -q -e close_write --format '%w%f' $existing 2>/dev/null) || break
-          ext=$(echo "$file" | sed 's/.*\.//' | tr '[:upper:]' '[:lower:]')
-          case "$ext" in
-            jpg|jpeg|png|gif|tiff|webp|mp4|mov|avi|mkv|webm|m4v)
-              sleep 0.3
-              $EXIF -overwrite_original -all= -gps:all= -makernotes:all= \
-                -Thumbnail-Image= -Software= -Artist= -Copyright= \
-                -SerialNumber= -CameraSerialNumber= -OwnerName= \
-                "$file" 2>/dev/null && \
-                "$NOTIFY" low "Metadata Cleaner" "Cleaned: $(basename "$file")"
-              ;;
-          esac
-        done
+        if [ "$CLEANED" -gt 0 ]; then
+          "$NOTIFY" normal "Metadata Cleaner" "Cleaned metadata from $CLEANED files"
+        fi
       '';
-      Restart = "on-failure";
-      RestartSec = 5;
     };
   };
 

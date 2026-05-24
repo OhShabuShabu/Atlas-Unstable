@@ -46,7 +46,6 @@ in
   # NOTE: Runs if database doesn't exist - auto-initializes at boot
   systemd.services."aide-init" = {
     description = "Initialize AIDE database";
-    after = [ "network.target" ];
     before = [ "aide-check.timer" ];
     wantedBy = [ "multi-user.target" ];  # FIX: Enable at boot
     serviceConfig = {
@@ -61,7 +60,7 @@ in
         # INFO: Only initialize if database doesn't exist
         if [ ! -f "$AIDE_DB" ]; then
           echo "Initializing AIDE database..."
-          /run/current-system/sw/bin/aide --init
+          ${pkgs.aide}/bin/aide --init
           
           if [ -f "/var/lib/aide/aide.db.new.gz" ]; then
             cp /var/lib/aide/aide.db.new.gz "$AIDE_DB"
@@ -78,7 +77,6 @@ in
   # INFO: Runs AIDE check daily at 3pm via timer - not at boot
   systemd.services."aide-check" = {
     description = "AIDE file integrity check";
-    after = [ "network.target" ];
     wantedBy = [ ];  # Only runs via timer, not at boot
     serviceConfig = {
       Type = "oneshot";
@@ -93,7 +91,7 @@ in
         # INFO: Only run check if database exists
         if [ -f "$AIDE_DB" ]; then
           echo "Running AIDE integrity check at $(date)" > "$LOG_FILE"
-          /run/current-system/sw/bin/aide --check >> "$LOG_FILE" 2>&1
+          ${pkgs.aide}/bin/aide --check >> "$LOG_FILE" 2>&1
           
           if [ $? -eq 0 ]; then
             echo "No changes detected" >> "$LOG_FILE"

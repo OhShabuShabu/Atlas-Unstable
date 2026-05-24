@@ -46,8 +46,20 @@
     # Enable systemd initrd (required for LUKS)
     initrd.systemd.enable = true;
 
-    # Load AMD GPU driver in initrd so Plymouth uses KMS at native resolution
-    initrd.kernelModules = [ "amdgpu" ];
+    # Load GPU drivers in initrd so Plymouth uses KMS at native resolution during LUKS prompt
+    # List covers AMD, Intel, and NVIDIA — only the matching driver loads per hardware
+    initrd.kernelModules = [
+      "amdgpu"  # AMD/ATI Radeon (GCN 5+ / Navi)
+      "i915"    # Intel integrated (Sandy Bridge+)
+      "nouveau" # NVIDIA (open-source KMS driver)
+    ];
+
+    # Ensure Plymouth waits for udev to settle before showing the splash
+    # This gives the GPU driver time to load firmware and set up KMS
+    initrd.systemd.services."plymouth-start" = {
+      after = [ "systemd-udev-settle.service" ];
+      wants = [ "systemd-udev-settle.service" ];
+    };
 
     # LUKS devices and fileSystems are provided by either:
     #   - current-system.nix (for `nixos-rebuild switch --flake .#atlas`)
@@ -71,33 +83,9 @@
         })
       ];
     };
-
-    # Silent boot - reduce console noise
-    consoleLogLevel = 0;
-    initrd.verbose = false;
-
-    # Kernel parameters
-    kernelParams = [
-      "video=1920x1080@60e"
-
-      # Boot options
-      "quiet"
-      "splash"
-      "boot.shell_on_fail"
-      "loglevel=3"
-
-      # Systemd early boot config
-      "rd.systemd.show_status=false"
-      "rd.udev.log_level=3"
-      "udev.log_priority=3"
-
-      # CPU performance tuning
-      "intel_pstate=active"
-      "tsc=reliable"
-    ];
   };
 
-  # Include AMD GPU firmware in initrd so amdgpu can do proper modesetting
+  # Include all redistributable GPU firmware in initrd so any GPU driver can do KMS
   hardware.enableRedistributableFirmware = true;
 
   # ============================================================================
@@ -114,7 +102,8 @@
   networking.useDHCP = false;
   networking.dhcpcd.enable = false;
 
-  # Custom nameservers (Cloudflare + Google)
+  # Custom nameservers (fallback when systemd-resolved is unavailable)
+  # Primary DNS set in services.resolved below
   networking.nameservers = [
     "1.1.1.1"
     "1.0.0.1"
@@ -172,14 +161,9 @@
   # SECTION 6: USER CONFIGURATION
   # ============================================================================
   # Main user account
-  users.users.root = {
-    initialPassword = "root";
-  };
-
   users.users.yusa = {
     isNormalUser = true;
     description = "yusa";
-    initialPassword = "atlas";
     extraGroups = [
       "networkmanager"
       "wheel"
@@ -505,6 +489,7 @@
           {
             matches = [
               {
+                # NOTE: PCI address is hardware-specific. Run `wpctl status` to find yours.
                 "device.name" = "~alsa_card.pci-0000_00_1f.3";
               }
             ];
@@ -603,7 +588,7 @@
   ];
 
   # ============================================================================
-  # SECTION 19: ADDITIONAL HARDENING
+  # SECTION 20: ADDITIONAL HARDENING (formerly 19)
   # ============================================================================
   # FIX: Restrict /home permissions for better security
   #      Prevents other users from accessing user data
@@ -611,14 +596,14 @@
 
 
   # ============================================================================
-  # SECTION 19: GVFS (Virtual Filesystem)
+  # SECTION 21: GVFS (Virtual Filesystem)
   # ============================================================================
   # GVFS — provides trash:// URI, MTP device mounting, and other virtual filesystem features
   services.gvfs.enable = true;
 
 
   # ============================================================================
-  # SECTION 20: FONTS
+  # SECTION 22: FONTS
   # ============================================================================
   # Font configuration
   fonts.packages = with pkgs; [
@@ -645,7 +630,7 @@
 
 
   # ============================================================================
-  # SECTION 21: SYSTEM VERSION
+  # SECTION 23: SYSTEM VERSION
   # ============================================================================
   # NixOS state version
   system.stateVersion = "25.11";

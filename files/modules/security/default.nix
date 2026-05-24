@@ -21,7 +21,6 @@
     ./network-privacy.nix
     ./aide.nix
     ./clamav.nix
-    ./strong-keyring.nix
     ./auditd-config.nix
     ./quarantine.nix
   ];

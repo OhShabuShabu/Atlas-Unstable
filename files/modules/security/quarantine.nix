@@ -1,4 +1,4 @@
-{ pkgs, lib, ... }:
+{ pkgs, ... }:
 
 let
   quarantineDir = "/etc/quarantine";
@@ -44,39 +44,25 @@ in
     };
   };
 
-  systemd.services.quarantine-sanitizer = {
-    description = "Sanitize quarantined files to 0000 permissions";
-    after = [ "quarantine-setup.service" ];
-    wants = [ "quarantine-setup.service" ];
+  systemd.paths.quarantine-sanitizer = {
     wantedBy = [ "multi-user.target" ];
+    pathConfig = {
+      PathModified = [ "${quarantineDir}" ];
+      Unit = "quarantine-sanitizer.service";
+    };
+  };
+
+  systemd.services.quarantine-sanitizer = {
+    after = [ "quarantine-setup.service" ];
+    before = [ "quarantine-sanitizer.path" ];
     serviceConfig = {
-      Type = "simple";
+      Type = "oneshot";
       ExecStart = pkgs.writeShellScript "quarantine-sanitizer.sh" ''
         set -e
         QUARANTINE="${quarantineDir}"
-
-        sanitize() {
-          find "$QUARANTINE" -type f ! -name "README.txt" -exec chmod 0000 {} \; 2>/dev/null || true
-          find "$QUARANTINE" -type f ! -name "README.txt" -exec chown root:root {} \; 2>/dev/null || true
-        }
-
-        sanitize
-
-        if command -v ${pkgs.inotify-tools}/bin/inotifywait &>/dev/null; then
-          while true; do
-            ${pkgs.inotify-tools}/bin/inotifywait -q -e create,moved_to \
-              --format '%w%f' "$QUARANTINE" 2>/dev/null || break
-            sanitize
-          done
-        else
-          while true; do
-            sanitize
-            sleep 10
-          done
-        fi
+        find "$QUARANTINE" -type f ! -name "README.txt" -exec chmod 0000 {} \; 2>/dev/null || true
+        find "$QUARANTINE" -type f ! -name "README.txt" -exec chown root:root {} \; 2>/dev/null || true
       '';
-      Restart = "on-failure";
-      RestartSec = 5;
       PrivateNetwork = true;
       PrivateTmp = true;
       PrivateDevices = true;

@@ -12,6 +12,22 @@ let
   # INFO: Kernel boot parameters for security
   # NOTE: Enhanced with latest hardened profile recommendations
   bootParams = [
+    # Boot experience
+    "quiet"
+    "splash"
+    "boot.shell_on_fail"
+    "loglevel=3"
+
+    # Systemd early boot config
+    "rd.systemd.show_status=false"
+    "rd.udev.log_level=3"
+    "udev.log_priority=3"
+
+    # CPU performance tuning
+    "intel_pstate=active"
+    "tsc=reliable"
+
+    # Security hardening
     "slab_nomerge"                       # INFO: Disable slab merging
     "init_on_alloc=1"                   # INFO: Zero memory on alloc
     "init_on_free=1"                    # INFO: Zero memory on free
@@ -81,6 +97,10 @@ in
 {
   # INFO: Apply kernel boot parameters
   boot.kernelParams = bootParams;
+
+  # Silent boot - reduce console noise
+  boot.consoleLogLevel = 0;
+  boot.initrd.verbose = false;
 
   # INFO: Apply module blocking config
   boot.extraModprobeConfig = blockedModules;
