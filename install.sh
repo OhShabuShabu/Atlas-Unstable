@@ -339,17 +339,35 @@ MODULE_DESC[7]="dev        — Neovim, VSCodium, bun, opencode"
 MODULE_DESC[8]="tools      — yt-dlp, mpv"
 
 if [[ "$AUTO" -eq 0 ]]; then
+  TOGGLED=(0 0 0 0 0 0 0 0 0)
+
   echo -e "  ${BOLD}Select optional modules to install:${NC}"
-  echo -e "  ${DIM}(space-separated numbers, e.g. 1 3 4, or 0 for none)${NC}"
+  echo -e "  ${DIM}(type a number to toggle it on/off, press Enter when done)${NC}"
   spacer
-  for i in 1 2 3 4 5 6 7 8; do
-    echo -e "    ${CYAN}$i${NC}) ${MODULE_DESC[$i]}"
+
+  while :; do
+    for i in 1 2 3 4 5 6 7 8; do
+      MARK="${TOGGLED[$i]:-0}"
+      if [[ "$MARK" -eq 1 ]]; then
+        echo -e "    ${GREEN}[x]${NC} ${CYAN}$i${NC}) ${MODULE_DESC[$i]}"
+      else
+        echo -e "    ${DIM}[ ]${NC} ${CYAN}$i${NC}) ${MODULE_DESC[$i]}"
+      fi
+    done
+    spacer
+    read -rp "$(echo -e ${CYAN}"  Toggle number (or Enter to confirm): "${NC})" ANS
+    if [[ -z "$ANS" ]]; then
+      break
+    elif [[ "$ANS" =~ ^[0-8]$ ]]; then
+      TOGGLED[$ANS]=$((1 - ${TOGGLED[$ANS]:-0}))
+    fi
+    # Move cursor up past the list + spacer to redraw
+    echo -en "\033[10A"
   done
-  spacer
-  read -rp "$(echo -e ${CYAN}"  Enter selection: "${NC})" -a SEL
-  for s in "${SEL[@]}"; do
-    if [[ "$s" =~ ^[0-8]$ ]]; then
-      SELECTED_MODULES+=("$s")
+
+  for i in 1 2 3 4 5 6 7 8; do
+    if [[ "${TOGGLED[$i]:-0}" -eq 1 ]]; then
+      SELECTED_MODULES+=("$i")
     fi
   done
 else
