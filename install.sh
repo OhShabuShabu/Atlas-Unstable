@@ -282,6 +282,34 @@ mount -t btrfs -o subvol=var,noatime /dev/mapper/crypt "$TARGET/var"
 mount "$BOOT_PART" "$TARGET/boot"
 ok "Subvolumes mounted"
 
+# ─── Password Prompt & Injection ──────────────────────────────────────────────
+if [[ "$AUTO" -eq 0 ]]; then
+  spacer
+  echo -e "  ${BOLD}Set a password for user 'yusa':${NC}"
+  while :; do
+    read -r -s -p "  ${CYAN}Password:${NC} " PW1
+    echo
+    read -r -s -p "  ${CYAN}Confirm:${NC}  " PW2
+    echo
+    if [[ -z "$PW1" ]]; then
+      echo -e "  ${YELLOW}Password cannot be empty.${NC}"
+    elif [[ "$PW1" != "$PW2" ]]; then
+      echo -e "  ${YELLOW}Passwords do not match.${NC}"
+    else
+      break
+    fi
+  done
+  PW="${PW1}"
+else
+  PW="atlas"
+fi
+
+info "Injecting password hash into Nix config..."
+HASH=$(openssl passwd -6 "$PW")
+sed -i '/description = "yusa";/a\    initialHashedPassword = "'"${HASH//\$/\\$}"'";' \
+  "$ROOTDIR/files/core/configuration.nix"
+ok "Password hash injected"
+
 info "Running nixos-install (this will take 5-30 minutes)..."
 export DISKO_DEVICE="$DISK"
 echo "$LUKS_UUID" > "$ROOTDIR/.luk-uuid"
@@ -300,6 +328,9 @@ nixos-install --flake "$ROOTDIR#atlas-installer" \
   --option substituters "$SUBSTITUTERS"
 ok "NixOS base system installed"
 
+sed -i '/initialHashedPassword/d' "$ROOTDIR/files/core/configuration.nix" || true
+ok "Password hash cleaned from source config"
+
 # ═══════════════════════════════════════════════════════════════════════════
 # STEP 7: Copy Configuration to Installed System
 # ═══════════════════════════════════════════════════════════════════════════
@@ -316,29 +347,6 @@ mkdir -p "$TARGET/home/yusa"
 cp -r "$ROOTDIR" "$TARGET/home/yusa/atlas"
 chown -R 1000:100 "$TARGET/home/yusa/atlas" 2>/dev/null || true
 ok "Config copied to /home/yusa/atlas"
-
-if [[ "$AUTO" -eq 0 ]]; then
-  spacer
-  echo -e "  ${BOLD}Set a password for user 'yusa':${NC}"
-  while :; do
-    read -r -s -p "  ${CYAN}Password:${NC} " PW1
-    echo
-    read -r -s -p "  ${CYAN}Confirm:${NC}  " PW2
-    echo
-    if [[ -z "$PW1" ]]; then
-      echo -e "  ${YELLOW}Password cannot be empty.${NC}"
-    elif [[ "$PW1" != "$PW2" ]]; then
-      echo -e "  ${YELLOW}Passwords do not match.${NC}"
-    else
-      break
-    fi
-  done
-  echo "yusa:$PW1" | chroot "$TARGET" chpasswd && \
-    echo -e "  ${GREEN}✓${NC} Password set for user yusa" || \
-    echo -e "  ${YELLOW}chpasswd failed — password will be 'atlas' (default)${NC}"
-else
-  echo -e "  ${CYAN}→${NC} Auto-mode — using default password: atlas"
-fi
 
 # ═══════════════════════════════════════════════════════════════════════════
 # STEP 8: Optional Modules (multi-select)
