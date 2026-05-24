@@ -1,27 +1,5 @@
 { config, pkgs, lib, ... }:
 
-let
-  kotofetch = pkgs.rustPlatform.buildRustPackage rec {
-    pname = "kotofetch";
-    version = "0.2.22";
-    src = pkgs.fetchFromGitHub {
-      owner = "hxpe-dev";
-      repo = "kotofetch";
-      rev = "v${version}";
-      sha256 = "sha256-aY8HRKSHLQKjl4b7v5q3SeNMc+GJPnE2XVrEsl+nGR0=";
-    };
-    cargoHash = "sha256-r36x/I/RaIWFEoDYXf3edpLeqGvEyozhT4EuCTSEe/k=";
-    postInstall = ''
-      mkdir -p $out/share/kotofetch/quotes
-      cp -r $src/quotes/*.toml $out/share/kotofetch/quotes/
-    '';
-    meta = with pkgs.lib; {
-      description = "Minimalist fetch tool for Japanese quotes";
-      homepage = "https://github.com/hxpe-dev/kotofetch";
-      license = licenses.mit;
-      platforms = platforms.unix;
-    };
-  };
 in {
   # INFO: Home Manager imports
   imports = [
@@ -136,7 +114,6 @@ in {
     tty-clock
     matugen
     flatpak-builder
-    kotofetch
   ];
 
 # INFO: Files
@@ -168,30 +145,14 @@ in {
       font-family = Monocraft
       font-size = 13
       command = ${pkgs.nushell}/bin/nu
-      background-opacity = 1
+      background-opacity = 0.95
+      background-blur = 1
       window-padding-x = 10
       window-padding-y = 10
       cursor-style = bar
       cursor-style-blink = true
       confirm-close-surface = false
       resize-overlay = never
-    '';
-
-    # Kotofetch quotes from package
-    ".config/kotofetch/quotes".source = "${kotofetch}/share/kotofetch/quotes";
-
-    # Kotofetch config with typewriter animation
-    ".config/kotofetch/config.toml".text = ''
-      [display]
-      animation = "typewriter"
-      animation_duration_ms = 1500
-      centered = true
-      border = false
-      vertical_padding = 0
-      show_translation = ["english"]
-      quote_color = "#a3be8c"
-      translation_color = "dim"
-      modes = ["haiku.toml", "yojijukugo.toml"]
     '';
 
     # Mullvad browser profile

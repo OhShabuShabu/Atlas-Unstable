@@ -24,8 +24,6 @@ alias trash-list = ^trash list
 alias trash-restore = ^trash restore
 alias trash-put = ^trash put
 
-kotofetch
-
 # ============================================================================
 # DEVELOPMENT SHORTCUTS
 # ============================================================================
