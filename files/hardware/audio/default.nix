@@ -1,5 +1,8 @@
-{ lib, pkgs, audioDevice ? "~alsa_card.pci-0000_00_1f.3", ... }:
+{ lib, pkgs, ... }:
 
+let
+  audioDevice = "~alsa_card.pci-0000_00_1f.3";
+in
 {
   imports = [ ];
 
