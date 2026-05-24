@@ -125,7 +125,7 @@ if [[ $AUTO -eq 0 ]]; then
   echo -e "  ${YELLOW}This action ${BOLD}cannot${NC}${YELLOW} be undone.${NC}"
   spacer
   echo -e "  ${DIM}What will be created:${NC}"
-  echo -e "    ${DIM}• 1GB EFI System Partition (ESP)${NC}"
+  echo -e "    ${DIM}• 2GB EFI System Partition (ESP)${NC}"
   echo -e "    ${DIM}• 8GB Swap partition${NC}"
   echo -e "    ${DIM}• LUKS-encrypted Btrfs partition (remaining space)${NC}"
   echo -e "    ${DIM}  - Subvolumes: /nix, /persistent, /home, /var${NC}"
@@ -184,7 +184,7 @@ step 5 "Partitioning & Formatting $DISK"
 spacer
 
 info "Writing partition layout via disko..."
-info "  ${DIM}This will create: ESP (1G), Swap (8G), LUKS+Btrfs (remaining)${NC}"
+info "  ${DIM}This will create: ESP (2G), Swap (8G), LUKS+Btrfs (remaining)${NC}"
 
 # Write the disko config as Nix
 cat > /tmp/disko-config.nix << EOF
@@ -197,7 +197,7 @@ cat > /tmp/disko-config.nix << EOF
         type = "gpt";
         partitions = {
           esp = {
-            size = "1G";
+            size = "2G";
             type = "EF00";
             content = {
               type = "filesystem";
