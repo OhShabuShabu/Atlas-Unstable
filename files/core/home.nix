@@ -184,7 +184,7 @@ in {
     # Kotofetch config with typewriter animation
     ".config/kotofetch/config.toml".text = ''
       [display]
-      animation = "typewriter"
+      animation = "scramble"
       animation_duration_ms = 1500
       centered = true
       width = 72
