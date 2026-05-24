@@ -570,6 +570,7 @@
       '';
     })
     qt6.qtdeclarative
+    qt6.qt5compat
     qt6.qtsvg
     qt6.qtmultimedia
     gst_all_1.gst-plugins-base
