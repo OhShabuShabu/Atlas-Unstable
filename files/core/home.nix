@@ -1,6 +1,24 @@
 { config, pkgs, lib, ... }:
 
-{
+let
+  kotofetch = pkgs.rustPlatform.buildRustPackage rec {
+    pname = "kotofetch";
+    version = "0.2.22";
+    src = pkgs.fetchFromGitHub {
+      owner = "hxpe-dev";
+      repo = "kotofetch";
+      rev = "v${version}";
+      sha256 = "sha256-aY8HRKSHLQKjl4b7v5q3SeNMc+GJPnE2XVrEsl+nGR0=";
+    };
+    cargoHash = "sha256-r36x/I/RaIWFEoDYXf3edpLeqGvEyozhT4EuCTSEe/k=";
+    meta = with pkgs.lib; {
+      description = "Minimalist fetch tool for Japanese quotes";
+      homepage = "https://github.com/hxpe-dev/kotofetch";
+      license = licenses.mit;
+      platforms = platforms.unix;
+    };
+  };
+in {
   # INFO: Home Manager imports
   imports = [
     ../modules/dev/dev.nix
@@ -113,7 +131,8 @@
     xdg-utils
     tty-clock
     matugen
-    flatpak-builder 
+    flatpak-builder
+    kotofetch
   ];
 
 # INFO: Files
@@ -160,8 +179,6 @@
     ".local/share/mullvad-browser/installs.ini".source          = ../modules/privacy/mullvadbrowser/installs.ini;
     ".local/share/mullvad-browser/ipg7sh9x.default-release-1".source = ../modules/privacy/mullvadbrowser/ipg7sh9x.default-release-1;
 
-    # Motivate script symlinked into PATH (~/.local/bin is in home.sessionPath)
-    ".local/bin/motivate".source = ../bin/python/motivate;
   };
   programs.home-manager.enable = true;
 

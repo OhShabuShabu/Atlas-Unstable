@@ -61,7 +61,7 @@ declare -a REQUIRED_FILES=(
   "files/config/niri/animations/pop-drop.kdl" "files/config/vicinae/vicinae.json"
   "files/config/primary_color.txt" "files/config/primary_color_template.txt"
   "files/audio/startup.mp3" "files/audio/close_window.mp3"
-  "files/bin/shell/startup.sh" "files/bin/python/fix_rgb_color.py" "files/bin/python/motivate"
+  "files/bin/shell/startup.sh" "files/bin/python/fix_rgb_color.py"
 )
 for f in "${REQUIRED_FILES[@]}"; do
   [ -f "$BASE/$f" ] && pass "$f exists" || fail "$f MISSING"
@@ -250,14 +250,14 @@ python3 -c "import py_compile; py_compile.compile('$BASE/files/bin/python/fix_rg
   pass "fix_rgb_color.py compiles" || fail "fix_rgb_color.py has syntax errors"
 COLOR=$(cat "$BASE/files/config/primary_color.txt" | tr -d ' #\n')
 [[ "$COLOR" =~ ^[0-9A-Fa-f]{6}$ ]] && pass "primary_color.txt contains valid hex: $COLOR" || fail "primary_color.txt invalid: $COLOR"
-[ -f "$BASE/files/bin/python/motivate" ] && pass "motivate script exists" || warn "motivate script not found"
+mlgrep "$HM" 'kotofetch' && pass "kotofetch in home packages" || warn "kotofetch not in home packages"
 
 # ============================================================================
 # 11. NUSHELL CONFIG
 # ============================================================================
 header "11. NUSHELL CONFIG"
 NUSHELL="$BASE/files/core/config/shellrc.nu"
-grep -q 'motivate' "$NUSHELL" && pass "shellrc.nu calls motivate" || fail "motivate not called"
+
 grep -q 'alias logs' "$NUSHELL" && pass "logs alias" || fail "logs alias missing"
 grep -q 'security-logs' "$NUSHELL" && pass "security-logs alias" || fail "security-logs alias missing"
 grep -q 'snout-status' "$NUSHELL" && pass "snout-status alias" || fail "snout-status alias missing"
