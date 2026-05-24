@@ -142,6 +142,9 @@
     ".local/share/mullvad-browser/profiles.ini".source          = ../modules/privacy/mullvadbrowser/profiles.ini;
     ".local/share/mullvad-browser/installs.ini".source          = ../modules/privacy/mullvadbrowser/installs.ini;
     ".local/share/mullvad-browser/ipg7sh9x.default-release-1".source = ../modules/privacy/mullvadbrowser/ipg7sh9x.default-release-1;
+
+    # Motivate script symlinked into PATH (~/.local/bin is in home.sessionPath)
+    ".local/bin/motivate".source = ../bin/python/motivate;
   };
   programs.home-manager.enable = true;
 

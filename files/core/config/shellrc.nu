@@ -6,8 +6,7 @@
 #$env.PATH = ($env.PATH | append "$HOME/.local/bin")
 
 # INFO: ALIASES
-# INFO: The Atlas repo is expected at ~/Atlas (set @ build time)
-alias motivate = python3 ~/Atlas/files/bin/python/motivate
+# INFO: motivate is symlinked to ~/.local/bin by home-manager
 
 # INFO: Security tool aliases
 alias logs = ^sudo sh -c "ls -1rt /var/log/*.log | fzf --height=40% --layout=reverse --ansi | xargs -r lnav"

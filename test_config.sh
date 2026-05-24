@@ -105,7 +105,7 @@ mlgrep "$CFG" 'logrotate.*enable\s*=\s*true' && pass "logrotate enabled" || fail
 grep -Ezq 'security\.audit\s*=\s*\{[^}]*enable\s*=\s*true' "$CFG" || grep -q 'security\.audit\.enable\s*=\s*true' "$CFG" && pass "Linux audit subsystem enabled" || fail "audit not enabled"
 mlgrep "$CFG" 'security\.auditd\.enable\s*=\s*true' && pass "auditd enabled" || fail "auditd not enabled"
 CSN="$BASE/files/core/current-system.nix"
-mlgrep "$CSN" 'luks-' && pass "LUKS devices configured" || fail "LUKS not configured in current-system.nix"
+mlgrep "$CSN" 'luks\.devices\.\"crypt\"' && pass "LUKS devices configured" || fail "LUKS not configured in current-system.nix"
 mlgrep "$CFG" 'distrobox' && pass "Distrobox config present" || fail "Distrobox config missing"
 mlgrep "$CFG" 'monocraft' && pass "Monocraft font configured" || fail "Monocraft font not configured"
 mlgrep "$CFG" 'protectKernelImage\s*=\s*true' && pass "protectKernelImage enabled" || fail "protectKernelImage not enabled"

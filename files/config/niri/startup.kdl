@@ -1,2 +1,2 @@
-spawn-sh-at-startup "sh $HOME/Atlas/files/bin/shell/startup.sh"
-spawn-sh-at-startup "noctalia-shell"
+spawn-at-startup ["sh", "-c", "$HOME/Atlas/files/bin/shell/startup.sh"]
+spawn-at-startup ["noctalia-shell"]

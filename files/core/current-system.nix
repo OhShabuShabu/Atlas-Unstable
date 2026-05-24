@@ -1,21 +1,50 @@
 {
-  # Current ext4 filesystem layout — keeps the running system bootable
+  # Current btrfs filesystem layout — matches what disko creates
   # This is imported by the `atlas` output; NOT by `atlas-installer` (which uses disko)
 
+  boot.initrd.luks.devices."crypt".device = "/dev/disk/by-partlabel/disk-main-root";
+
   fileSystems."/" = {
-    device = "/dev/mapper/luks-9e21658b-4fcf-4f61-b95b-6e53e78880ca";
-    fsType = "ext4";
+    device = "tmpfs";
+    fsType = "tmpfs";
+    options = [ "size=25%" "mode=755" ];
   };
 
-  boot.initrd.luks.devices."luks-9e21658b-4fcf-4f61-b95b-6e53e78880ca".device = "/dev/disk/by-uuid/9e21658b-4fcf-4f61-b95b-6e53e78880ca";
+  fileSystems."/nix" = {
+    device = "/dev/mapper/crypt";
+    fsType = "btrfs";
+    options = [ "subvol=nix" "noatime" ];
+    neededForBoot = true;
+  };
+
+  fileSystems."/persistent" = {
+    device = "/dev/mapper/crypt";
+    fsType = "btrfs";
+    options = [ "subvol=persistent" "noatime" ];
+    neededForBoot = true;
+  };
+
+  fileSystems."/home" = {
+    device = "/dev/mapper/crypt";
+    fsType = "btrfs";
+    options = [ "subvol=home" "noatime" ];
+    neededForBoot = true;
+  };
+
+  fileSystems."/var" = {
+    device = "/dev/mapper/crypt";
+    fsType = "btrfs";
+    options = [ "subvol=var" "noatime" ];
+    neededForBoot = true;
+  };
 
   fileSystems."/boot" = {
-    device = "/dev/disk/by-uuid/121D-E2E5";
+    device = "/dev/disk/by-partlabel/disk-main-esp";
     fsType = "vfat";
     options = [ "fmask=0077" "dmask=0077" ];
   };
 
   swapDevices = [
-    { device = "/dev/mapper/luks-9f6c7cfc-4ae0-42c1-b4a3-80723993f898"; }
+    { device = "/dev/disk/by-partlabel/disk-main-swap"; }
   ];
 }
