@@ -385,10 +385,9 @@
   programs.niri.enable = true;
 
   # Display manager
-  services.displayManager.sddm = {
-    enable = true;
-    wayland.enable = true;
-  };
+  # Display manager (X11 backend — Wayland gives black screen in VM)
+  services.xserver.enable = true;
+  services.displayManager.sddm.enable = true;
 
   # Preservation handles machine-id persistence via initrd + boot service
   systemd.services.systemd-machine-id-commit.enable = false;
