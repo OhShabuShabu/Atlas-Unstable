@@ -384,6 +384,15 @@
   # Enable Niri (Wayland compositor)
   programs.niri.enable = true;
 
+  # Display manager
+  services.displayManager.sddm = {
+    enable = true;
+    wayland.enable = true;
+  };
+
+  # Preservation handles machine-id persistence via initrd + boot service
+  systemd.services.systemd-machine-id-commit.enable = false;
+
 
   # ============================================================================
   # SECTION 13: NOCTALIA SHELL
