@@ -184,6 +184,8 @@ in {
     # Kotofetch config with typewriter animation
     ".config/kotofetch/config.toml".text = ''
       [display]
+      animation = "typewriter"
+      animation_duration_ms = 1500
       centered = true
       width = 72
       border = false
@@ -191,6 +193,7 @@ in {
       show_translation = ["english"]
       quote_color = "#a3be8c"
       translation_color = "dim"
+      modes = ["haiku.toml", "yojijukugo.toml"]
     '';
 
     # Mullvad browser profile
