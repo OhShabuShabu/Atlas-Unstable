@@ -5,6 +5,9 @@ let
     env = builtins.getEnv "DISKO_DEVICE";
   in if env != "" then env else "/dev/REPLACE_ME";
 in {
+  # Plymouth hides LUKS password prompt in UEFI VMs
+  boot.plymouth.enable = lib.mkForce false;
+
   fileSystems = {
     "/nix".neededForBoot = true;
     "/persistent".neededForBoot = true;
