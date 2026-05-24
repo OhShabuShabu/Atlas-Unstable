@@ -3,17 +3,8 @@
 let
   username = "yusa";
   userHome = "/home/${username}";
-  notifyUser = pkgs.writeShellScriptBin "notify-user" ''
-    NOTIFY="${pkgs.libnotify}/bin/notify-send"
-    for user in ${username}; do
-      uid=$(id -u "$user" 2>/dev/null || echo 1000)
-      bus_path="/run/user/$uid/bus"
-      if [ -S "$bus_path" ]; then
-        sudo -u "$user" DBUS_SESSION_BUS_ADDRESS="unix:path=$bus_path" \
-          "$NOTIFY" -u "''${1:-normal}" -t 5000 "''${2:-Metadata Cleaner}" "''${3:-}" 2>/dev/null || true
-      fi
-    done
-  '';
+  notifications = import ../../lib/notifications.nix { inherit pkgs; };
+  notifyUser = notifications.notifyScript;
 in
 {
   environment.systemPackages = with pkgs; [

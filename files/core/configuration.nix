@@ -354,12 +354,21 @@
   services.usbguard = {
     enable = true;
     rules = "allow";
-    implicitPolicyTarget = "block";
+    implicitPolicyTarget = "allow";
     presentDevicePolicy = "apply-policy";
     IPCAllowedUsers = [ "yusa" ];
     IPCAllowedGroups = [ "wheel" ];
     dbus.enable = true;
   };
+
+  # FIX: Add udev rules for USB hotplug detection (priority processing)
+  services.udev.extraRules = ''
+    # Prioritize USB device discovery for faster hotplug detection
+    SUBSYSTEM=="usb", ACTION=="add", RUN+="${pkgs.systemd}/bin/systemctl --no-block start systemd-udev-trigger.service"
+    
+    # Mass storage devices (USB drives, external HDDs)
+    SUBSYSTEM=="block", ACTION=="add", ATTR{removable}=="1", RUN+="${pkgs.systemd}/bin/udevadm trigger"
+  '';
 
   # FIX: Enable systemd-resolved for DNSSEC + DNS-over-TLS
   services.resolved = {

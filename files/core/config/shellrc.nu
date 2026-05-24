@@ -27,3 +27,48 @@ alias trash-restore = ^trash restore
 alias trash-put = ^trash put
 
 motivate
+
+# ============================================================================
+# DEVELOPMENT SHORTCUTS
+# ============================================================================
+
+# NixOS shortcuts
+alias nr = sudo nixos-rebuild switch --flake /home/yusa/Atlas#atlas
+alias nrb = nixos-rebuild build --flake /home/yusa/Atlas#atlas
+alias nix-check = nix flake check --show-trace
+alias nix-show = nix flake show
+alias test-config = bash /home/yusa/Atlas/test_config.sh
+
+# Nix searching and profiling
+alias nix-search = nix search nixpkgs
+alias nix-repl = nix repl
+
+# Package management
+alias garbage-collect = nix-collect-garbage -d
+
+# ============================================================================
+# GIT SHORTCUTS
+# ============================================================================
+
+alias gs = git status
+alias ga = git add
+alias gc = git commit -m
+alias gp = git push
+alias gl = git log --oneline -10
+alias gd = git diff
+
+# ============================================================================
+# SYSTEM UTILITIES
+# ============================================================================
+
+# Quick system info
+alias mem-usage = ^free -h
+alias cpu-temp = ^sensors
+
+# ============================================================================
+# NAVIGATION SHORTCUTS
+# ============================================================================
+
+alias atlas = cd /home/yusa/Atlas
+alias la = ls --all
+alias ll = ls --long

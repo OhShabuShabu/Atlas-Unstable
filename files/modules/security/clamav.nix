@@ -1,25 +1,12 @@
 { pkgs, lib, ... }:
 
 let
+  notifications = import ../../lib/notifications.nix { inherit pkgs; };
+  notifyScript = notifications.notifyScript;
+
   scanDirs = "/home /tmp /var /srv";
   logFile = "/var/log/clamav/scan.log";
   quarantineDir = "/etc/quarantine";
-
-  notifyScript = pkgs.writeShellScriptBin "clamav-notify" ''
-    NOTIFY="${pkgs.libnotify}/bin/notify-send"
-    SEVERITY="''${1:-normal}"
-    TITLE="''${2:-ClamAV}"
-    MESSAGE="''${3:-}"
-
-    for user in yusa; do
-      uid=$(id -u "$user" 2>/dev/null || echo 1000)
-      bus_path="/run/user/$uid/bus"
-      if [ -S "$bus_path" ]; then
-        sudo -u "$user" DBUS_SESSION_BUS_ADDRESS="unix:path=$bus_path" \
-          "$NOTIFY" -u "$SEVERITY" -t 15000 "$TITLE" "$MESSAGE" 2>/dev/null || true
-      fi
-    done
-  '';
 in
 
 {
@@ -67,7 +54,7 @@ in
         LOG_FILE="${logFile}"
         QUARANTINE="${quarantineDir}"
         CLAMSCAN="${pkgs.clamav}/bin/clamscan"
-        NOTIFY="${notifyScript}/bin/clamav-notify"
+        NOTIFY="${notifyScript}/bin/notify-user"
 
         mkdir -p "$(dirname "$LOG_FILE")"
         mkdir -p "$QUARANTINE"
@@ -116,7 +103,7 @@ in
         set -e
         QUARANTINE="${quarantineDir}"
         CLAMSCAN="${pkgs.clamav}/bin/clamscan"
-        NOTIFY="${notifyScript}/bin/clamav-notify"
+        NOTIFY="${notifyScript}/bin/notify-user"
 
         mkdir -p "$QUARANTINE"
 

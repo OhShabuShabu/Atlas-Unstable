@@ -55,6 +55,69 @@ A personalized NixOS (nixos-unstable) configuration built with Home Manager, fea
 - **TCP BBR** congestion control + cake qdisc
 - **Trashy** — CLI system trash manager (safer alternative to rm)
 
+## Quick Configuration Guide
+
+### Adding a Package
+
+To add a system package:
+
+1. Open `files/core/configuration.nix`
+2. Find `environment.systemPackages`
+3. Add the package name to the list: `pkgs.package_name`
+4. Rebuild: `sudo nixos-rebuild switch --flake .#atlas`
+
+### Adding a User Package
+
+To add a user-level package:
+
+1. Open `files/core/home.nix`
+2. Find `home.packages`
+3. Add the package
+4. Rebuild Home Manager: `home-manager switch -b backup --flake .#yusa@atlas`
+
+### Enabling/Disabling Modules
+
+Each feature is implemented as a module. To disable:
+
+1. Edit `files/core/configuration.nix`
+2. Comment out the module import (line starting with `../modules/`)
+3. Rebuild: `sudo nixos-rebuild switch --flake .#atlas`
+
+**WARNING**: Some modules are interdependent. Check `files/modules/*/README.md` for dependencies.
+
+## Troubleshooting
+
+### USB devices not detected after inserting
+- **Fix**: Usbguard may be blocking. Check: `sudo usbguard list-rules`
+- Accept device: `sudo usbguard allow-device [device-id]`
+
+### System slow after rebuild
+- Check: `nix-collect-garbage -d` (removes old builds)
+- Check: `systemd-analyze` (shows boot time)
+
+### Network issues after rebuild
+- Check: `sudo systemctl restart NetworkManager`
+- Check firewall rules: `sudo nft list ruleset | grep -i rule`
+
+### Module won't load
+- Check syntax: `nix flake check`
+- Check imports: grep the module name in configuration.nix
+- View errors: `sudo journalctl -xeu systemd-nixos-setup.service`
+
+### NixOS rebuild fails
+- **First**: Run `nix flake check --show-trace` for detailed error
+- **Check** file indentation (must be 2 spaces)
+- **Check** balanced braces and semicolons
+- **Revert**: `git checkout -- files/path/to/file.nix`
+
+## Module Reference
+
+See documentation in each module:
+- `files/modules/security/README.md` — Security modules
+- `files/modules/dev/README.md` — Development tools
+- `files/modules/gaming/README.md` — Gaming setup
+- `files/modules/privacy/README.md` — Privacy features
+
 ## Structure
 
 ```

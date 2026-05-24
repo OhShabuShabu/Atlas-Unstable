@@ -1,6 +1,9 @@
 { pkgs, lib, ... }:
 
 let
+  notifications = import ../../lib/notifications.nix { inherit pkgs; };
+  notifyScript = notifications.notifyScript;
+
   snoutBin = pkgs.writeShellScriptBin "snout" ''
     set -e
     case "''${1:-help}" in
@@ -47,18 +50,7 @@ let
     }
 
     notify_user() {
-      local urgency="''${1:-normal}"
-      local title="''${2:-Snout}"
-      local msg="''${3:-}"
-      local notify_bin="${pkgs.libnotify}/bin/notify-send"
-      for user in yusa; do
-        uid=$(id -u "$user" 2>/dev/null || echo 1000)
-        bus_path="/run/user/$uid/bus"
-        if [ -S "$bus_path" ]; then
-          sudo -u "$user" DBUS_SESSION_BUS_ADDRESS="unix:path=$bus_path" \
-            "$notify_bin" -u "$urgency" -t 5000 "$title" "$msg" 2>/dev/null || true
-        fi
-      done
+      ${notifyScript}/bin/notify-user "$@" 2>/dev/null || true
     }
 
     log_event "INFO" "Snout daemon starting"
