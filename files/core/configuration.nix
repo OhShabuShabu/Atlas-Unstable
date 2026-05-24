@@ -53,19 +53,19 @@
     #   - current-system.nix (for `nixos-rebuild switch --flake .#atlas`)
     #   - disko.nix       (for fresh install via `.#atlas-installer`)
 
-    # Plymouth boot splash — Mate Red theme
+    # Plymouth boot splash — Hyprland macOS style theme
     plymouth = {
       enable = true;
-      theme = "mate_red";
+      theme = "hyprland-mac-style";
       themePackages = with pkgs; [
         (pkgs.stdenv.mkDerivation {
-          pname = "plymouth-mate-red-theme";
+          pname = "plymouth-hyprland-mac-style";
           version = "1.0";
-          src = ./../config/plymouth/mate_red;
+          src = ./../config/plymouth/hyprland-mac-style;
           installPhase = ''
             mkdir -p $out/share/plymouth/themes
-            cp -r "$src" $out/share/plymouth/themes/mate_red
-            substituteInPlace $out/share/plymouth/themes/mate_red/mate_red.plymouth \
+            cp -r "$src" $out/share/plymouth/themes/hyprland-mac-style
+            substituteInPlace $out/share/plymouth/themes/hyprland-mac-style/hyprland-mac-style.plymouth \
               --replace-fail "/usr/share" "$out/share"
           '';
         })
@@ -625,6 +625,7 @@
     udev-gothic-nf
     noto-fonts
     liberation_ttf
+    cantarell-fonts
 
     # Custom Monocraft font (gaming aesthetic)
     (pkgs.stdenv.mkDerivation {
