@@ -187,6 +187,7 @@ in {
       animation = "typewriter"
       animation_duration_ms = 1500
       centered = true
+      width = 72
       show_translation = ["english"]
       quote_color = "#a3be8c"
       translation_color = "dim"
