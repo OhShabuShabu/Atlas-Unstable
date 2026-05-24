@@ -71,6 +71,7 @@
           installPhase = ''
             mkdir -p $out/share/plymouth/themes
             cp -r "$src/Plymouth Theme/yorha" $out/share/plymouth/themes/yorha
+            chmod -R +w $out/share/plymouth/themes/yorha
             substituteInPlace $out/share/plymouth/themes/yorha/yorha.plymouth \
               --replace-fail "/usr/share" "$out/share"
             sed -i 's|//yorha|/yorha|g' $out/share/plymouth/themes/yorha/yorha.plymouth
