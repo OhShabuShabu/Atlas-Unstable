@@ -53,7 +53,12 @@
     # Plymouth boot splash
     plymouth = {
       enable = true;
-      theme = "bgrt";
+      theme = "lone";
+      themePackages = with pkgs; [
+        (adi1090x-plymouth-themes.override {
+          selected_themes = [ "lone" ];
+        })
+      ];
     };
 
     # Silent boot - reduce console noise
