@@ -153,7 +153,7 @@ binds {
 
     Mod+Shift+W hotkey-overlay-title="Noctalia: Open Shell Menu" { spawn-sh "noctalia-shell ipc call 'panel toggle'"; }
 
-    Mod+Shift+Escape { spawn "~/.local/share/quickshell-lockscreen/lock.sh"; }
+    Mod+Shift+Escape { spawn-sh "~/.local/share/quickshell-lockscreen/lock.sh"; }
 
     Mod+Escape allow-inhibiting=false { toggle-keyboard-shortcuts-inhibit; }
 
