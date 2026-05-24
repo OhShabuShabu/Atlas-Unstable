@@ -57,6 +57,7 @@
     plymouth = {
       enable = true;
       theme = "yorha";
+      font = "${pkgs.comfortaa}/share/fonts/truetype/Comfortaa-Regular.ttf";
       themePackages = with pkgs; [
         (pkgs.stdenv.mkDerivation {
           pname = "plymouth-yorha-theme";
@@ -72,6 +73,7 @@
             cp -r "$src/Plymouth Theme/yorha" $out/share/plymouth/themes/yorha
             substituteInPlace $out/share/plymouth/themes/yorha/yorha.plymouth \
               --replace-fail "/usr/share" "$out/share"
+            sed -i 's|//yorha|/yorha|g' $out/share/plymouth/themes/yorha/yorha.plymouth
           '';
         })
       ];
