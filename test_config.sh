@@ -251,6 +251,8 @@ python3 -c "import py_compile; py_compile.compile('$BASE/files/bin/python/fix_rg
 COLOR=$(cat "$BASE/files/config/primary_color.txt" | tr -d ' #\n')
 [[ "$COLOR" =~ ^[0-9A-Fa-f]{6}$ ]] && pass "primary_color.txt contains valid hex: $COLOR" || fail "primary_color.txt invalid: $COLOR"
 mlgrep "$HM" 'kotofetch' && pass "kotofetch in home packages" || warn "kotofetch not in home packages"
+mlgrep "$HM" 'kotofetch.*config\.toml' && pass "kotofetch config with typewriter animation" || warn "kotofetch config not found"
+mlgrep "$NUSHELL" 'kotofetch' && pass "shellrc.nu calls kotofetch" || warn "kotofetch not called in shellrc.nu"
 
 # ============================================================================
 # 11. NUSHELL CONFIG

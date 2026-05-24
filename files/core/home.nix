@@ -11,6 +11,10 @@ let
       sha256 = "sha256-aY8HRKSHLQKjl4b7v5q3SeNMc+GJPnE2XVrEsl+nGR0=";
     };
     cargoHash = "sha256-r36x/I/RaIWFEoDYXf3edpLeqGvEyozhT4EuCTSEe/k=";
+    postInstall = ''
+      mkdir -p $out/share/kotofetch/quotes
+      cp -r $src/quotes/*.toml $out/share/kotofetch/quotes/
+    '';
     meta = with pkgs.lib; {
       description = "Minimalist fetch tool for Japanese quotes";
       homepage = "https://github.com/hxpe-dev/kotofetch";
@@ -172,6 +176,23 @@ in {
       cursor-style-blink = true
       confirm-close-surface = false
       resize-overlay = never
+    '';
+
+    # Kotofetch quotes from package
+    ".config/kotofetch/quotes".source = "${kotofetch}/share/kotofetch/quotes";
+
+    # Kotofetch config with typewriter animation
+    ".config/kotofetch/config.toml".text = ''
+      [display]
+      animation = "typewriter"
+      animation_duration_ms = 1500
+      border = true
+      rounded_border = true
+      centered = true
+      show_translation = ["english", "romaji"]
+      quote_color = "#a3be8c"
+      translation_color = "dim"
+      border_color = "#be8ca3"
     '';
 
     # Mullvad browser profile
