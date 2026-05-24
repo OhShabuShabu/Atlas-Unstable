@@ -224,19 +224,23 @@ echo "=== Step 5: Setting user passwords ==="
 echo ""
 
 if [[ $AUTO -eq 1 ]]; then
-  echo "root"  | nixos-enter --root "$TARGET" --command 'passwd --stdin root' 2>/dev/null || true
-  echo "atlas" | nixos-enter --root "$TARGET" --command 'passwd --stdin yusa' 2>/dev/null || true
+  ROOT_PW="root"
+  YUSA_PW="atlas"
   echo "Passwords set to root:root / yusa:atlas (change on first login)."
 else
   echo "Enter password for root:"
-  read -s PW
-  echo "$PW" | nixos-enter --root "$TARGET" --command 'passwd --stdin root'
+  read -s ROOT_PW
   echo ""
   echo "Enter password for yusa:"
-  read -s PW
-  echo "$PW" | nixos-enter --root "$TARGET" --command 'passwd --stdin yusa'
+  read -s YUSA_PW
   echo ""
 fi
+
+ROOT_HASH=$(nix run nixpkgs#mkpasswd -- -m sha-512 "$ROOT_PW" 2>/dev/null)
+YUSA_HASH=$(nix run nixpkgs#mkpasswd -- -m sha-512 "$YUSA_PW" 2>/dev/null)
+
+sed -i "s|^root:[^:]*:|root:${ROOT_HASH}:|" "$TARGET/etc/shadow"
+sed -i "s|^yusa:[^:]*:|yusa:${YUSA_HASH}:|" "$TARGET/etc/shadow"
 
 echo ""
 echo "=== Install complete! ==="
