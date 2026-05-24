@@ -4,9 +4,14 @@ set -euo pipefail
 ROOTDIR="$(cd "$(dirname "$0")" && pwd)"
 
 AUTO=0
-if [[ "${1:-}" == "-y" || "${1:-}" == "--yes" ]]; then
-  AUTO=1
-fi
+CACHE_URL=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -y|--yes)   AUTO=1; shift ;;
+    -c|--cache) CACHE_URL="$2"; shift 2 ;;
+    *)          shift ;;
+  esac
+done
 
 if [[ $EUID -ne 0 ]]; then
   echo "Must be run as root (you're in a NixOS live ISO, use sudo)." >&2
@@ -203,36 +208,35 @@ echo "$LUKS_UUID" > "$ROOTDIR/.luk-uuid"
 
 trap 'rm -f "$ROOTDIR/.luk-uuid"' EXIT
 
+if [[ -n "$CACHE_URL" ]]; then
+  SUBSTITUTERS="$CACHE_URL https://cache.nixos.org"
+else
+  SUBSTITUTERS="https://cache.nixos.org"
+fi
+
 nixos-install --flake "$ROOTDIR#atlas-installer" \
   --root "$TARGET" \
   --no-root-passwd \
-  --option substituters "https://cache.nixos.org"
+  --option substituters "$SUBSTITUTERS"
 
 echo ""
 echo "=== Step 5: Setting user passwords ==="
 echo ""
 
 if [[ $AUTO -eq 1 ]]; then
-  ROOT_HASH=$(python3 -c 'import crypt; print(crypt.crypt("root", crypt.mksalt(crypt.METHOD_SHA512)))')
-  YUSA_HASH=$(python3 -c 'import crypt; print(crypt.crypt("atlas", crypt.mksalt(crypt.METHOD_SHA512)))')
+  echo "root"  | nixos-enter --root "$TARGET" --command 'passwd --stdin root' 2>/dev/null || true
+  echo "atlas" | nixos-enter --root "$TARGET" --command 'passwd --stdin yusa' 2>/dev/null || true
   echo "Passwords set to root:root / yusa:atlas (change on first login)."
 else
   echo "Enter password for root:"
   read -s PW
-  export PW
-  ROOT_HASH=$(python3 -c 'import crypt, os; print(crypt.crypt(os.environ["PW"], crypt.mksalt(crypt.METHOD_SHA512)))')
-  unset PW
+  echo "$PW" | nixos-enter --root "$TARGET" --command 'passwd --stdin root'
   echo ""
   echo "Enter password for yusa:"
   read -s PW
-  export PW
-  YUSA_HASH=$(python3 -c 'import crypt, os; print(crypt.crypt(os.environ["PW"], crypt.mksalt(crypt.METHOD_SHA512)))')
-  unset PW
+  echo "$PW" | nixos-enter --root "$TARGET" --command 'passwd --stdin yusa'
   echo ""
 fi
-
-sed -i "s|^root:[^:]*:|root:${ROOT_HASH}:|" "$TARGET/etc/shadow"
-sed -i "s|^yusa:[^:]*:|yusa:${YUSA_HASH}:|" "$TARGET/etc/shadow"
 
 echo ""
 echo "=== Install complete! ==="
