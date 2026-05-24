@@ -4,8 +4,8 @@ set -euo pipefail
 ROOTDIR="$(cd "$(dirname "$0")" && pwd)"
 
 # ─── Colors ────────────────────────────────────────────────────────────────
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'
-BOLD='\033[1m'; DIM='\033[2m'; NC='\033[0m'
+RED=$'\033[0;31m'; GREEN=$'\033[0;32m'; YELLOW=$'\033[1;33m'; CYAN=$'\033[0;36m'
+BOLD=$'\033[1m'; DIM=$'\033[2m'; NC=$'\033[0m'
 
 # ─── Config ─────────────────────────────────────────────────────────────────
 AUTO=0
@@ -321,9 +321,9 @@ if [[ "$AUTO" -eq 0 ]]; then
   spacer
   echo -e "  ${BOLD}Set a password for user 'yusa':${NC}"
   while :; do
-    read -rsp "  ${CYAN}Password:${NC} " PW1
+    read -r -s -p "  ${CYAN}Password:${NC} " PW1
     echo
-    read -rsp "  ${CYAN}Confirm:${NC} " PW2
+    read -r -s -p "  ${CYAN}Confirm:${NC}  " PW2
     echo
     if [[ -z "$PW1" ]]; then
       echo -e "  ${YELLOW}Password cannot be empty.${NC}"
@@ -333,11 +333,11 @@ if [[ "$AUTO" -eq 0 ]]; then
       break
     fi
   done
-  printf "%s\n%s\n" "$PW1" "$PW1" | chroot "$TARGET" passwd yusa && \
-    ok "Password set for user yusa" || \
-    echo -e "  ${YELLOW}passwd command failed — password will be 'atlas' (default)${NC}"
+  echo "yusa:$PW1" | chroot "$TARGET" chpasswd && \
+    echo -e "  ${GREEN}✓${NC} Password set for user yusa" || \
+    echo -e "  ${YELLOW}chpasswd failed — password will be 'atlas' (default)${NC}"
 else
-  info "Auto-mode — using default password: atlas"
+  echo -e "  ${CYAN}→${NC} Auto-mode — using default password: atlas"
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
