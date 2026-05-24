@@ -10,7 +10,7 @@ YELLOW = '\033[93m'
 RESET = '\033[0m'
 
 CACHE_DIR = os.path.expanduser("~/.cache")
-    CACHE_FILE = os.path.join(CACHE_DIR, "motivate_quote")
+CACHE_FILE = os.path.join(CACHE_DIR, "motivate_quote")
 os.makedirs(CACHE_DIR, exist_ok=True)
 
 def fetch_quote():
