@@ -207,3 +207,19 @@ nixos-install --flake "$ROOTDIR#atlas-installer" \
   --root "$TARGET" \
   --no-root-passwd \
   --option substituters "https://cache.nixos.org"
+
+echo ""
+echo "=== Step 5: Setting user password ==="
+echo ""
+
+if [[ $AUTO -eq 1 ]]; then
+  echo "yusa:atlas" | nixos-enter --root "$TARGET" --command 'chpasswd' 2>/dev/null || true
+  echo "Password set to \"atlas\" (change on first login)."
+else
+  nixos-enter --root "$TARGET" --command 'passwd yusa'
+fi
+
+echo ""
+echo "=== Install complete! ==="
+echo "Reboot and remove the install media."
+echo ""
