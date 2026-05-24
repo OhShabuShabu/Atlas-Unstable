@@ -213,17 +213,21 @@ echo "=== Step 5: Setting user passwords ==="
 echo ""
 
 if [[ $AUTO -eq 1 ]]; then
-  ROOT_HASH=$(openssl passwd -6 "root")
-  YUSA_HASH=$(openssl passwd -6 "atlas")
+  ROOT_HASH=$(python3 -c 'import crypt; print(crypt.crypt("root", crypt.mksalt(crypt.METHOD_SHA512)))')
+  YUSA_HASH=$(python3 -c 'import crypt; print(crypt.crypt("atlas", crypt.mksalt(crypt.METHOD_SHA512)))')
   echo "Passwords set to root:root / yusa:atlas (change on first login)."
 else
   echo "Enter password for root:"
   read -s PW
-  ROOT_HASH=$(openssl passwd -6 "$PW")
+  export PW
+  ROOT_HASH=$(python3 -c 'import crypt, os; print(crypt.crypt(os.environ["PW"], crypt.mksalt(crypt.METHOD_SHA512)))')
+  unset PW
   echo ""
   echo "Enter password for yusa:"
   read -s PW
-  YUSA_HASH=$(openssl passwd -6 "$PW")
+  export PW
+  YUSA_HASH=$(python3 -c 'import crypt, os; print(crypt.crypt(os.environ["PW"], crypt.mksalt(crypt.METHOD_SHA512)))')
+  unset PW
   echo ""
 fi
 
