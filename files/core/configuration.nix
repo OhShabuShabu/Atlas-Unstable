@@ -53,13 +53,26 @@
     #   - current-system.nix (for `nixos-rebuild switch --flake .#atlas`)
     #   - disko.nix       (for fresh install via `.#atlas-installer`)
 
-    # Plymouth boot splash
+    # Plymouth boot splash — Nibar animated theme
     plymouth = {
       enable = true;
-      theme = "lone";
+      theme = "nibar";
       themePackages = with pkgs; [
-        (adi1090x-plymouth-themes.override {
-          selected_themes = [ "lone" ];
+        (pkgs.stdenv.mkDerivation {
+          pname = "plymouth-nibar-theme";
+          version = "1.0";
+          src = pkgs.fetchFromGitHub {
+            owner = "anaysharma";
+            repo = "nibar-plymouth-theme";
+            rev = "ab2d144efc936548eb9270d43720c295851f5936";
+            sha256 = "sha256-KK9BCFVUg5vTY9LsJ7s+hAO8S9eeoDzxpHuvigxWzsk=";
+          };
+          installPhase = ''
+            mkdir -p $out/share/plymouth/themes
+            cp -r $src/nibar $out/share/plymouth/themes/nibar
+            substituteInPlace $out/share/plymouth/themes/nibar/nibar.plymouth \
+              --replace-fail "/usr/share" "$out/share"
+          '';
         })
       ];
     };

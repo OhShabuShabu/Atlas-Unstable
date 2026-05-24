@@ -1,6 +1,6 @@
 [Plymouth Theme]
 Name=nier-automata
-Description=NieR: Automata title screen boot splash
+Description=NieR: Automata boot splash
 ModuleName=script
 
 [script]
