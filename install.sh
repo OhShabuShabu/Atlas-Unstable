@@ -209,21 +209,26 @@ nixos-install --flake "$ROOTDIR#atlas-installer" \
   --option substituters "https://cache.nixos.org"
 
 echo ""
-echo "=== Step 5: Setting user password ==="
+echo "=== Step 5: Setting user passwords ==="
 echo ""
 
 if [[ $AUTO -eq 1 ]]; then
-  echo "root:root" | nixos-enter --root "$TARGET" --command 'chpasswd' 2>/dev/null || true
-  echo "yusa:atlas"   | nixos-enter --root "$TARGET" --command 'chpasswd' 2>/dev/null || true
+  ROOT_HASH=$(openssl passwd -6 "root")
+  YUSA_HASH=$(openssl passwd -6 "atlas")
   echo "Passwords set to root:root / yusa:atlas (change on first login)."
 else
-  echo "Set root password:"
-  read -s ROOT_PW
-  echo "root:$ROOT_PW" | nixos-enter --root "$TARGET" --command 'chpasswd'
-  echo "Set yusa password:"
-  read -s YUSA_PW
-  echo "yusa:$YUSA_PW" | nixos-enter --root "$TARGET" --command 'chpasswd'
+  echo "Enter password for root:"
+  read -s PW
+  ROOT_HASH=$(openssl passwd -6 "$PW")
+  echo ""
+  echo "Enter password for yusa:"
+  read -s PW
+  YUSA_HASH=$(openssl passwd -6 "$PW")
+  echo ""
 fi
+
+sed -i "s|^root:[^:]*:|root:${ROOT_HASH}:|" "$TARGET/etc/shadow"
+sed -i "s|^yusa:[^:]*:|yusa:${YUSA_HASH}:|" "$TARGET/etc/shadow"
 
 echo ""
 echo "=== Install complete! ==="
