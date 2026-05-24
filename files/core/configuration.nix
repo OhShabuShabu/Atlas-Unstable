@@ -67,8 +67,8 @@
 
     # Kernel parameters
     kernelParams = [
-      # Display settings
-      "video=1920x1080"
+      # Force HD framebuffer for Plymouth
+      "video=1920x1080@60"
 
       # Boot options
       "quiet"
