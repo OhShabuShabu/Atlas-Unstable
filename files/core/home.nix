@@ -189,6 +189,7 @@ in {
       centered = true
       width = 72
       border = false
+      vertical_padding = 0
       show_translation = ["english"]
       quote_color = "#a3be8c"
       translation_color = "dim"
