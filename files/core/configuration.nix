@@ -385,9 +385,13 @@
   programs.niri.enable = true;
 
   # Display manager (Wayland backend; machine-id must be persisted during install)
+  # SDDM theme: qylock Nier Automata by Darkkal44
+  # Font requirement: FOT-Rodin Pro DB (commercial) — install manually:
+  #   ~/.local/share/fonts/FOT-Rodin\ Pro\ DB.otf  &&  fc-cache -fv
   services.displayManager.sddm = {
     enable = true;
     wayland.enable = true;
+    theme = "nier-automata";
   };
 
   # Preservation handles machine-id persistence via initrd + boot service
@@ -543,9 +547,32 @@
     yazi
     exiftool
 
+    # Fallback terminal
+    alacritty
+
     # Graphical authentication (polkit-style popup)
     kdePackages.kde-cli-tools
     kdePackages.kdialog
+
+    # SDDM Nier Automata theme + Qt6 deps
+    (pkgs.stdenv.mkDerivation {
+      pname = "sddm-nier-automata-theme";
+      version = "main";
+      src = pkgs.fetchFromGitHub {
+        owner = "Darkkal44";
+        repo = "qylock";
+        rev = "main";
+        sha256 = "0kdy4w7az0ygmv3yf92xsyrflak52lm3prp8lickwk207y3qgm7g";
+      };
+      installPhase = ''
+        mkdir -p $out/share/sddm/themes/nier-automata
+        cp -r $src/themes/nier-automata/* $out/share/sddm/themes/nier-automata/
+      '';
+    })
+    qt6.qt6declarative
+    qt6.qt6svg
+    qt6.qt6multimedia
+    qt6.qt6multimedia-ffmpeg
 
     # System trash manager
     trashy

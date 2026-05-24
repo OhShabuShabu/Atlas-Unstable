@@ -22,6 +22,11 @@ mlgrep() { local f="$1" pat="$2"; python3 -c "import re; c=open('$f').read(); ex
 # ============================================================================
 # 1. FLAKE STRUCTURE
 # ============================================================================
+header "0. INSTALL SCRIPT"
+grep -q 'Step 1/7' "$BASE/install.sh" && pass "install.sh has step progress (7 steps)" || warn "install.sh missing step progress"
+grep -q 'Cancel Installation' "$BASE/install.sh" 2>/dev/null || grep -q "can't be undone" "$BASE/install.sh" && pass "install.sh warns about destructive action" || warn "install.sh missing destructive action warning"
+grep -q "password: atlas" "$BASE/install.sh" && pass "install.sh provides default credentials" || warn "install.sh missing default credentials info"
+
 header "1. FLAKE STRUCTURE"
 [ -f "$BASE/flake.nix" ] && pass "flake.nix exists" || fail "flake.nix missing"
 [ -f "$BASE/flake.lock" ] && pass "flake.lock exists" || fail "flake.lock missing"
@@ -110,6 +115,7 @@ mlgrep "$CFG" 'distrobox' && pass "Distrobox config present" || fail "Distrobox 
 mlgrep "$CFG" 'monocraft' && pass "Monocraft font configured" || fail "Monocraft font not configured"
 mlgrep "$CFG" 'protectKernelImage\s*=\s*true' && pass "protectKernelImage enabled" || fail "protectKernelImage not enabled"
 mlgrep "$CFG" 'forcePageTableIsolation\s*=\s*true' && pass "forcePageTableIsolation enabled" || fail "forcePageTableIsolation not enabled"
+mlgrep "$CFG" 'nier-automata' && pass "SDDM Nier Automata theme configured" || warn "SDDM Nier Automata theme not configured"
 
 # ============================================================================
 # 5. HOME MANAGER CONFIG
@@ -213,6 +219,7 @@ grep -q 'include.*startup.kdl' "$BASE/files/config/niri/config.kdl" && pass "con
 grep -q 'include.*animations' "$BASE/files/config/niri/config.kdl" && pass "config.kdl includes animations" || fail "config.kdl missing animations include"
 grep -q 'show-hotkey-overlay' "$BASE/files/config/niri/binds.kdl" && pass "Hotkey overlay binding" || fail "Hotkey overlay binding missing"
 grep -q 'ghostty' "$BASE/files/config/niri/binds.kdl" && pass "Ghostty terminal binding" || fail "Ghostty terminal binding missing"
+grep -q 'alacritty' "$BASE/files/config/niri/binds.kdl" && pass "Alacritty fallback binding" || fail "Alacritty fallback binding missing"
 grep -q 'vicinae toggle' "$BASE/files/config/niri/binds.kdl" && pass "Vicinae launcher binding" || fail "Vicinae launcher binding missing"
 grep -q 'close-window' "$BASE/files/config/niri/binds.kdl" && pass "Close window binding" || fail "Close window binding missing"
 grep -q 'screenshot' "$BASE/files/config/niri/binds.kdl" && pass "Screenshot binding" || fail "Screenshot binding missing"
@@ -334,7 +341,7 @@ mlgrep "$BASE/files/modules/dev/dev.nix" 'LazyVim' && pass "Neovim LazyVim confi
 # 18. SYSTEM PACKAGES
 # ============================================================================
 header "18. SYSTEM PACKAGES"
-for pkg in niri python3 ffmpeg inotify-tools roboto openrgb ollama-rocm mpvpaper pavucontrol jq trashy; do
+for pkg in niri python3 ffmpeg inotify-tools roboto openrgb ollama-rocm mpvpaper pavucontrol jq trashy alacritty; do
   grep -q "$pkg" "$BASE/files/core/configuration.nix" && pass "system package: $pkg" || warn "system package: $pkg not found"
 done
 for pkg in vulnix; do
@@ -408,6 +415,7 @@ grep -q 'enableGnomeKeyring.*false' "$BASE/files/modules/security/password-polic
 [ -f "$BASE/files/audio/startup.mp3" ] && pass "startup.mp3 audio file" || warn "startup.mp3 missing"
 [ -f "$BASE/files/audio/close_window.mp3" ] && pass "close_window.mp3 audio file" || warn "close_window.mp3 missing"
 mlgrep "$HM" 'createAwwwCache' && pass "Awww cache directory created" || warn "Awww cache creation missing"
+mlgrep "$HM" 'alacritty\.toml' && pass "Alacritty fallback config" || warn "Alacritty fallback config missing"
 mlgrep "$BASE/files/modules/security/service-hardening.nix" 'Service Hardening Guidelines' && pass "Service hardening docs present" || fail "Service hardening docs missing"
 
 # ============================================================================

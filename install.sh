@@ -3,6 +3,11 @@ set -euo pipefail
 
 ROOTDIR="$(cd "$(dirname "$0")" && pwd)"
 
+# ─── Colors ────────────────────────────────────────────────────────────────
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'
+BOLD='\033[1m'; DIM='\033[2m'; NC='\033[0m'
+
+# ─── Config ─────────────────────────────────────────────────────────────────
 AUTO=0
 CACHE_URL=""
 while [[ $# -gt 0 ]]; do
@@ -13,72 +18,138 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# ─── Helpers ────────────────────────────────────────────────────────────────
+step()   { echo -e "\n${CYAN}${BOLD}═══ Step ${1}/${TOTAL_STEPS}: ${2} ═══${NC}"; }
+info()   { echo -e "  ${CYAN}→${NC} $1"; }
+ok()     { echo -e "  ${GREEN}✓${NC} $1"; }
+warn()   { echo -e "  ${YELLOW}⚠${NC} $1"; }
+fail()   { echo -e "  ${RED}✗${NC} $1"; }
+header() { echo -e "\n${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"; echo -e "${BOLD}${CYAN}  $1${NC}"; echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"; }
+spacer() { echo ""; }
+
+TOTAL_STEPS=7
+SCRIPT_START=$(date +%s)
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STEP 1: Environment Checks
+# ═══════════════════════════════════════════════════════════════════════════
+step 1 "Checking Environment"
+spacer
+
 if [[ $EUID -ne 0 ]]; then
-  echo "Must be run as root (you're in a NixOS live ISO, use sudo)." >&2
+  fail "This script must be run as root."
+  echo -e "  ${DIM}You're in a NixOS live ISO; use: sudo ./install.sh${NC}"
   exit 1
 fi
+ok "Running as root"
 
 if ! command -v nix &>/dev/null; then
-  echo "nix not found. Are you in a NixOS live ISO?" >&2
+  fail "nix command not found."
+  echo -e "  ${DIM}Are you in a NixOS live ISO?${NC}"
   exit 1
 fi
+ok "Nix is available"
 
-if [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]] && [[ $AUTO -eq 0 ]]; then
-  echo "WARNING: Running from a desktop session. The install uses a lot of memory"
-  echo "and GNOME may kill the terminal (OOM). Switch to a TTY first:"
-  echo "  Ctrl+Alt+F3   then run:  sudo ./install.sh"
-  echo ""
-  read -rp 'Continue anyway? (y/N): ' ANS
-  if [[ "$ANS" != "y" && "$ANS" != "Y" ]]; then
-    echo "Aborted."
-    exit 1
+TOTAL_MEM=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo)
+ok "Detected ${TOTAL_MEM}MB RAM"
+
+if [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]]; then
+  if [[ $AUTO -eq 0 ]]; then
+    warn "Running from a desktop session."
+    echo -e "  ${YELLOW}The install is memory-intensive and your DE may kill the${NC}"
+    echo -e "  ${YELLOW}terminal (OOM). Switch to a TTY for best results:${NC}"
+    echo -e "  ${BOLD}    Ctrl+Alt+F3   then run:  sudo ./install.sh${NC}"
+    spacer
+    read -rp "$(echo -e ${YELLOW}"  Continue anyway? (y/N): "${NC})" ANS
+    if [[ "$ANS" != "y" && "$ANS" != "Y" ]]; then
+      echo -e "  ${RED}Aborted by user.${NC}"
+      exit 1
+    fi
+  else
+    warn "Running from desktop (auto-mode, continuing)"
   fi
 fi
+ok "Environment checks passed"
 
-echo "=== Atlas Installer ==="
-echo ""
+# ═══════════════════════════════════════════════════════════════════════════
+# STEP 2: Disk Selection
+# ═══════════════════════════════════════════════════════════════════════════
+step 2 "Selecting Target Disk"
+spacer
 
 AVAILABLE=($(lsblk -dpno NAME,TYPE 2>/dev/null | awk '/disk/ {print $1}'))
 if [[ ${#AVAILABLE[@]} -eq 0 ]]; then
-  echo "No disks detected." >&2
+  fail "No disks detected."
+  echo -e "  ${DIM}Check that a drive is connected and visible to the system.${NC}"
   exit 1
 fi
 
 if [[ ${#AVAILABLE[@]} -eq 1 ]]; then
   DISK="${AVAILABLE[0]}"
-  echo "Disk: $DISK  ($(lsblk -dno SIZE "$DISK" 2>/dev/null || echo "?"))"
+  info "Single disk detected: ${BOLD}$DISK${NC} ($(lsblk -dno SIZE "$DISK" 2>/dev/null || echo "?"))"
 elif [[ $AUTO -eq 1 ]]; then
   DISK="${AVAILABLE[0]}"
-  echo "WARNING: Multiple disks, using first: $DISK"
+  warn "Multiple disks detected — using first: ${BOLD}$DISK${NC}"
 else
-  echo "Available disks:"
+  echo -e "  ${BOLD}Available disks:${NC}"
   for i in "${!AVAILABLE[@]}"; do
     DEV="${AVAILABLE[$i]}"
     SIZE=$(lsblk -dno SIZE "$DEV" 2>/dev/null || echo "?")
     MODEL=$(lsblk -dno MODEL "$DEV" 2>/dev/null || echo "")
-    echo "  $((i+1)). $DEV  ($SIZE)  $MODEL"
+    echo -e "    $((i+1)). ${DEV}  ${DIM}(${SIZE})${NC}  ${MODEL}"
   done
-  echo ""
+  spacer
   while [[ -z "${DISK:-}" ]]; do
-    read -rp "Select disk number [1-${#AVAILABLE[@]}]: " SEL
+    read -rp "$(echo -e ${CYAN}"  Select disk number [1-${#AVAILABLE[@]}]: "${NC})" SEL
     if [[ "$SEL" =~ ^[0-9]+$ ]] && [[ "$SEL" -ge 1 ]] && [[ "$SEL" -le "${#AVAILABLE[@]}" ]]; then
       DISK="${AVAILABLE[$((SEL-1))]}"
     else
-      echo "Invalid selection." >&2
+      echo -e "  ${RED}Invalid selection.${NC}"
     fi
   done
 fi
 
-echo ""
-echo "Selected: $DISK"
-echo ""
-lsblk "$DISK"
+spacer
+echo -e "  ${BOLD}Selected disk:${NC} $DISK"
+lsblk "$DISK" | sed 's/^/    /'
 
-TOTAL_MEM=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo)
+# ═══════════════════════════════════════════════════════════════════════════
+# STEP 3: Confirmation (Destructive Action)
+# ═══════════════════════════════════════════════════════════════════════════
+step 3 "Confirm Installation"
+spacer
 
-# Free up space on the live ISO
-echo "Clearing nix garbage on live ISO..."
+if [[ $AUTO -eq 0 ]]; then
+  warn "${BOLD}This will ERASE ALL DATA on $DISK${NC}"
+  echo -e "  ${YELLOW}The disk will be repartitioned and encrypted with LUKS.${NC}"
+  echo -e "  ${YELLOW}This action ${BOLD}cannot${NC}${YELLOW} be undone.${NC}"
+  spacer
+  echo -e "  ${DIM}What will be created:${NC}"
+  echo -e "    ${DIM}• 1GB EFI System Partition (ESP)${NC}"
+  echo -e "    ${DIM}• 8GB Swap partition${NC}"
+  echo -e "    ${DIM}• LUKS-encrypted Btrfs partition (remaining space)${NC}"
+  echo -e "    ${DIM}  - Subvolumes: /nix, /persistent, /home, /var${NC}"
+  echo -e "    ${DIM}• tmpfs for / and /tmp${NC}"
+  spacer
+  read -rp "$(echo -e ${RED}"  Type 'yes' to continue: "${NC})" CONFIRM
+  if [[ "$CONFIRM" != "yes" ]]; then
+    echo -e "  ${YELLOW}Installation cancelled.${NC}"
+    exit 1
+  fi
+else
+  info "Auto-mode enabled — skipping confirmation"
+fi
+ok "Proceeding with installation"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STEP 4: Preparing System Resources
+# ═══════════════════════════════════════════════════════════════════════════
+step 4 "Preparing System Resources"
+spacer
+
+info "Clearing Nix garbage on live ISO..."
 nix-collect-garbage 2>/dev/null || true
+ok "Garbage collection done"
 
 # Expand live ISO writable store so nix has room to build
 for MP in /nix/.rw-store / ; do
@@ -86,32 +157,37 @@ for MP in /nix/.rw-store / ; do
     FS_TYPE=$(findmnt -n -o FSTYPE "$MP")
     if [[ "$FS_TYPE" == "tmpfs" ]]; then
       NEW_SIZE=$((TOTAL_MEM * 9 / 10))M
-      mount -o remount,size="$NEW_SIZE" "$MP" 2>/dev/null && echo "Expanded $MP to $NEW_SIZE"
+      mount -o remount,size="$NEW_SIZE" "$MP" 2>/dev/null && info "Expanded $MP to $NEW_SIZE"
     fi
   fi
 done
+ok "Live ISO store expanded"
 
-# Create zram swap if low memory and no swap active
+# Create zram swap if low memory
 if [[ "$TOTAL_MEM" -lt 8192 ]] && ! swapon --show | grep -q .; then
-  echo ""
-  echo "Low memory detected (${TOTAL_MEM}MB). Creating compressed swap..."
+  info "Low memory (${TOTAL_MEM}MB) — creating compressed swap..."
   modprobe zram 2>/dev/null || true
   echo "$((TOTAL_MEM / 2))M" > /sys/block/zram0/disksize 2>/dev/null || true
   mkswap /dev/zram0 2>/dev/null || true
   swapon /dev/zram0 -p 10 2>/dev/null || true
-  echo "zram swap enabled ($((TOTAL_MEM / 2))MB, compressed)."
+  ok "zram swap enabled ($((TOTAL_MEM / 2))MB, compressed)"
 fi
 
-echo ""
-echo "Freeing page cache..."
+info "Freeing page cache..."
 sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
+ok "System resources ready"
 
-echo ""
-echo "=== Step 2: Partitioning $DISK ==="
-echo ""
+# ═══════════════════════════════════════════════════════════════════════════
+# STEP 5: Partitioning & Formatting
+# ═══════════════════════════════════════════════════════════════════════════
+step 5 "Partitioning & Formatting $DISK"
+spacer
 
-# Write the disko config as Nix (disko evaluates configs via nix-instantiate)
-cat > /tmp/disko-config.nix <<EOF
+info "Writing partition layout via disko..."
+info "  ${DIM}This will create: ESP (1G), Swap (8G), LUKS+Btrfs (remaining)${NC}"
+
+# Write the disko config as Nix
+cat > /tmp/disko-config.nix << EOF
 {
   disko.devices = {
     disk.main = {
@@ -170,14 +246,17 @@ cat > /tmp/disko-config.nix <<EOF
 }
 EOF
 
-# Build and run disko from pinned nixpkgs
+info "Running disko (this may prompt for LUKS passphrase)..."
 nix run "nixpkgs#disko" \
   --extra-experimental-features "nix-command flakes" \
   -- --mode disko /tmp/disko-config.nix
+ok "Disk partitioned and formatted"
 
-echo ""
-echo "=== Step 3: Mounting target ==="
-echo ""
+# ═══════════════════════════════════════════════════════════════════════════
+# STEP 6: Mounting & Installing NixOS
+# ═══════════════════════════════════════════════════════════════════════════
+step 6 "Mounting & Installing NixOS"
+spacer
 
 TARGET=/mnt
 
@@ -185,24 +264,25 @@ LUKS_PART=$(lsblk -lno PATH,FSTYPE "$DISK" | grep crypto_LUKS | awk '{print $1}'
 BOOT_PART=$(lsblk -lno PATH,FSTYPE "$DISK" | grep vfat | awk '{print $1}')
 LUKS_UUID=$(blkid -o value -s UUID "$LUKS_PART" 2>/dev/null || true)
 
-echo "LUKS root:  $LUKS_PART  (UUID: $LUKS_UUID)"
-echo "ESP boot:   $BOOT_PART"
-echo ""
+info "LUKS root:  ${BOLD}$LUKS_PART${NC}  (UUID: $LUKS_UUID)"
+info "ESP boot:   ${BOLD}$BOOT_PART${NC}"
+spacer
 
 if ! cryptsetup status crypt &>/dev/null; then
+  info "Opening LUKS device (enter your passphrase)..."
   cryptsetup open "$LUKS_PART" crypt
 fi
+ok "LUKS device opened"
 
+info "Mounting Btrfs subvolumes..."
 mount -t btrfs -o subvol=nix,noatime /dev/mapper/crypt "$TARGET/nix"
 mount -t btrfs -o subvol=persistent,noatime /dev/mapper/crypt "$TARGET/persistent"
 mount -t btrfs -o subvol=home,noatime /dev/mapper/crypt "$TARGET/home"
 mount -t btrfs -o subvol=var,noatime /dev/mapper/crypt "$TARGET/var"
 mount "$BOOT_PART" "$TARGET/boot"
+ok "Subvolumes mounted"
 
-echo ""
-echo "=== Step 4: Installing NixOS ==="
-echo ""
-
+info "Running nixos-install (this will take 5-30 minutes)..."
 export DISKO_DEVICE="$DISK"
 echo "$LUKS_UUID" > "$ROOTDIR/.luk-uuid"
 
@@ -218,24 +298,36 @@ nixos-install --flake "$ROOTDIR#atlas-installer" \
   --root "$TARGET" \
   --no-root-passwd \
   --option substituters "$SUBSTITUTERS"
+ok "NixOS base system installed"
 
-echo ""
-echo "=== Step 5: Persisting machine-id ==="
-echo ""
+# ═══════════════════════════════════════════════════════════════════════════
+# STEP 7: Finalizing
+# ═══════════════════════════════════════════════════════════════════════════
+step 7 "Finalizing Installation"
+spacer
 
+info "Persisting machine-id..."
 mkdir -p "$TARGET/persistent/etc"
 cp "$TARGET/etc/machine-id" "$TARGET/persistent/etc/machine-id" 2>/dev/null || true
+ok "Machine-id saved"
 
-echo ""
-echo "=== Step 6: Copying config to installed system ==="
-echo ""
-
+info "Copying configuration to installed system..."
 mkdir -p "$TARGET/home/yusa"
 cp -r "$ROOTDIR" "$TARGET/home/yusa/atlas"
 chown -R 1000:100 "$TARGET/home/yusa/atlas" 2>/dev/null || true
-echo "Config copied to /home/yusa/atlas"
+ok "Config copied to /home/yusa/atlas"
 
-echo ""
-echo "=== Install complete! ==="
-echo "Reboot and remove the install media."
-echo "After boot, use: sudo nixos-rebuild switch --flake /home/yusa/atlas#atlas"
+# ─── Summary ────────────────────────────────────────────────────────────────
+ELAPSED=$(( $(date +%s) - SCRIPT_START ))
+header "Install Complete!"
+echo -e "  ${GREEN}${BOLD}Atlas has been installed successfully!${NC}"
+echo -e "  ${DIM}Total time: ${ELAPSED}s${NC}"
+spacer
+echo -e "  ${BOLD}Next steps:${NC}"
+echo -e "    1. ${CYAN}Reboot${NC} and remove the install media"
+echo -e "    2. Boot into your new system"
+echo -e "    3. Log in with ${YELLOW}username: yusa${NC} / ${YELLOW}password: atlas${NC}"
+echo -e "    4. After login, apply the full configuration:"
+echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/atlas#atlas${NC}"
+spacer
+echo -e "  ${DIM}For detailed documentation, see: /home/yusa/atlas/README.md${NC}"

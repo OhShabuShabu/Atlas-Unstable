@@ -2,6 +2,7 @@ binds {
     Mod+Shift+Slash { show-hotkey-overlay; }
 
     Mod+T hotkey-overlay-title="Terminal: Ghostty" { spawn "ghostty"; }
+    Alt+Return hotkey-overlay-title="Terminal: Alacritty (Fallback)" { spawn "alacritty"; }
     Mod+Space hotkey-overlay-title="App Launcher: vicinae" { spawn-sh "vicinae toggle"; }
 
     Super+Alt+S allow-when-locked=true hotkey-overlay-title=null { spawn-sh "pkill orca || exec orca"; }

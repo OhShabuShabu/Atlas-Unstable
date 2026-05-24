@@ -123,6 +123,23 @@
     ".config/nushell/shellrc.nu".source           = ./config/shellrc.nu;
     ".config/nix".source                          = ./config/nix;
 
+    # Alacritty fallback terminal configuration
+    ".config/alacritty/alacritty.toml".text = ''
+      [window]
+      opacity = 0.95
+      padding = { x = 10, y = 10 }
+
+      [font]
+      normal = { family = "Monocraft", style = "Regular" }
+      size = 13
+
+      [cursor]
+      style = { shape = "Bar", blinking = "On" }
+
+      [shell]
+      program = "${pkgs.nushell}/bin/nu"
+    '';
+
     # Ghostty terminal configuration
     ".config/ghostty/config".text = ''
       font-family = Monocraft
