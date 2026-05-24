@@ -18,6 +18,9 @@ Thumbs.db
 # Secrets
 *.age
 
+# Installer artifact (LUKS UUID generated at install time)
+.luk-uuid
+
 # Temporary
 tmp/
 temp/

@@ -178,8 +178,9 @@ TARGET=/mnt
 
 LUKS_PART=$(lsblk -lno PATH,FSTYPE "$DISK" | grep crypto_LUKS | awk '{print $1}')
 BOOT_PART=$(lsblk -lno PATH,FSTYPE "$DISK" | grep vfat | awk '{print $1}')
+LUKS_UUID=$(blkid -o value -s UUID "$LUKS_PART" 2>/dev/null || true)
 
-echo "LUKS root:  $LUKS_PART"
+echo "LUKS root:  $LUKS_PART  (UUID: $LUKS_UUID)"
 echo "ESP boot:   $BOOT_PART"
 echo ""
 
@@ -198,6 +199,10 @@ echo "=== Step 4: Installing NixOS ==="
 echo ""
 
 export DISKO_DEVICE="$DISK"
+echo "$LUKS_UUID" > "$ROOTDIR/.luk-uuid"
+
+trap 'rm -f "$ROOTDIR/.luk-uuid"' EXIT
+
 nixos-install --flake "$ROOTDIR#atlas-installer" \
   --root "$TARGET" \
   --no-root-passwd \
