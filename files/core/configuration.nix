@@ -78,7 +78,7 @@
 
     # Kernel parameters
     kernelParams = [
-      "video=1920x1080@60"
+      "video=1920x1080@60e"
 
       # Boot options
       "quiet"
@@ -97,6 +97,8 @@
     ];
   };
 
+  # Include AMD GPU firmware in initrd so amdgpu can do proper modesetting
+  hardware.enableRedistributableFirmware = true;
 
   # ============================================================================
   # SECTION 2: NETWORK CONFIGURATION
