@@ -50,21 +50,10 @@
     #   - current-system.nix (for `nixos-rebuild switch --flake .#atlas`)
     #   - disko.nix       (for fresh install via `.#atlas-installer`)
 
-    # Plymouth boot splash — NieR: Automata themed
+    # Plymouth boot splash
     plymouth = {
       enable = true;
-      theme = "nier-automata";
-      themePackages = with pkgs; [
-        (pkgs.stdenv.mkDerivation {
-          pname = "plymouth-theme-nier-automata";
-          version = "1.0";
-          src = ./../plymouth/nier-automata;
-          installPhase = ''
-            mkdir -p $out/share/plymouth/themes/nier-automata
-            cp -r $src/* $out/share/plymouth/themes/nier-automata/
-          '';
-        })
-      ];
+      theme = "bgrt";
     };
 
     # Silent boot - reduce console noise

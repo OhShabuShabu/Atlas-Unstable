@@ -8,8 +8,7 @@ A personalized NixOS (nixos-unstable) configuration built with Home Manager, fea
 |-----------|--------|
 | **WM** | [Niri](https://github.com/YaLTeR/niri) (scrolling Wayland compositor) |
 | **Shell** | [Noctalia](https://github.com/noctalia-dev/noctalia-shell) (Wayland desktop shell) |
-| **Display Manager** | SDDM (qylock NieR: Automata theme, auto-login) |
-| **Boot Splash** | Plymouth (custom NieR: Automata theme) |
+| **Display Manager** | SDDM (astronaut theme, auto-login) |
 | **Terminal** | [Ghostty](https://ghostty.org/) with Nushell |
 | **Editor** | Neovim (LazyVim), opencode |
 
@@ -48,7 +47,7 @@ A personalized NixOS (nixos-unstable) configuration built with Home Manager, fea
 - Nushell with zoxide integration
 
 ### System
-- **Boot** — systemd-boot (EFI) with silent NieR: Automata Plymouth splash
+- **Boot** — systemd-boot (EFI) with silent Plymouth splash
 - **Audio** — startup/close sound effects
 - **RGB** — OpenRGB
 - **Flatpak** — Flathub repository enabled
