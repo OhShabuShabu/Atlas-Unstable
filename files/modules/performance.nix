@@ -23,7 +23,7 @@
     max-jobs = lib.mkDefault "auto";
     cores = lib.mkDefault 0;  # INFO: Use all available cores
     auto-optimise-store = true;  # INFO: Deduplicate store
-    min-free = 500;
+    min-free = 500000000;
   };
 
   # INFO: Nix garbage collection

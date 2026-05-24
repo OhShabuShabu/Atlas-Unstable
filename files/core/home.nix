@@ -47,7 +47,6 @@
     GTK_THEME = "Adwaita-dark";
     QT_QPA_PLATFORM = "wayland;xcb";
     QT_WAYLAND_DISABLE_WINDOWDECORATION = "1";
-    MANGOHUD = "1";
   };
 
   # FIX: Use sessionPath to properly prepend to PATH
@@ -65,10 +64,10 @@
   
   xdg.mimeApps.enable = true;
   xdg.mimeApps.defaultApplications = {
-  "text/plain" = "code.desktop";
-  "text/css" = "code.desktop";
-  "application/x-shellscript" = "code.desktop";
-  "application/x-zerosize" = "code.desktop";
+  "text/plain" = "vscodium.desktop";
+  "text/css" = "vscodium.desktop";
+  "application/x-shellscript" = "vscodium.desktop";
+  "application/x-zerosize" = "vscodium.desktop";
   "text/html" = "firefox.desktop";
   "x-scheme-handler/http" = "firefox.desktop";
   "x-scheme-handler/https" = "firefox.desktop";
@@ -109,7 +108,6 @@
     adwaita-icon-theme
     papirus-icon-theme
     gnome-themes-extra
-    nautilus
     libnotify
     wl-clipboard
     xdg-utils

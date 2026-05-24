@@ -97,7 +97,7 @@
   };
 
   # FIX: Harden OpenSSH if enabled
-  systemd.services.sshd.serviceConfig = {
+  systemd.services.sshd.serviceConfig = lib.mkIf (config.services.openssh.enable or false) {
     NoNewPrivileges = true;
     PrivateTmp = true;
     PrivateNetwork = true;
@@ -106,7 +106,7 @@
   };
 
   # FIX: Harden nginx if enabled
-  systemd.services.nginx.serviceConfig = {
+  systemd.services.nginx.serviceConfig = lib.mkIf (config.services.nginx.enable or false) {
     NoNewPrivileges = true;
     PrivateTmp = true;
     PrivateNetwork = true;

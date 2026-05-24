@@ -5,9 +5,8 @@ let
     env = builtins.getEnv "DISKO_DEVICE";
   in if env != "" then env else "/dev/REPLACE_ME";
 in {
-  # Plymouth hides LUKS password prompt in UEFI VMs
-  boot.plymouth.enable = lib.mkForce false;
-  boot.kernelParams = [ "console=tty1" "nomodeset" ];
+  # VM disk drivers (bare metal uses NVMe/AHCI from hardware-configuration.nix)
+  boot.initrd.availableKernelModules = [ "virtio_blk" "virtio_pci" "virtio_scsi" "ata_piix" ];
 
   fileSystems = {
     "/nix".neededForBoot = true;

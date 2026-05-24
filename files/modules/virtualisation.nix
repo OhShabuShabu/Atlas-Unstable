@@ -22,8 +22,8 @@
   # Enable libvirt daemon
   virtualisation.libvirtd = {
     enable = true;
-    # Use nftables backend instead of iptables for kernel compatibility
-    firewallBackend = "iptables";
+    # Use nftables backend for kernel compatibility
+    firewallBackend = "nftables";
 
     # Allow the VM to access the kvmfr IVSHMEM device (bypass cgroup restrictions)
     qemu.verbatimConfig = ''

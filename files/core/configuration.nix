@@ -332,10 +332,10 @@
       };
       # Add pwquality module to password change services
       passwd = {
-        text = lib.mkDefault (lib.mkBefore "password requisite ${pkgs.libpwquality.lib}/lib/security/pam_pwquality.so try_first_pass");
+        text = lib.mkDefault (lib.mkBefore "password requisite ${pkgs.libpwquality}/lib/security/pam_pwquality.so try_first_pass");
       };
       chpasswd = {
-        text = lib.mkDefault (lib.mkBefore "password requisite ${pkgs.libpwquality.lib}/lib/security/pam_pwquality.so try_first_pass");
+        text = lib.mkDefault (lib.mkBefore "password requisite ${pkgs.libpwquality}/lib/security/pam_pwquality.so try_first_pass");
       };
     };
   };
@@ -414,37 +414,19 @@
     enable = true;
     platformTheme = "kde";
   };
-  services.xserver = {
+  # Configure input devices (libinput)
+  services.libinput = {
     enable = true;
 
-    libinput = {
-      enable = true;
-
-      # disabling mouse acceleration
-      mouse = {
-        accelProfile = "flat";
-      };
-
-      # disabling touchpad acceleration
-      touchpad = {
-        accelProfile = "flat";
-      };
+    # disabling mouse acceleration
+    mouse = {
+      accelProfile = "flat";
     };
-  };
 
-
-  # ============================================================================
-  # SECTION 15: DISPLAY MANAGER (SDDM)
-  # ============================================================================
-  services.displayManager.sddm = {
-    enable = false;
-    wayland.enable = false;
-    package = pkgs.kdePackages.sddm;
-    theme = "sddm-astronaut-theme";
-    extraPackages = with pkgs; [
-      sddm-astronaut
-      kdePackages.qtmultimedia
-    ];
+    # disabling touchpad acceleration
+    touchpad = {
+      accelProfile = "flat";
+    };
   };
 
 

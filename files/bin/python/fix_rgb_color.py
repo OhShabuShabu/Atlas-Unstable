@@ -3,8 +3,8 @@ import sys
 import colorsys
 
 def fix_color(hex_color):
-    hex_color = hex_color.lstrip('#').upper()
-    if len(hex_color) != 6:
+    hex_color = hex_color.lstrip('#').strip()
+    if len(hex_color) != 6 or not all(c in '0123456789ABCDEFabcdef' for c in hex_color):
         return hex_color
 
     r = int(hex_color[0:2], 16) / 255
@@ -13,10 +13,10 @@ def fix_color(hex_color):
 
     h, s, v = colorsys.rgb_to_hsv(r, g, b)
     
-    if s < 1.0 and v > 0.2:
+    if 0 < s < 1.0 and v > 0.2:
         s = 1.0
     
-    r, g, b = colorsys.hsv_to_rgb(h, s, v)
+    r, g, b = colorsys.hsv_to_rgb(h, s, v,)
     
     r = min(255, int(r * 255))
     g = min(255, int(g * 255))

@@ -6,7 +6,8 @@
 #$env.PATH = ($env.PATH | append "$HOME/.local/bin")
 
 # INFO: ALIASES
-alias motivate = python3 ($env.HOME | path join "Atlas/files/bin/python/motivate")
+# INFO: The Atlas repo is expected at ~/Atlas (set @ build time)
+alias motivate = python3 ~/Atlas/files/bin/python/motivate
 
 # INFO: Security tool aliases
 alias logs = ^sudo sh -c "ls -1rt /var/log/*.log | fzf --height=40% --layout=reverse --ansi | xargs -r lnav"
@@ -16,6 +17,9 @@ alias aide-check = ^sudo aide --check
 alias snout-status = ^sudo systemctl status snout-daemon
 alias snout-logs = ^sudo journalctl -fu snout-daemon
 alias snout-scan = ^sudo snout scan
+alias snort-status = ^sudo systemctl status snort-daemon
+alias snort-alerts = ^sudo tail -f /var/log/snort/alert_csv.txt
+alias snortctl = ^sudo snortctl
 
 # INFO: Trash aliases
 alias trash = ^trash

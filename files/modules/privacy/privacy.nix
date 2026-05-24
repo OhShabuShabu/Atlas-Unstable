@@ -19,8 +19,6 @@ in
   environment.systemPackages = with pkgs; [
     mullvad-vpn
     mullvad-browser
-    exiftool
-    inotify-tools
     notifyUser
     nftables
   ];

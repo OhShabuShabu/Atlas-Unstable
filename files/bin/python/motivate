@@ -9,7 +9,9 @@ CYAN = '\033[96m'
 YELLOW = '\033[93m'
 RESET = '\033[0m'
 
-CACHE_FILE = os.path.expanduser("~/.cache/motivate_quote")
+CACHE_DIR = os.path.expanduser("~/.cache")
+    CACHE_FILE = os.path.join(CACHE_DIR, "motivate_quote")
+os.makedirs(CACHE_DIR, exist_ok=True)
 
 def fetch_quote():
     try:
@@ -25,7 +27,7 @@ def fetch_quote():
             with open(CACHE_FILE, 'w') as f:
                 f.write(f"{today}|{quote}|{author}")
             return quote, author
-    except:
+    except Exception:
         return None, None
 
 def main():
@@ -40,13 +42,13 @@ def main():
                     quote, author = content[1], content[2]
                 else:
                     new_quote, new_author = fetch_quote()
-                    if new_quote:
+                    if new_quote is not None:
                         quote, author = new_quote, new_author
-        except:
+        except Exception:
             pass
     else:
         new_quote, new_author = fetch_quote()
-        if new_quote:
+        if new_quote is not None:
             quote, author = new_quote, new_author
 
     print()

@@ -62,7 +62,7 @@ for f in "${REQUIRED_FILES[@]}"; do
   [ -f "$BASE/$f" ] && pass "$f exists" || fail "$f MISSING"
 done
 [ -d "$BASE/files/config/.icons" ] && pass ".icons directory exists" || warn ".icons directory missing"
-[ -d "$BASE/files/modules/dev/nvim" ] && pass "nvim config directory exists" || fail "nvim config directory missing"
+[ -f "$BASE/files/modules/dev/dev.nix" ] && pass "Neovim dev module exists" || fail "Neovim dev module missing"
 
 # ============================================================================
 # 3. NIX SYNTAX
@@ -86,7 +86,6 @@ mlgrep "$CFG" 'experimental-features.*nix-command.*flakes' && pass "Flakes + nix
 mlgrep "$CFG" 'allowUnfree\s*=\s*true' && pass "Unfree packages allowed" || fail "Unfree not allowed"
 mlgrep "$CFG" 'systemd-boot.*enable\s*=\s*true' && pass "systemd-boot enabled" || fail "systemd-boot not enabled"
 mlgrep "$CFG" 'plymouth.*enable\s*=\s*true' && pass "Plymouth enabled" || fail "Plymouth not enabled"
-mlgrep "$CFG" 'sddm.*enable\s*=\s*true' && pass "SDDM enabled" || fail "SDDM not enabled"
 mlgrep "$CFG" 'autoLogin.*enable\s*=\s*true' && pass "Auto-login enabled" || warn "Auto-login not enabled"
 mlgrep "$CFG" 'programs\.niri\.enable\s*=\s*true' && pass "Niri WM enabled" || fail "Niri not enabled"
 mlgrep "$CFG" 'pipewire.*enable\s*=\s*true' && pass "Pipewire enabled" || fail "Pipewire not enabled"
@@ -105,9 +104,12 @@ mlgrep "$CFG" 'programs\.nix-ld\.enable\s*=\s*true' && pass "nix-ld enabled" || 
 mlgrep "$CFG" 'logrotate.*enable\s*=\s*true' && pass "logrotate enabled" || fail "logrotate not enabled"
 grep -Ezq 'security\.audit\s*=\s*\{[^}]*enable\s*=\s*true' "$CFG" || grep -q 'security\.audit\.enable\s*=\s*true' "$CFG" && pass "Linux audit subsystem enabled" || fail "audit not enabled"
 mlgrep "$CFG" 'security\.auditd\.enable\s*=\s*true' && pass "auditd enabled" || fail "auditd not enabled"
-mlgrep "$CFG" 'luks-' && pass "LUKS devices configured" || fail "LUKS not configured"
+CSN="$BASE/files/core/current-system.nix"
+mlgrep "$CSN" 'luks-' && pass "LUKS devices configured" || fail "LUKS not configured in current-system.nix"
 mlgrep "$CFG" 'distrobox' && pass "Distrobox config present" || fail "Distrobox config missing"
 mlgrep "$CFG" 'monocraft' && pass "Monocraft font configured" || fail "Monocraft font not configured"
+mlgrep "$CFG" 'protectKernelImage\s*=\s*true' && pass "protectKernelImage enabled" || fail "protectKernelImage not enabled"
+mlgrep "$CFG" 'forcePageTableIsolation\s*=\s*true' && pass "forcePageTableIsolation enabled" || fail "forcePageTableIsolation not enabled"
 
 # ============================================================================
 # 5. HOME MANAGER CONFIG
@@ -326,24 +328,28 @@ DEV="$BASE/files/modules/dev/dev.nix"
 for tool in neovim opencode bun claude-code; do
   mlgrep "$DEV" "$tool" && pass "dev: $tool" || fail "dev: $tool not configured"
 done
-[ -f "$BASE/files/modules/dev/nvim/init.lua" ] && pass "Neovim init.lua exists" || fail "Neovim init.lua missing"
+mlgrep "$BASE/files/modules/dev/dev.nix" 'LazyVim' && pass "Neovim LazyVim configured" || fail "Neovim LazyVim not configured"
 
 # ============================================================================
 # 18. SYSTEM PACKAGES
 # ============================================================================
 header "18. SYSTEM PACKAGES"
-for pkg in niri python3 ffmpeg inotify-tools roboto openrgb ollama-rocm mpvpaper pavucontrol jq trashy vulnix; do
+for pkg in niri python3 ffmpeg inotify-tools roboto openrgb ollama-rocm mpvpaper pavucontrol jq trashy; do
   grep -q "$pkg" "$BASE/files/core/configuration.nix" && pass "system package: $pkg" || warn "system package: $pkg not found"
 done
-for pkg in lynis clamav aide audit lnav snort; do
+for pkg in vulnix; do
+  grep -q "$pkg" "$BASE/files/modules/security/default.nix" && pass "system package: $pkg (security module)" || warn "system package: $pkg not found"
+done
+for pkg in lynis clamav aide audit lnav; do
   grep -q "$pkg" "$BASE/files/modules/security/default.nix" && pass "security packages: $pkg" || warn "security packages: $pkg not found"
 done
+grep -q 'snort' "$BASE/files/modules/security/snort.nix" && pass "security packages: snort (snort.nix)" || warn "security packages: snort not found"
 
 # ============================================================================
 # 19. IMPORTS CONSISTENCY
 # ============================================================================
 header "19. IMPORTS CONSISTENCY"
-for mod in kernel-sysctl kernel-boot firewall banner service-hardening telemetry password-policy network-privacy aide clamav strong-keyring auditd-config; do
+for mod in kernel-sysctl kernel-boot process-accounting firewall banner service-hardening telemetry password-policy network-privacy aide clamav strong-keyring auditd-config quarantine; do
   grep -q "./$mod" "$BASE/files/modules/security/default.nix" && pass "security/default.nix imports $mod" || fail "security/default.nix missing import: $mod"
 done
 for mod in hardware-configuration security snort snout performance privacy gaming virtualisation minecraft flatpak; do
@@ -375,11 +381,11 @@ done
 # 21. SHELL ALIASES
 # ============================================================================
 header "21. SHELL ALIASES"
-SECALIAS="$BASE/files/modules/security/default.nix"
-grep -q 'aide-check' "$SECALIAS" && pass "Alias: aide-check" || fail "Alias: aide-check missing"
-grep -q 'lynis-scan' "$SECALIAS" && pass "Alias: lynis-scan" || fail "Alias: lynis-scan missing"
-grep -q 'snout-scan' "$SECALIAS" && pass "Alias: snout-scan" || fail "Alias: snout-scan missing"
-grep -q 'snortctl' "$SECALIAS" && pass "Alias: snortctl" || fail "Alias: snortctl missing"
+NUSHELL="$BASE/files/core/config/shellrc.nu"
+grep -q 'aide-check' "$NUSHELL" && pass "Alias: aide-check" || fail "Alias: aide-check missing"
+grep -q 'lynis-scan' "$NUSHELL" && pass "Alias: lynis-scan" || fail "Alias: lynis-scan missing"
+grep -q 'snout-scan' "$NUSHELL" && pass "Alias: snout-scan" || fail "Alias: snout-scan missing"
+grep -q 'snortctl' "$NUSHELL" && pass "Alias: snortctl" || fail "Alias: snortctl missing"
 grep -q 'audit-tail' "$BASE/files/modules/security/auditd-config.nix" && pass "Alias: audit-tail" || fail "Alias: audit-tail missing"
 grep -q 'pa-report' "$BASE/files/modules/security/process-accounting.nix" && pass "Alias: pa-report" || fail "Alias: pa-report missing"
 grep -q 'pkcs11-list' "$BASE/files/modules/security/strong-keyring.nix" && pass "Alias: pkcs11-list" || fail "Alias: pkcs11-list missing"
