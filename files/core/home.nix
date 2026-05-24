@@ -188,6 +188,7 @@ in {
       animation_duration_ms = 1500
       centered = true
       width = 72
+      border = false
       show_translation = ["english"]
       quote_color = "#a3be8c"
       translation_color = "dim"
