@@ -53,28 +53,20 @@
     #   - current-system.nix (for `nixos-rebuild switch --flake .#atlas`)
     #   - disko.nix       (for fresh install via `.#atlas-installer`)
 
-    # Plymouth boot splash — Yorha NieR:Automata theme
+    # Plymouth boot splash — Mate Red theme
     plymouth = {
       enable = true;
-      theme = "yorha";
-      font = "${pkgs.comfortaa}/share/fonts/truetype/Comfortaa-Regular.ttf";
+      theme = "mate_red";
       themePackages = with pkgs; [
         (pkgs.stdenv.mkDerivation {
-          pname = "plymouth-yorha-theme";
+          pname = "plymouth-mate-red-theme";
           version = "1.0";
-          src = pkgs.fetchFromGitHub {
-            owner = "antspartanelite";
-            repo = "Custom-Nier-Boot";
-            rev = "689b010ea1f1e6f5cf5a4c9366b88c415e911b56";
-            sha256 = "sha256-8JqqJkP5QOX2jJouOhLHR6CjfJmg7Lo0PFeB9h3Drgs=";
-          };
+          src = ./../config/plymouth/mate_red;
           installPhase = ''
             mkdir -p $out/share/plymouth/themes
-            cp -r "$src/Plymouth Theme/yorha" $out/share/plymouth/themes/yorha
-            chmod -R +w $out/share/plymouth/themes/yorha
-            substituteInPlace $out/share/plymouth/themes/yorha/yorha.plymouth \
+            cp -r "$src" $out/share/plymouth/themes/mate_red
+            substituteInPlace $out/share/plymouth/themes/mate_red/mate_red.plymouth \
               --replace-fail "/usr/share" "$out/share"
-            sed -i 's|//yorha|/yorha|g' $out/share/plymouth/themes/yorha/yorha.plymouth
           '';
         })
       ];
