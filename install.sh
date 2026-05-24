@@ -305,7 +305,7 @@ else
 fi
 
 info "Injecting password hash into Nix config..."
-HASH=$(openssl passwd -6 "$PW")
+HASH=$(nix run nixpkgs#mkpasswd -- -m sha-512 "$PW" 2>/dev/null)
 sed -i '/description = "yusa";/a\    initialHashedPassword = "'"${HASH//\$/\\$}"'";' \
   "$ROOTDIR/files/core/configuration.nix"
 ok "Password hash injected"
