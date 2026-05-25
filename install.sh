@@ -450,17 +450,14 @@ nixos-install --flake "$ROOTDIR#atlas-installer" \
   > /tmp/nixos-install.log 2>&1 &
 NIX_PID=$!
 
+i=0
 printf '\e[?25l'
 while kill -0 "$NIX_PID" 2>/dev/null; do
   ELAPSED=$((SECONDS - INSTALL_START))
-  PSEUDO=$(( ELAPSED * 100 / 900 ))
-  (( PSEUDO > 95 )) && PSEUDO=95
-  (( ++PSEUDO ))
-  FILL=$(( PSEUDO * 36 / 100 ))
-  printf -v BAR '%*s' "$FILL" ''; BAR="${BAR// /━}"
-  printf -v REST '%*s' $((36-FILL)) ''; REST="${REST// /─}"
-  printf "\r  ${CYAN}${BAR}${DIM}${REST}${NC}  ${BOLD}%3d%%${NC}  ${CYAN}⏱${NC} %02d:%02d" "$PSEUDO" $((ELAPSED/60)) $((ELAPSED%60))
-  sleep 0.3
+  STATUS=$(tail -1 /tmp/nixos-install.log 2>/dev/null | tr '\n' ' ' | head -c 65)
+  printf "\r  ${CYAN}%s${NC}  ⏱ %02d:%02d  ${DIM}%s${NC}  " "${SPIN:$i:1}" $((ELAPSED/60)) $((ELAPSED%60)) "$STATUS"
+  i=$(((i+1)%${#SPIN}))
+  sleep 0.5
 done
 printf '\e[?25h'
 
@@ -475,8 +472,7 @@ TOTAL=$((SECONDS - INSTALL_START))
 sed -i '/initialPassword\|initialHashedPassword/d' "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true
 
 if [[ $NIX_EXIT -eq 0 ]]; then
-  printf -v BAR '%*s' '36' ''; BAR="${BAR// /━}"
-  printf "\r  ${GREEN}${BAR}${NC}  ${BOLD}100%%${NC}  ${GREEN}⏱${NC} %02d:%02d\n" $((TOTAL/60)) $((TOTAL%60))
+  echo
   ok "NixOS base system installed (${BOLD}$((TOTAL/60))m $((TOTAL%60))s${NC})"
 else
   echo
