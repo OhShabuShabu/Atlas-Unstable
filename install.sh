@@ -493,7 +493,7 @@ step 8 "Optional Modules (Gaming, Dev, Privacy, etc.)"
 spacer
 
 RAW_URL="https://raw.githubusercontent.com/OhShabuShabu/Atlas-Modules/main"
-OPT_DIR="$TARGET/home/yusa/atlas/files/modules/optional"
+OPT_DIR="$TARGET/persistent/home/yusa/Atlas/files/modules/optional"
 SELECTED_MODULES=()
 
 declare -A MODULE_DESC
