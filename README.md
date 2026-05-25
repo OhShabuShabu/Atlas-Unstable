@@ -51,7 +51,6 @@ A personalized NixOS (nixos-unstable) configuration built with Home Manager, fea
 - **Audio** — startup/close sound effects
 - **RGB** — OpenRGB
 - **Flatpak** — Flathub repository enabled
-- **Ollama** — local LLM service (ROCm)
 - **TCP BBR** congestion control + cake qdisc
 - **Trashy** — CLI system trash manager (safer alternative to rm)
 
@@ -77,13 +76,12 @@ To add a user-level package:
 
 ### Enabling/Disabling Modules
 
-Each feature is implemented as a module. Optional modules live in a separate repo at `/home/yusa/atlas-modules` (imported via flake input). To disable:
+Each feature is implemented as a module. Optional modules are downloaded as individual `.nix` files (at install time or manually) to `files/modules/optional/` where they're auto-imported by directory. To disable:
 
-1. Edit `files/core/configuration.nix`
-2. Comment out the module import (line starting with `inputs.atlas-modules.nixosModules.`)
-3. Rebuild: `sudo nixos-rebuild switch --flake .#atlas`
+1. Remove the `.nix` file from `files/modules/optional/nixos/` or `files/modules/optional/home/`
+2. Rebuild: `sudo nixos-rebuild switch --flake .#atlas`
 
-**WARNING**: Some modules are interdependent. Check module READMEs for dependencies.
+**WARNING**: Some modules are interdependent. Check module docs for dependencies.
 
 ## Troubleshooting
 
@@ -147,6 +145,7 @@ atlas/
 │   ├── flatpak.nix                     # Flatpak packages
 │   ├── minecraft.nix                   # PrismLauncher config
 │   ├── performance.nix                 # CPU governor, Nix optimization
+│   ├── extras.nix                      # AI/ML (Ollama ROCm), animated wallpapers
 │   ├── tools.nix                       # CLI utilities
 │   └── virtualisation.nix              # Docker, Podman, libvirt
 ```

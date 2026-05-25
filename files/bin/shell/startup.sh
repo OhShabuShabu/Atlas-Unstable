@@ -10,5 +10,7 @@ mullvad connect &
 
 sleep 12
 
-openrgb -d 0 -c $(python3 "$PROJECT_DIR/files/bin/python/fix_rgb_color.py" $(tr -d '#' < "$PROJECT_DIR/files/config/primary_color.txt")) &
+if command -v openrgb &>/dev/null; then
+  openrgb -d 0 -c $(python3 "$PROJECT_DIR/files/bin/python/fix_rgb_color.py" $(tr -d '#' < "$PROJECT_DIR/files/config/primary_color.txt")) &
+fi
 # virsh --connect qemu:///system start win11 &

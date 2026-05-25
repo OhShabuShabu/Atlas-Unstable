@@ -27,7 +27,7 @@ fail()   { echo -e "  ${RED}✗${NC} $1"; }
 header() { echo -e "\n${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"; echo -e "${BOLD}${CYAN}  $1${NC}"; echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"; }
 spacer() { echo ""; }
 
-TOTAL_STEPS=8
+TOTAL_STEPS=9
 SCRIPT_START=$(date +%s)
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -368,6 +368,7 @@ MODULE_DESC[5]="minecraft  — PrismLauncher, Blockbench"
 MODULE_DESC[6]="flatpak    — Flathub repository"
 MODULE_DESC[7]="dev        — Neovim, VSCodium, bun, opencode"
 MODULE_DESC[8]="tools      — yt-dlp, mpv"
+MODULE_DESC[9]="extras     — AI/ML (Ollama ROCm), animated wallpapers"
 
 declare -A MODULE_FILE
 MODULE_FILE[1]="performance.nix"
@@ -378,6 +379,7 @@ MODULE_FILE[5]="minecraft.nix"
 MODULE_FILE[6]="flatpak.nix"
 MODULE_FILE[7]="dev/dev.nix"
 MODULE_FILE[8]="tools.nix"
+MODULE_FILE[9]="extras.nix"
 
 declare -A MODULE_DIR
 MODULE_DIR[1]="nixos"
@@ -388,16 +390,17 @@ MODULE_DIR[5]="nixos"
 MODULE_DIR[6]="nixos"
 MODULE_DIR[7]="home"
 MODULE_DIR[8]="home"
+MODULE_DIR[9]="nixos"
 
 if [[ "$AUTO" -eq 0 ]]; then
-  TOGGLED=(0 0 0 0 0 0 0 0 0)
+  TOGGLED=(0 0 0 0 0 0 0 0 0 0)
 
   echo -e "  ${BOLD}Select optional modules to install:${NC}"
   echo -e "  ${DIM}(type a number to toggle it on/off, press Enter when done)${NC}"
   spacer
 
   while :; do
-    for i in 1 2 3 4 5 6 7 8; do
+    for i in 1 2 3 4 5 6 7 8 9; do
       MARK="${TOGGLED[$i]:-0}"
       if [[ "$MARK" -eq 1 ]]; then
         echo -e "    ${GREEN}[x]${NC} ${CYAN}$i${NC}) ${MODULE_DESC[$i]}"
@@ -409,19 +412,19 @@ if [[ "$AUTO" -eq 0 ]]; then
     read -rp "$(echo -e ${CYAN}"  Toggle number (or Enter to confirm): "${NC})" ANS
     if [[ -z "$ANS" ]]; then
       break
-    elif [[ "$ANS" =~ ^[0-8]$ ]]; then
+    elif [[ "$ANS" =~ ^[0-9]$ ]]; then
       TOGGLED[$ANS]=$((1 - ${TOGGLED[$ANS]:-0}))
     fi
     echo -en "\033[10A"
   done
 
-  for i in 1 2 3 4 5 6 7 8; do
+  for i in 1 2 3 4 5 6 7 8 9; do
     if [[ "${TOGGLED[$i]:-0}" -eq 1 ]]; then
       SELECTED_MODULES+=("$i")
     fi
   done
 else
-  SELECTED_MODULES=(1 2 3 4 5 6 7 8)
+  SELECTED_MODULES=(1 2 3 4 5 6 7 8 9)
 fi
 
 if [[ ${#SELECTED_MODULES[@]} -gt 0 ]]; then

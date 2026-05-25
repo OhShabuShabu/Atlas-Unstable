@@ -539,14 +539,7 @@
     wtype
     wlrctl
 
-    # Wallpaper engine support
-    linux-wallpaperengine
-
-    # AI/ML
-    ollama-rocm
-
     # Media
-    mpvpaper
     crosspipe
     pavucontrol
     easyeffects
