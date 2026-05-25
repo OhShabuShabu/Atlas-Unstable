@@ -72,17 +72,6 @@ timer_until() {
   printf '\e[?25h'
 }
 
-# ─── Celebration ─────────────────────────────────────────────────────────
-celebrate() {
-  local colors=("${GREEN}" "${YELLOW}" "${CYAN}")
-  for ((c=0; c<6; c++)); do
-    local ci=$((c % 3))
-    echo -en "\r  ${colors[ci]}✦${NC}   ${colors[ci]}✦${NC}   ${colors[ci]}✦${NC}   ${BOLD}Install Complete!${NC}   ${colors[ci]}✦${NC}   ${colors[ci]}✦${NC}   ${colors[ci]}✦${NC}"
-    sleep 0.25
-  done
-  echo
-}
-
 TOTAL_STEPS=9
 SCRIPT_START=$(date +%s)
 
@@ -609,30 +598,28 @@ else
   info "No modules selected — you can add them later by downloading .nix files to files/modules/optional/"
 fi
 
-# ─── Summary ────────────────────────────────────────────────────────────────
-ELAPSED=$(( $(date +%s) - SCRIPT_START ))
-ELAPSED_MIN=$((ELAPSED / 60))
-ELAPSED_SEC=$((ELAPSED % 60))
+# ═══════════════════════════════════════════════════════════════════════════
+# STEP 9: Apply Full Configuration (includes optional modules)
+# ═══════════════════════════════════════════════════════════════════════════
+step 9 "Applying Full Configuration"
+spacer
 
+info "Running nixos-rebuild switch to activate the configuration..."
+info "${DIM}This installs all selected optional modules.${NC}"
 echo
-celebrate
-echo
-echo -e "  ${BOLD}${GREEN}┌─────────────────────────────────────────────┐${NC}"
-echo -e "  ${BOLD}${GREEN}│  Atlas has been installed successfully!      │${NC}"
-echo -e "  ${BOLD}${GREEN}│  ─────────────────────────────────────────── │${NC}"
-echo -e "  ${BOLD}${GREEN}│  ⏱  Total time: ${BOLD}${ELAPSED_MIN}m ${ELAPSED_SEC}s${NC}${GREEN}                    │${NC}"
-echo -e "  ${BOLD}${GREEN}└─────────────────────────────────────────────┘${NC}"
-echo
-echo -e "  ${BOLD}Next steps:${NC}"
-echo -e "    ${CYAN}1.${NC} Reboot and remove the install media"
-echo -e "    ${CYAN}2.${NC} Boot into your new system"
-echo -e "    ${CYAN}3.${NC} Log in with ${YELLOW}username: yusa${NC}"
-echo -e "    ${CYAN}4.${NC} After login, apply the full configuration:"
-echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/atlas#atlas${NC}"
-if [[ ${#SELECTED_MODULES[@]} -eq 0 ]]; then
-  echo -e "    ${CYAN}5.${NC} To add optional modules later:"
-echo -e "       ${DIM}Download .nix files to /home/yusa/atlas/files/modules/optional/nixos/ or home/${NC}"
-  echo -e "       ${DIM}They're auto-imported from the directory.${NC}"
+
+if command -v nixos-enter &>/dev/null; then
+  nixos-enter --root "$TARGET" -c "nixos-rebuild switch --flake /home/yusa/atlas#atlas" \
+    > /tmp/nixos-rebuild.log 2>&1 &
+  REBUILD_PID=$!
+  timer_until $REBUILD_PID "nixos-rebuild"
+  if wait $REBUILD_PID 2>/dev/null; then
+    ok "Full configuration applied (including optional modules)"
+  else
+    warn "nixos-rebuild had issues — run it manually after first boot:"
+    echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/atlas#atlas${NC}"
+  fi
+else
+  warn "nixos-enter not found — run nixos-rebuild manually after first boot:"
+  echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/atlas#atlas${NC}"
 fi
-echo
-echo -e "  ${DIM}For detailed documentation, see: /home/yusa/atlas/README.md${NC}"
