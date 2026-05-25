@@ -408,22 +408,43 @@ else
 fi
 
 INSTALL_START=$SECONDS
-echo -e "  ${DIM}Nix will build the system from the flake specification.${NC}"
-echo -e "  ${DIM}This takes 5-30 minutes depending on download speed.${NC}"
-echo
 
 nixos-install --flake "$ROOTDIR#atlas-installer" \
   --root "$TARGET" \
   --no-root-passwd \
   --option substituters "$SUBSTITUTERS" \
-  --accept-flake-config
+  --accept-flake-config > /tmp/nixos-install.log 2>&1 &
+NIX_PID=$!
+
+PB_WIDTH=32
+printf '\e[?25l'
+while kill -0 "$NIX_PID" 2>/dev/null; do
+  ELAPSED=$((SECONDS - INSTALL_START))
+  PSEUDO=$(( ELAPSED * 100 / 900 ))
+  (( PSEUDO > 95 )) && PSEUDO=95
+  (( ++PSEUDO ))
+  FILL=$(( PSEUDO * PB_WIDTH / 100 ))
+  printf -v BAR '%*s' "$FILL" ''; BAR="${BAR// /█}"
+  printf -v REST '%*s' $((PB_WIDTH-FILL)) ''; REST="${REST// /░}"
+  printf "\r  ${CYAN}┣${NC}${BAR}${REST}${CYAN}┫${NC}  ${BOLD}%3d%%${NC}  ${CYAN}⏱${NC} %02d:%02d" "$PSEUDO" $((ELAPSED/60)) $((ELAPSED%60))
+  sleep 0.3
+done
+
+wait "$NIX_PID"
 NIX_EXIT=$?
 TOTAL=$((SECONDS - INSTALL_START))
+
+printf -v BAR '%*s' "$PB_WIDTH" ''; BAR="${BAR// /█}"
+printf "\r  ${GREEN}┣${NC}${BAR}${GREEN}┫${NC}  ${BOLD}100%%${NC}  ${GREEN}⏱${NC} %02d:%02d\n" $((TOTAL/60)) $((TOTAL%60))
+printf '\e[?25h'
 
 if [[ $NIX_EXIT -eq 0 ]]; then
   ok "NixOS base system installed (${BOLD}$((TOTAL/60))m $((TOTAL%60))s${NC})"
 else
+  echo
   fail "nixos-install failed (exit $NIX_EXIT)"
+  echo -e "  ${DIM}Last output:${NC}"
+  tail -5 /tmp/nixos-install.log 2>/dev/null | sed 's/^/  /'
   exit 1
 fi
 
