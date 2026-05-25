@@ -437,7 +437,10 @@ printf -v BAR '%*s' '36' ''; BAR="${BAR// /━}"
 printf "\r  ${GREEN}${BAR}${NC}  ${BOLD}100%%${NC}  ${GREEN}⏱${NC} %02d:%02d\n" $((TOTAL/60)) $((TOTAL%60))
 printf '\e[?25h'
 
+sed -i '/initialPassword\|initialHashedPassword/d' "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true
+
 if [[ $NIX_EXIT -eq 0 ]]; then
+  ok "Password cleaned from source config"
   ok "NixOS base system installed (${BOLD}$((TOTAL/60))m $((TOTAL%60))s${NC})"
 else
   echo
@@ -446,9 +449,6 @@ else
   tail -5 /tmp/nixos-install.log 2>/dev/null | sed 's/^/  /'
   exit 1
 fi
-
-sed -i '/initialPassword\|initialHashedPassword/d' "$ROOTDIR/files/core/configuration.nix" || true
-ok "Password cleaned from source config"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # STEP 7: Copy Configuration to Installed System
