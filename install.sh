@@ -33,9 +33,8 @@ step() {
   printf -v bar '%*s' "$fill" ''; bar="${bar// /━}"
   printf -v rest '%*s' $((36-fill)) ''; rest="${rest// /─}"
   if [[ ${STEP_PRINTED:-0} -eq 1 ]]; then
-    printf '\e8'; printf '\e[J'
+    printf '\e[H\e[J'    # home + clear screen — reliable across scrolls
   fi
-  printf '\e7'
   echo
   echo -e "  ${CYAN}${bar}${DIM}${rest}${NC}  ${BOLD}${pct}%${NC}  ${DIM}Step ${num}/${total}${NC}"
   echo -e "  ${BOLD}${CYAN}▶${NC} ${BOLD}${title}${NC}"
@@ -49,10 +48,9 @@ SPIN='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
 spin() {
   local pid=$1 msg="${2:-Working...}"
   local i=0
-  printf '\e[?25l\e7'
+  printf '\e[?25l'
   while kill -0 "$pid" 2>/dev/null; do
-    printf '\e8'
-    printf "  ${CYAN}%s${NC} %s " "${SPIN:$i:1}" "$msg"
+    printf "\r  ${CYAN}%s${NC} %s " "${SPIN:$i:1}" "$msg"
     i=$(((i+1)%${#SPIN}))
     sleep 0.08
   done
