@@ -304,11 +304,12 @@ else
   PW="atlas"
 fi
 
-info "Injecting password hash into Nix config..."
-HASH=$(nix run nixpkgs#mkpasswd -- -m sha-512 "$PW" 2>/dev/null)
-sed -i '/description = "yusa";/a\    initialHashedPassword = "'"${HASH//\$/\\$}"'";' \
-  "$ROOTDIR/files/core/configuration.nix"
-ok "Password hash injected"
+info "Injecting password into Nix config..."
+PW_SAFE="${PW//\"/\\\"}"
+sed -i '/description = "yusa";/a\    initialPassword = "'"$PW_SAFE"'";' \
+  "$ROOTDIR/files/core/configuration.nix" && \
+  ok "Password injected (NixOS will hash on first boot)" || \
+  warn "Could not inject password into configuration.nix"
 
 info "Running nixos-install (this will take 5-30 minutes)..."
 export DISKO_DEVICE="$DISK"
@@ -328,8 +329,8 @@ nixos-install --flake "$ROOTDIR#atlas-installer" \
   --option substituters "$SUBSTITUTERS"
 ok "NixOS base system installed"
 
-sed -i '/initialHashedPassword/d' "$ROOTDIR/files/core/configuration.nix" || true
-ok "Password hash cleaned from source config"
+sed -i '/initialPassword\|initialHashedPassword/d' "$ROOTDIR/files/core/configuration.nix" || true
+ok "Password cleaned from source config"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # STEP 7: Copy Configuration to Installed System
