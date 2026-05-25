@@ -25,9 +25,9 @@
   };
 
   fileSystems."/home" = {
-    device = "/dev/mapper/crypt";
-    fsType = "btrfs";
-    options = [ "subvol=home" "noatime" ];
+    device = "tmpfs";
+    fsType = "tmpfs";
+    options = [ "size=25%" "mode=755" ];
     neededForBoot = true;
   };
 
@@ -44,7 +44,9 @@
     options = [ "fmask=0077" "dmask=0077" ];
   };
 
-  swapDevices = [
-    { device = "/dev/disk/by-partlabel/disk-main-swap"; }
-  ];
+  # Swap file on the LUKS-encrypted /persistent subvol — no bare swap partition
+  swapDevices = [{
+    device = "/persistent/swapfile";
+    size = 8192;
+  }];
 }

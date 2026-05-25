@@ -38,6 +38,14 @@ in {
       ];
     };
 
+    nodev."/home" = {
+      fsType = "tmpfs";
+      mountOptions = [
+        "size=25%"
+        "mode=755"
+      ];
+    };
+
     disk.main = {
       type = "disk";
       device = diskDevice;
@@ -57,13 +65,8 @@ in {
               ];
             };
           };
-          swap = {
-            size = "8G";
-            content = {
-              type = "swap";
-              resumeDevice = true;
-            };
-          };
+          # Swap is a file on the LUKS-encrypted /persistent btrfs subvol.
+          # No separate swap partition — everything on disk is inside LUKS.
           root = {
             size = "100%";
             content = {
@@ -82,10 +85,10 @@ in {
                     mountOptions = [ "subvol=persistent" "noatime" ];
                     mountpoint = "/persistent";
                   };
-                  "/home" = {
-                    mountOptions = [ "subvol=home" "noatime" ];
-                    mountpoint = "/home";
-                  };
+                  # /home is tmpfs — user data is persisted via bind mounts from
+                  # /persistent/home/<user>/, configured in preservation.nix
+                  # The subvol entry is kept (commented) for reference only —
+                  # a fresh install with disko creates a clean btrfs without it.
                   "/var" = {
                     mountOptions = [ "subvol=var" "noatime" ];
                     mountpoint = "/var";
