@@ -25,60 +25,22 @@ warn()   { echo -e "  ${YELLOW}⚠${NC} $1"; }
 fail()   { echo -e "  ${RED}✗${NC} $1"; }
 spacer() { echo ""; }
 
-# ─── Step Progress ───────────────────────────────────────────────────────
+# ─── Step Progress (refreshes in place) ──────────────────────────────
 step() {
   local num=$1 total=$TOTAL_STEPS title="$2"
   local pct=$((num * 100 / total))
   local fill=$((num * 36 / total))
   printf -v bar '%*s' "$fill" ''; bar="${bar// /━}"
   printf -v rest '%*s' $((36-fill)) ''; rest="${rest// /─}"
+  if [[ $STEP_PRINTED -eq 1 ]]; then
+    printf '\e8'; printf '\e[J'
+  fi
+  printf '\e7'
   echo
   echo -e "  ${CYAN}${bar}${DIM}${rest}${NC}  ${BOLD}${pct}%${NC}  ${DIM}Step ${num}/${total}${NC}"
   echo -e "  ${BOLD}${CYAN}▶${NC} ${BOLD}${title}${NC}"
   echo
-}
-
-# ─── Water Physics Progress Bar ──────────────────────────────────────────
-WATER_ROWS=3
-WATER_COLS=44
-
-water_bar() {
-  local pct=$1 frame=$2
-  local -a rows
-
-  for ((r=0; r<WATER_ROWS; r++)); do
-    local bot=$(( r * 100 / WATER_ROWS ))
-    local top=$(( (r + 1) * 100 / WATER_ROWS ))
-    if (( pct >= top )); then
-      printf -v rows[r] '%*s' "$WATER_COLS" ''
-      rows[r]="${rows[r]// /█}"
-    elif (( pct <= bot )); then
-      printf -v rows[r] '%*s' "$WATER_COLS" ''
-      rows[r]="${rows[r]// /░}"
-    else
-      local rel=$(( (pct - bot) * WATER_COLS / (top - bot) ))
-      local line=""
-      for ((i=0; i<WATER_COLS; i++)); do
-        if (( i < rel - 3 )); then
-          line+="█"
-        elif (( i < rel )); then
-          local wi=$(( (frame * 2 + i * 3) % 4 ))
-          case $wi in 0) line+="~";; 1) line+="≈";; 2) line+="≋";; 3) line+="≈";; esac
-        else
-          line+="░"
-        fi
-      done
-      rows[r]="$line"
-    fi
-  done
-
-  printf -v rule '%*s' "$WATER_COLS" ''
-  rule="${rule// /─}"
-  echo -e "${CYAN}┌${NC}${rule}${CYAN}┐${NC}"
-  for ((r=WATER_ROWS-1; r>=0; r--)); do
-    echo -e "${CYAN}│${NC}${rows[r]}${CYAN}│${NC}"
-  done
-  echo -e "${CYAN}└${NC}${rule}${CYAN}┘${NC}  ${BOLD}${pct}%${NC}"
+  STEP_PRINTED=1
 }
 
 # ─── Braille Spinner ─────────────────────────────────────────────────────
@@ -96,18 +58,6 @@ spin() {
   done
   printf '\e[?25h'
   printf "\r  ${GREEN}✓${NC} %s\n" "$msg"
-}
-
-# ─── Geometric Color Banner ───────────────────────────────────────────────
-banner() {
-  echo
-  echo -e "  ${CYAN}┏${NC}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${CYAN}┓${NC}"
-  echo -e "  ${CYAN}┃${NC}      ${BOLD}${YELLOW}◤${NC}  ${BOLD}A T L A S${NC}  ${YELLOW}◢${NC}   ${DIM}NixOS Installer${NC}  ${CYAN}┃${NC}"
-  echo -e "  ${CYAN}┃${NC}  ${BOLD}${YELLOW}╱${NC}${GREEN}╲${NC}                ${DIM}Noctalia · Niri${NC}  ${CYAN}┃${NC}"
-  echo -e "  ${CYAN}┃${NC}  ${BOLD}${YELLOW}╱${NC}${GREEN}╲${NC}${CYAN}╱${NC}${GREEN}╲${NC}              ${DIM}LUKS · Security${NC}  ${CYAN}┃${NC}"
-  echo -e "  ${CYAN}┃${NC}  ${BOLD}${YELLOW}╱${NC}${GREEN}╲${NC}${CYAN}╱${NC}${GREEN}╲${NC}${RED}╱${NC}${GREEN}╲${NC}            ${DIM}Impermanence${NC}  ${CYAN}┃${NC}"
-  echo -e "  ${CYAN}┗${NC}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${CYAN}┛${NC}"
-  echo
 }
 
 # ─── Elapsed Timer ──────────────────────────────────────────────────────
@@ -137,8 +87,6 @@ celebrate() {
 
 TOTAL_STEPS=9
 SCRIPT_START=$(date +%s)
-
-banner
 
 # ═══════════════════════════════════════════════════════════════════════════
 # STEP 1: Environment Checks
@@ -388,11 +336,8 @@ spacer
 # ─── LUKS unlock ───────────────────────────────────────────────────────────────
 sub_header "Unlocking LUKS encryption"
 if ! cryptsetup status crypt &>/dev/null; then
-  info "Enter your LUKS passphrase to decrypt the root volume:"
-  echo -e "  ${DIM}  ┌───────────────────────────────────────────┐${NC}"
-  echo -e "  ${DIM}  │  ${NC}${BOLD}   LUKS:  $LUKS_PART${NC}${DIM}           │${NC}"
-  echo -e "  ${DIM}  │  ${NC}${DIM}   UUID:  $LUKS_UUID${NC}${DIM}        │${NC}"
-  echo -e "  ${DIM}  └───────────────────────────────────────────┘${NC}"
+  echo -e "  ${DIM}Enter your LUKS passphrase to unlock:${NC}"
+  echo -e "  ${DIM}  Device: ${BOLD}$LUKS_PART${NC}${DIM}  UUID: $LUKS_UUID${NC}"
   cryptsetup open "$LUKS_PART" crypt
 fi
 ok "LUKS device opened"
@@ -416,18 +361,15 @@ spacer
 sub_header "Configuring user password"
 if [[ "$AUTO" -eq 0 ]]; then
   info "Set a password for user '${BOLD}yusa${NC}':"
-  echo -e "  ${DIM}  ┌─────────────────────────────────────┐${NC}"
   while :; do
-    read -r -s -p "$(echo -e "  ${DIM}  │ ${NC}  ${CYAN}Password:${NC} ")" PW1
+    read -r -s -p "  ${CYAN}Password:${NC} " PW1
     echo
-    read -r -s -p "$(echo -e "  ${DIM}  │ ${NC}  ${CYAN}Confirm:${NC}  ")" PW2
-    echo -e "  ${DIM}  └─────────────────────────────────────┘${NC}"
+    read -r -s -p "  ${CYAN}Confirm:${NC}  " PW2
+    echo
     if [[ -z "$PW1" ]]; then
-      echo -e "  ${YELLOW}  ⚠ Password cannot be empty.${NC}"
-      echo -e "  ${DIM}  ┌─────────────────────────────────────┐${NC}"
+      warn "Password cannot be empty."
     elif [[ "$PW1" != "$PW2" ]]; then
-      echo -e "  ${YELLOW}  ⚠ Passwords do not match.${NC}"
-      echo -e "  ${DIM}  ┌─────────────────────────────────────┐${NC}"
+      warn "Passwords do not match."
     else
       break
     fi
@@ -465,42 +407,23 @@ else
   SUBSTITUTERS="https://cache.nixos.org"
 fi
 
-# Start nixos-install in background — animate water progress while it runs
+INSTALL_START=$SECONDS
+echo -e "  ${DIM}Nix will build the system from the flake specification.${NC}"
+echo -e "  ${DIM}This takes 5-30 minutes depending on download speed.${NC}"
+echo
+
 nixos-install --flake "$ROOTDIR#atlas-installer" \
   --root "$TARGET" \
   --no-root-passwd \
   --option substituters "$SUBSTITUTERS" \
-  --accept-flake-config > /tmp/nixos-install.log 2>&1 &
-NIX_PID=$!
-INSTALL_START=$SECONDS
-FRAME=0
-
-printf '\e7'  # save cursor
-while kill -0 "$NIX_PID" 2>/dev/null; do
-  printf '\e8'  # restore cursor to saved position
-  ELAPSED=$((SECONDS - INSTALL_START))
-  PSEUDO=$(( ELAPSED * 100 / 900 ))
-  (( PSEUDO > 92 )) && PSEUDO=92
-  (( ++PSEUDO ))
-
-  water_bar "$PSEUDO" "$((FRAME++))"
-  TAIL=$(tail -1 /tmp/nixos-install.log 2>/dev/null | tr -d '\n\r' | head -c 65)
-  printf "  ${CYAN}⏱${NC} %02d:%02d  ${DIM}%s${NC}\n" $((ELAPSED/60)) $((ELAPSED%60)) "$TAIL"
-  printf '\e[J'  # clear to screen end
-  sleep 0.3
-done
-
-wait "$NIX_PID"
+  --accept-flake-config
 NIX_EXIT=$?
-
-printf '\e8'
-water_bar 100 "$((FRAME++))"
 TOTAL=$((SECONDS - INSTALL_START))
-printf "  ${GREEN}✓${NC} Installed in ${BOLD}%02d:%02d${NC}\n" $((TOTAL/60)) $((TOTAL%60))
 
-if [[ $NIX_EXIT -ne 0 ]]; then
-  echo
-  fail "nixos-install failed (exit $NIX_EXIT) — check /tmp/nixos-install.log"
+if [[ $NIX_EXIT -eq 0 ]]; then
+  ok "NixOS base system installed (${BOLD}$((TOTAL/60))m $((TOTAL%60))s${NC})"
+else
+  fail "nixos-install failed (exit $NIX_EXIT)"
   exit 1
 fi
 
