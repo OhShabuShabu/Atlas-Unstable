@@ -1,8 +1,0 @@
-[Plymouth Theme]
-Name=Ubuntu MATE Red Logo
-Description=A theme that features a blank background with a logo.
-ModuleName=script
-
-[script]
-ImageDir=/usr/share/plymouth/themes/mate_red
-ScriptFile=/usr/share/plymouth/themes/mate_red/mate_red.script

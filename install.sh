@@ -355,9 +355,8 @@ ok "Config copied to /home/yusa/atlas"
 step 8 "Optional Modules (Gaming, Dev, Privacy, etc.)"
 spacer
 
-MODULES_URL="https://github.com/OhShabuShabu/Atlas-Modules"
-ATLAS_CFG="$TARGET/home/yusa/atlas/files/core/configuration.nix"
-ATLAS_FLAKE="$TARGET/home/yusa/atlas/flake.nix"
+RAW_URL="https://raw.githubusercontent.com/OhShabuShabu/Atlas-Modules/main"
+OPT_DIR="$TARGET/home/yusa/atlas/files/modules/optional"
 SELECTED_MODULES=()
 
 declare -A MODULE_DESC
@@ -369,6 +368,26 @@ MODULE_DESC[5]="minecraft  — PrismLauncher, Blockbench"
 MODULE_DESC[6]="flatpak    — Flathub repository"
 MODULE_DESC[7]="dev        — Neovim, VSCodium, bun, opencode"
 MODULE_DESC[8]="tools      — yt-dlp, mpv"
+
+declare -A MODULE_FILE
+MODULE_FILE[1]="performance.nix"
+MODULE_FILE[2]="privacy/privacy.nix"
+MODULE_FILE[3]="gaming/gaming.nix"
+MODULE_FILE[4]="virtualisation.nix"
+MODULE_FILE[5]="minecraft.nix"
+MODULE_FILE[6]="flatpak.nix"
+MODULE_FILE[7]="dev/dev.nix"
+MODULE_FILE[8]="tools.nix"
+
+declare -A MODULE_DIR
+MODULE_DIR[1]="nixos"
+MODULE_DIR[2]="nixos"
+MODULE_DIR[3]="nixos"
+MODULE_DIR[4]="nixos"
+MODULE_DIR[5]="nixos"
+MODULE_DIR[6]="nixos"
+MODULE_DIR[7]="home"
+MODULE_DIR[8]="home"
 
 if [[ "$AUTO" -eq 0 ]]; then
   TOGGLED=(0 0 0 0 0 0 0 0 0)
@@ -393,7 +412,6 @@ if [[ "$AUTO" -eq 0 ]]; then
     elif [[ "$ANS" =~ ^[0-8]$ ]]; then
       TOGGLED[$ANS]=$((1 - ${TOGGLED[$ANS]:-0}))
     fi
-    # Move cursor up past the list + spacer to redraw
     echo -en "\033[10A"
   done
 
@@ -407,42 +425,33 @@ else
 fi
 
 if [[ ${#SELECTED_MODULES[@]} -gt 0 ]]; then
-  info "Cloning modules repo..."
-  mkdir -p "$TARGET/home/yusa"
-  if command -v git &>/dev/null; then
-    git clone --depth=1 "$MODULES_URL" "$TARGET/home/yusa/atlas-modules" 2>&1 | sed 's/^/    /'
+  info "Downloading selected modules from $RAW_URL ..."
+
+  if command -v curl &>/dev/null; then
+    CURL="curl"
   else
-    nix run nixpkgs#git -- clone --depth=1 "$MODULES_URL" "$TARGET/home/yusa/atlas-modules" 2>&1 | sed 's/^/    /'
+    CURL="nix run nixpkgs#curl --"
   fi
-  chown -R 1000:100 "$TARGET/home/yusa/atlas-modules" 2>/dev/null || true
-  ok "Modules repo cloned to /home/yusa/atlas-modules"
 
-  # Switch flake input to local path
-  sed -i 's|url = "github:OhShabuShabu/Atlas-Modules";|url = "/home/yusa/atlas-modules";|' "$ATLAS_FLAKE"
+  for s in "${SELECTED_MODULES[@]}"; do
+    TYPE="${MODULE_DIR[$s]}"
+    FILE="${MODULE_FILE[$s]}"
+    FILENAME=$(basename "$FILE")
+    DEST="$OPT_DIR/$TYPE/$FILENAME"
 
-  # Disable unselected NixOS modules (in configuration.nix)
-  for i in 1 2 3 4 5 6; do
-    if [[ ! " ${SELECTED_MODULES[*]} " =~ " $i " ]]; then
-      case $i in
-        1) sed -i '/atlas-modules\.nixosModules\.performance/ s/^/#/' "$ATLAS_CFG" ;;
-        2) sed -i '/atlas-modules\.nixosModules\.privacy/ s/^/#/' "$ATLAS_CFG" ;;
-        3) sed -i '/atlas-modules\.nixosModules\.gaming/ s/^/#/' "$ATLAS_CFG" ;;
-        4) sed -i '/atlas-modules\.nixosModules\.virtualisation/ s/^/#/' "$ATLAS_CFG" ;;
-        5) sed -i '/atlas-modules\.nixosModules\.minecraft/ s/^/#/' "$ATLAS_CFG" ;;
-        6) sed -i '/atlas-modules\.nixosModules\.flatpak/ s/^/#/' "$ATLAS_CFG" ;;
-      esac
-    fi
+    mkdir -p "$OPT_DIR/$TYPE"
+    $CURL -sSo "$DEST" "$RAW_URL/$FILE" 2>&1 | sed 's/^/    /'
+    ok "Downloaded ${FILENAME}"
   done
 
-  # Disable unselected Home Manager modules (in flake.nix)
-  for i in 7 8; do
-    if [[ ! " ${SELECTED_MODULES[*]} " =~ " $i " ]]; then
-      case $i in
-        7) sed -i '/atlas-modules\.homeModules\.dev/ s/^/#/' "$ATLAS_FLAKE" ;;
-        8) sed -i '/atlas-modules\.homeModules\.tools/ s/^/#/' "$ATLAS_FLAKE" ;;
-      esac
-    fi
-  done
+  if [[ " ${SELECTED_MODULES[*]} " =~ " 2 " ]]; then
+    info "Privacy module selected — downloading shared library..."
+    mkdir -p "$OPT_DIR/lib"
+    $CURL -sSo "$OPT_DIR/lib/notifications.nix" "$RAW_URL/lib/notifications.nix" 2>&1 | sed 's/^/    /'
+    ok "Downloaded lib/notifications.nix"
+  fi
+
+  chown -R 1000:100 "$OPT_DIR" 2>/dev/null || true
 
   selected_names=()
   for s in "${SELECTED_MODULES[@]}"; do
@@ -450,7 +459,7 @@ if [[ ${#SELECTED_MODULES[@]} -gt 0 ]]; then
   done
   ok "Enabled: ${selected_names[*]}"
 else
-  info "No modules selected — flake will fetch from $MODULES_URL on rebuild"
+  info "No modules selected — you can add them later by downloading .nix files to files/modules/optional/"
 fi
 
 # ─── Summary ────────────────────────────────────────────────────────────────
@@ -467,8 +476,8 @@ echo -e "    4. After login, apply the full configuration:"
 echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/atlas#atlas${NC}"
 if [[ ${#SELECTED_MODULES[@]} -eq 0 ]]; then
   echo -e "    5. To add optional modules later:"
-  echo -e "       ${DIM}git clone --depth=1 https://github.com/OhShabuShabu/Atlas-Modules /home/yusa/atlas-modules${NC}"
-  echo -e "       Then change flake.nix to use local path or rebuild with GitHub URL"
+  echo -e "       ${DIM}Download .nix files to /home/yusa/atlas/files/modules/optional/nixos/ or home/${NC}"
+  echo -e "       ${DIM}They're auto-imported from the directory.${NC}"
 fi
 spacer
 echo -e "  ${DIM}For detailed documentation, see: /home/yusa/atlas/README.md${NC}"

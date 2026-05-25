@@ -46,9 +46,8 @@
               users.yusa = { pkgs, inputs, ... }: {
                 imports = [
                   noctalia.homeModules.default
-                  inputs.atlas-modules.homeModules.dev
-                  inputs.atlas-modules.homeModules.tools
                   ./files/core/home.nix
+                  ./files/modules/optional/home
                 ];
               };
             };
@@ -75,9 +74,8 @@
               users.yusa = { pkgs, inputs, ... }: {
                 imports = [
                   noctalia.homeModules.default
-                  inputs.atlas-modules.homeModules.dev
-                  inputs.atlas-modules.homeModules.tools
                   ./files/core/home.nix
+                  ./files/modules/optional/home
                 ];
               };
             };

@@ -134,10 +134,11 @@ atlas/
 │   │   └── .icons/                     # Cursor themes
 │   ├── modules/
 │   │   └── security/                   # Snout, ClamAV, AIDE, auditd, kernel, firewall
+│   ├── lib/                            # Shared Nix library modules
 │   ├── hardware/                       # CPU/GPU/audio auto-configs
 │   ├── profiles/                       # System profiles (atlas, generic)
 │   ├── audio/                          # Sound effects
-│   └── bin/                            # Scripts (startup, motivate, fix_rgb_color)
+│   └── bin/                            # Scripts (startup, fix_rgb_color)
 │
 ├── Optional modules (separate repo):   /home/yusa/atlas-modules/
 │   ├── dev/                            # Neovim, development tools

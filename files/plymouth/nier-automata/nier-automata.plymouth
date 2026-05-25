@@ -1,8 +1,0 @@
-[Plymouth Theme]
-Name=nier-automata
-Description=NieR: Automata boot splash
-ModuleName=script
-
-[script]
-ImageDir=/usr/share/plymouth/themes/nier-automata
-ScriptFile=/usr/share/plymouth/themes/nier-automata/nier-automata.script

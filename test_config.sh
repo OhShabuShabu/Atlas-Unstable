@@ -57,7 +57,7 @@ declare -a REQUIRED_FILES=(
   "files/config/niri/startup.kdl" "files/config/niri/window-rules.kdl"
   "files/config/niri/animations/pop-drop.kdl" "files/config/vicinae/vicinae.json"
   "files/config/primary_color.txt" "files/config/primary_color_template.txt"
-  "files/audio/startup.mp3" "files/audio/close_window.mp3"
+  "files/audio/startup.mp3"
   "files/bin/shell/startup.sh" "files/bin/python/fix_rgb_color.py"
 )
 for f in "${REQUIRED_FILES[@]}"; do
@@ -363,12 +363,10 @@ done
 for mod in hardware-configuration security snort snout; do
   mlgrep "$CFG" "$mod" && pass "configuration.nix imports $mod" || warn "configuration.nix import not found: $mod"
 done
-for mod in performance privacy gaming virtualisation minecraft flatpak; do
-  mlgrep "$CFG" "atlas-modules.nixosModules.$mod" && pass "configuration.nix imports atlas-modules:$mod" || warn "configuration.nix missing atlas-modules import: $mod"
-done
-for imp in dev tools; do
-  mlgrep "$BASE/flake.nix" "atlas-modules.homeModules.$imp" && pass "flake.nix imports atlas-modules:$imp" || warn "flake.nix missing atlas-modules import: $imp"
-done
+mlgrep "$CFG" "modules/optional/nixos" && pass "configuration.nix imports optional/nixos auto-import" || warn "configuration.nix missing optional/nixos auto-import"
+mlgrep "$BASE/flake.nix" "modules/optional/home" && pass "flake.nix imports optional/home auto-import" || warn "flake.nix missing optional/home auto-import"
+[ -f "$BASE/files/modules/optional/nixos/default.nix" ] && pass "optional/nixos auto-import default.nix exists" || fail "optional/nixos/default.nix missing"
+[ -f "$BASE/files/modules/optional/home/default.nix" ] && pass "optional/home auto-import default.nix exists" || fail "optional/home/default.nix missing"
 
 # ============================================================================
 # 20. SYSTEMD SERVICES
@@ -417,7 +415,7 @@ grep -q 'result' "$BASE/.gitignore" 2>/dev/null && pass ".gitignore ignores buil
 grep -q 'Authorized Access Only' "$BASE/files/modules/security/banner.nix" && pass "Login banner present" || fail "Login banner missing"
 grep -q 'enableGnomeKeyring.*false' "$BASE/files/modules/security/password-policy.nix" && pass "GNOME keyring disabled" || fail "GNOME keyring not disabled"
 [ -f "$BASE/files/audio/startup.mp3" ] && pass "startup.mp3 audio file" || warn "startup.mp3 missing"
-[ -f "$BASE/files/audio/close_window.mp3" ] && pass "close_window.mp3 audio file" || warn "close_window.mp3 missing"
+
 mlgrep "$HM" 'createAwwwCache' && pass "Awww cache directory created" || warn "Awww cache creation missing"
 mlgrep "$HM" 'alacritty\.toml' && pass "Alacritty fallback config" || warn "Alacritty fallback config missing"
 mlgrep "$BASE/files/modules/security/service-hardening.nix" 'Service Hardening Guidelines' && pass "Service hardening docs present" || fail "Service hardening docs missing"

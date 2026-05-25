@@ -65,7 +65,6 @@ This directory contains 17 specialized security hardening modules for the Atlas 
 ### Miscellaneous
 - **telemetry.nix** — Disable telemetry/tracking
 - **banner.nix** — Login banner
-- **strong-keyring.nix** — Hardware security token support
 
 ## Enabling/Disabling Modules
 

@@ -21,13 +21,6 @@
       extraConfig = { Settings = ''gtk-application-prefer-dark-theme=1''; };
     };
   };
-  #dconf.settings = {
-  #"org/virt-manager/virt-manager/connections" = {
-  #  autoconnect = ["qemu:///system"];
-  #  uris = ["qemu:///system"];
-  #  };
-  #};
-
 
 
   # Force dark mode for X11/XWayland apps via xsettings
