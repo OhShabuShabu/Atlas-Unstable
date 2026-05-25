@@ -170,11 +170,11 @@ if [[ $AUTO -eq 0 ]]; then
   echo -e "  ${YELLOW}This action ${BOLD}cannot${NC}${YELLOW} be undone.${NC}"
   spacer
   echo -e "  ${DIM}What will be created:${NC}"
-    echo -e "    ${DIM}• 4GB EFI System Partition (ESP)${NC}"
-  echo -e "    ${DIM}• 8GB Swap partition${NC}"
-  echo -e "    ${DIM}• LUKS-encrypted Btrfs partition (remaining space)${NC}"
-  echo -e "    ${DIM}  - Subvolumes: /nix, /persistent, /home, /var${NC}"
-  echo -e "    ${DIM}• tmpfs for / and /tmp${NC}"
+    echo -e "    ${DIM}• 2GB EFI System Partition (ESP)${NC}"
+  echo -e "    ${DIM}• LUKS-encrypted Btrfs partition (all remaining space)${NC}"
+  echo -e "    ${DIM}  - Subvolumes: /nix, /persistent, /var${NC}"
+  echo -e "    ${DIM}• tmpfs for /, /home, and /tmp${NC}"
+  echo -e "    ${DIM}• Swap file on encrypted /persistent subvol${NC}"
   spacer
   read -rp "$(echo -e ${RED}"  Type 'yes' to continue: "${NC})" CONFIRM
   if [[ "$CONFIRM" != "yes" ]]; then
@@ -251,11 +251,23 @@ spacer
 
 # ─── Disko Config ───────────────────────────────────────────────────────
 info "Writing partition layout via disko..."
-info "  ${DIM}This will create: ESP (4G), Swap (8G), LUKS+Btrfs (remaining)${NC}"
+info "  ${DIM}This will create: ESP (2G), LUKS+Btrfs (remaining), tmpfs for /, /home, /tmp${NC}"
 
 cat > /tmp/disko-config.nix << EOF
 {
   disko.devices = {
+    nodev."/" = {
+      fsType = "tmpfs";
+      mountOptions = ["size=25%" "mode=755"];
+    };
+    nodev."/tmp" = {
+      fsType = "tmpfs";
+      mountOptions = ["size=25%" "mode=1777"];
+    };
+    nodev."/home" = {
+      fsType = "tmpfs";
+      mountOptions = ["size=25%" "mode=755"];
+    };
     disk.main = {
       type = "disk";
       device = "$DISK";
@@ -263,7 +275,7 @@ cat > /tmp/disko-config.nix << EOF
         type = "gpt";
         partitions = {
           esp = {
-            size = "4G";
+            size = "2G";
             type = "EF00";
             content = {
               type = "filesystem";
@@ -272,13 +284,8 @@ cat > /tmp/disko-config.nix << EOF
               mountOptions = ["fmask=0077" "dmask=0077"];
             };
           };
-          swap = {
-            size = "8G";
-            content = {
-              type = "swap";
-              resumeDevice = true;
-            };
-          };
+          # No swap partition — everything on disk is inside LUKS.
+          # Swap is a file on the LUKS-encrypted /persistent btrfs subvol.
           root = {
             size = "100%";
             content = {
@@ -292,7 +299,8 @@ cat > /tmp/disko-config.nix << EOF
                 subvolumes = {
                   "/nix" = { mountOptions = ["subvol=nix" "noatime"]; mountpoint = "/nix"; };
                   "/persistent" = { mountOptions = ["subvol=persistent" "noatime"]; mountpoint = "/persistent"; };
-                  "/home" = { mountOptions = ["subvol=home" "noatime"]; mountpoint = "/home"; };
+                  # /home is tmpfs — user data is persisted via bind mounts from
+                  # /persistent/home/yusa/, configured in preservation.nix
                   "/var" = { mountOptions = ["subvol=var" "noatime"]; mountpoint = "/var"; };
                 };
               };
@@ -300,14 +308,6 @@ cat > /tmp/disko-config.nix << EOF
           };
         };
       };
-    };
-    nodev."/" = {
-      fsType = "tmpfs";
-      mountOptions = ["size=25%" "mode=755"];
-    };
-    nodev."/tmp" = {
-      fsType = "tmpfs";
-      mountOptions = ["size=25%" "mode=1777"];
     };
   };
 }
@@ -371,8 +371,8 @@ mount -t btrfs -o subvol=nix,noatime /dev/mapper/crypt "$TARGET/nix"
 ok "Mounted /nix"
 mount -t btrfs -o subvol=persistent,noatime /dev/mapper/crypt "$TARGET/persistent"
 ok "Mounted /persistent"
-mount -t btrfs -o subvol=home,noatime /dev/mapper/crypt "$TARGET/home"
-ok "Mounted /home"
+mkdir -p "$TARGET/home"
+ok "Prepared /home (tmpfs — will be mounted at boot)"
 mount -t btrfs -o subvol=var,noatime /dev/mapper/crypt "$TARGET/var"
 ok "Mounted /var"
 mount "$BOOT_PART" "$TARGET/boot"
@@ -482,11 +482,11 @@ mkdir -p "$TARGET/persistent/etc"
 cp "$TARGET/etc/machine-id" "$TARGET/persistent/etc/machine-id" 2>/dev/null || true
 ok "Machine-id saved"
 
-info "Copying configuration to installed system..."
-mkdir -p "$TARGET/home/yusa"
-cp -r "$ROOTDIR" "$TARGET/home/yusa/atlas"
-chown -R 1000:100 "$TARGET/home/yusa/atlas" 2>/dev/null || true
-ok "Config copied to /home/yusa/atlas"
+info "Copying configuration to installed system (persistent storage)..."
+mkdir -p "$TARGET/persistent/home/yusa"
+cp -r "$ROOTDIR" "$TARGET/persistent/home/yusa/Atlas"
+chown -R 1000:100 "$TARGET/persistent/home/yusa/Atlas" 2>/dev/null || true
+ok "Config copied to /persistent/home/yusa/Atlas"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # STEP 8: Optional Modules (multi-select)
@@ -609,7 +609,7 @@ info "${DIM}This installs all selected optional modules.${NC}"
 echo
 
 if command -v nixos-enter &>/dev/null; then
-  nixos-enter --root "$TARGET" -c "nixos-rebuild switch --flake /home/yusa/atlas#atlas" \
+  nixos-enter --root "$TARGET" -c "nixos-rebuild switch --flake /persistent/home/yusa/Atlas#atlas" \
     > /tmp/nixos-rebuild.log 2>&1 &
   REBUILD_PID=$!
   timer_until $REBUILD_PID "nixos-rebuild"
@@ -617,11 +617,11 @@ if command -v nixos-enter &>/dev/null; then
     ok "Full configuration applied (including optional modules)"
   else
     warn "nixos-rebuild had issues — run it manually after first boot:"
-    echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/atlas#atlas${NC}"
+    echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/Atlas#atlas${NC}"
   fi
 else
   warn "nixos-enter not found — run nixos-rebuild manually after first boot:"
-  echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/atlas#atlas${NC}"
+  echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/Atlas#atlas${NC}"
 fi
 
 # ─── Next Steps ──────────────────────────────────────────────────────────
@@ -638,7 +638,7 @@ echo -e "    ${CYAN}2.${NC} Boot into your new system"
 echo -e "    ${CYAN}3.${NC} Log in with ${YELLOW}username: yusa${NC}"
 if [[ ${#SELECTED_MODULES[@]} -eq 0 ]]; then
   echo -e "    ${CYAN}4.${NC} Apply the full configuration and add optional modules:"
-  echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/atlas#atlas${NC}"
+  echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/Atlas#atlas${NC}"
 fi
 echo
-echo -e "  ${DIM}For detailed documentation, see: /home/yusa/atlas/README.md${NC}"
+echo -e "  ${DIM}For detailed documentation, see: /home/yusa/Atlas/README.md${NC}"
