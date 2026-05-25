@@ -45,6 +45,11 @@
     # Enable systemd initrd (required for LUKS)
     initrd.systemd.enable = true;
 
+    # Limit boot entries to prevent /boot (ESP) from filling up
+    # Without this, every rebuild adds another kernel + initrd (~500MB+ with all firmware)
+    # and they are never automatically cleaned from the EFI partition
+    loader.systemd-boot.configurationLimit = 5;
+
     # Load GPU drivers in initrd so Plymouth uses KMS at native resolution during LUKS prompt
     # List covers AMD, Intel, and NVIDIA — only the matching driver loads per hardware
     initrd.kernelModules = [
