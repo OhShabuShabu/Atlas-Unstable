@@ -439,16 +439,14 @@ nixos-install --flake "$ROOTDIR#atlas-installer" \
   > /tmp/nixos-install.log 2>&1 &
 NIX_PID=$!
 
-i=0
 printf '\e[?25l'
 while kill -0 "$NIX_PID" 2>/dev/null; do
   ELAPSED=$((SECONDS - INSTALL_START))
   STATUS=$(tail -1 /tmp/nixos-install.log 2>/dev/null | tr '\n' ' ' | head -c 65)
-  printf "\r  ${CYAN}%s${NC}  ⏱ %02d:%02d  ${DIM}%s${NC}  " "${SPIN:$i:1}" $((ELAPSED/60)) $((ELAPSED%60)) "$STATUS"
-  i=$(((i+1)%${#SPIN}))
-  sleep 0.5
+  printf "\r  ⏱ %02d:%02d  ${DIM}%s${NC}\033[K" $((ELAPSED/60)) $((ELAPSED%60)) "$STATUS"
+  sleep 5
 done
-printf '\e[?25h'
+printf '\r\033[K\e[?25h'
 
 # Guard against set -e — wait kills the script silently if nixos-install fails
 if wait "$NIX_PID" 2>/dev/null; then
