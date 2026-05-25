@@ -623,3 +623,22 @@ else
   warn "nixos-enter not found — run nixos-rebuild manually after first boot:"
   echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/atlas#atlas${NC}"
 fi
+
+# ─── Next Steps ──────────────────────────────────────────────────────────
+ELAPSED=$(( $(date +%s) - SCRIPT_START ))
+ELAPSED_MIN=$((ELAPSED / 60))
+ELAPSED_SEC=$((ELAPSED % 60))
+
+spacer
+echo -e "  ${BOLD}Install complete (${ELAPSED_MIN}m ${ELAPSED_SEC}s)${NC}"
+echo
+echo -e "  ${BOLD}Next steps:${NC}"
+echo -e "    ${CYAN}1.${NC} Reboot and remove the install media"
+echo -e "    ${CYAN}2.${NC} Boot into your new system"
+echo -e "    ${CYAN}3.${NC} Log in with ${YELLOW}username: yusa${NC}"
+if [[ ${#SELECTED_MODULES[@]} -eq 0 ]]; then
+  echo -e "    ${CYAN}4.${NC} Apply the full configuration and add optional modules:"
+  echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/atlas#atlas${NC}"
+fi
+echo
+echo -e "  ${DIM}For detailed documentation, see: /home/yusa/atlas/README.md${NC}"
