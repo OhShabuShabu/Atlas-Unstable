@@ -19,16 +19,126 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ─── Helpers ────────────────────────────────────────────────────────────────
-step()   { echo -e "\n${CYAN}${BOLD}═══ Step ${1}/${TOTAL_STEPS}: ${2} ═══${NC}"; }
 info()   { echo -e "  ${CYAN}→${NC} $1"; }
 ok()     { echo -e "  ${GREEN}✓${NC} $1"; }
 warn()   { echo -e "  ${YELLOW}⚠${NC} $1"; }
 fail()   { echo -e "  ${RED}✗${NC} $1"; }
-header() { echo -e "\n${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"; echo -e "${BOLD}${CYAN}  $1${NC}"; echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"; }
 spacer() { echo ""; }
+
+# ─── Step Progress ───────────────────────────────────────────────────────
+step() {
+  local num=$1 total=$TOTAL_STEPS title="$2"
+  local pct=$((num * 100 / total))
+  local fill=$((num * 36 / total))
+  printf -v bar '%*s' "$fill" ''; bar="${bar// /━}"
+  printf -v rest '%*s' $((36-fill)) ''; rest="${rest// /─}"
+  echo
+  echo -e "  ${CYAN}${bar}${DIM}${rest}${NC}  ${BOLD}${pct}%${NC}  ${DIM}Step ${num}/${total}${NC}"
+  echo -e "  ${BOLD}${CYAN}▶${NC} ${BOLD}${title}${NC}"
+  echo
+}
+
+# ─── Water Physics Progress Bar ──────────────────────────────────────────
+WATER_ROWS=3
+WATER_COLS=44
+
+water_bar() {
+  local pct=$1 frame=$2
+  local -a rows
+
+  for ((r=0; r<WATER_ROWS; r++)); do
+    local bot=$(( r * 100 / WATER_ROWS ))
+    local top=$(( (r + 1) * 100 / WATER_ROWS ))
+    if (( pct >= top )); then
+      printf -v rows[r] '%*s' "$WATER_COLS" ''
+      rows[r]="${rows[r]// /█}"
+    elif (( pct <= bot )); then
+      printf -v rows[r] '%*s' "$WATER_COLS" ''
+      rows[r]="${rows[r]// /░}"
+    else
+      local rel=$(( (pct - bot) * WATER_COLS / (top - bot) ))
+      local line=""
+      for ((i=0; i<WATER_COLS; i++)); do
+        if (( i < rel - 3 )); then
+          line+="█"
+        elif (( i < rel )); then
+          local wi=$(( (frame * 2 + i * 3) % 4 ))
+          case $wi in 0) line+="~";; 1) line+="≈";; 2) line+="≋";; 3) line+="≈";; esac
+        else
+          line+="░"
+        fi
+      done
+      rows[r]="$line"
+    fi
+  done
+
+  printf -v rule '%*s' "$WATER_COLS" ''
+  rule="${rule// /─}"
+  echo -e "${CYAN}┌${NC}${rule}${CYAN}┐${NC}"
+  for ((r=WATER_ROWS-1; r>=0; r--)); do
+    echo -e "${CYAN}│${NC}${rows[r]}${CYAN}│${NC}"
+  done
+  echo -e "${CYAN}└${NC}${rule}${CYAN}┘${NC}  ${BOLD}${pct}%${NC}"
+}
+
+# ─── Braille Spinner ─────────────────────────────────────────────────────
+SPIN='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+
+spin() {
+  local pid=$1 msg="${2:-Working...}"
+  local i=0
+  printf '\e[?25l\e7'
+  while kill -0 "$pid" 2>/dev/null; do
+    printf '\e8'
+    printf "  ${CYAN}%s${NC} %s " "${SPIN:$i:1}" "$msg"
+    i=$(((i+1)%${#SPIN}))
+    sleep 0.08
+  done
+  printf '\e[?25h'
+  printf "\r  ${GREEN}✓${NC} %s\n" "$msg"
+}
+
+# ─── Geometric Color Banner ───────────────────────────────────────────────
+banner() {
+  echo
+  echo -e "  ${CYAN}┏${NC}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${CYAN}┓${NC}"
+  echo -e "  ${CYAN}┃${NC}      ${BOLD}${YELLOW}◤${NC}  ${BOLD}A T L A S${NC}  ${YELLOW}◢${NC}   ${DIM}NixOS Installer${NC}  ${CYAN}┃${NC}"
+  echo -e "  ${CYAN}┃${NC}  ${BOLD}${YELLOW}╱${NC}${GREEN}╲${NC}                ${DIM}Noctalia · Niri${NC}  ${CYAN}┃${NC}"
+  echo -e "  ${CYAN}┃${NC}  ${BOLD}${YELLOW}╱${NC}${GREEN}╲${NC}${CYAN}╱${NC}${GREEN}╲${NC}              ${DIM}LUKS · Security${NC}  ${CYAN}┃${NC}"
+  echo -e "  ${CYAN}┃${NC}  ${BOLD}${YELLOW}╱${NC}${GREEN}╲${NC}${CYAN}╱${NC}${GREEN}╲${NC}${RED}╱${NC}${GREEN}╲${NC}            ${DIM}Impermanence${NC}  ${CYAN}┃${NC}"
+  echo -e "  ${CYAN}┗${NC}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${CYAN}┛${NC}"
+  echo
+}
+
+# ─── Elapsed Timer ──────────────────────────────────────────────────────
+timer_until() {
+  local pid=$1 start=$SECONDS label="${2:-Elapsed}"
+  printf '\e[?25l'
+  while kill -0 "$pid" 2>/dev/null; do
+    local e=$((SECONDS - start))
+    printf "\r  ${CYAN}⏱${NC} ${label}: ${BOLD}%02d:%02d${NC}" $((e/60)) $((e%60))
+    sleep 1
+  done
+  local e=$((SECONDS - start))
+  printf "\r  ${GREEN}✓${NC} ${label}: ${BOLD}%02d:%02d${NC}\n" $((e/60)) $((e%60))
+  printf '\e[?25h'
+}
+
+# ─── Celebration ─────────────────────────────────────────────────────────
+celebrate() {
+  local colors=("${GREEN}" "${YELLOW}" "${CYAN}")
+  for ((c=0; c<6; c++)); do
+    local ci=$((c % 3))
+    echo -en "\r  ${colors[ci]}✦${NC}   ${colors[ci]}✦${NC}   ${colors[ci]}✦${NC}   ${BOLD}Install Complete!${NC}   ${colors[ci]}✦${NC}   ${colors[ci]}✦${NC}   ${colors[ci]}✦${NC}"
+    sleep 0.25
+  done
+  echo
+}
 
 TOTAL_STEPS=9
 SCRIPT_START=$(date +%s)
+
+banner
 
 # ═══════════════════════════════════════════════════════════════════════════
 # STEP 1: Environment Checks
@@ -147,9 +257,9 @@ ok "Proceeding with installation"
 step 4 "Preparing System Resources"
 spacer
 
-info "Clearing Nix garbage on live ISO..."
-nix-collect-garbage 2>/dev/null || true
-ok "Garbage collection done"
+(nix-collect-garbage 2>/dev/null || true) &
+spin $! "Clearing Nix garbage on live ISO"
+wait $!
 
 # Expand live ISO writable store so nix has room to build
 for MP in /nix/.rw-store / ; do
@@ -246,9 +356,10 @@ cat > /tmp/disko-config.nix << EOF
 }
 EOF
 
-info "Running disko (this may prompt for LUKS passphrase)..."
+info "Running disko (enter your LUKS passphrase when prompted)..."
 nix run "nixpkgs#disko" \
   --extra-experimental-features "nix-command flakes" \
+  --accept-flake-config \
   -- --mode disko /tmp/disko-config.nix
 ok "Disk partitioned and formatted"
 
@@ -260,41 +371,63 @@ spacer
 
 TARGET=/mnt
 
+# Accept flake config prompts automatically (avoids Noctilia GUI dialog on desktop)
+export NIX_ACCEPT_FLAKE_CONFIG=1
+
+# ─── Detect partitions ─────────────────────────────────────────────────────────
+sub_header() { echo -e "  ${CYAN}▸${NC} ${BOLD}$1${NC}"; }
+
+sub_header "Detecting partitions"
 LUKS_PART=$(lsblk -lno PATH,FSTYPE "$DISK" | grep crypto_LUKS | awk '{print $1}')
 BOOT_PART=$(lsblk -lno PATH,FSTYPE "$DISK" | grep vfat | awk '{print $1}')
 LUKS_UUID=$(blkid -o value -s UUID "$LUKS_PART" 2>/dev/null || true)
-
-info "LUKS root:  ${BOLD}$LUKS_PART${NC}  (UUID: $LUKS_UUID)"
-info "ESP boot:   ${BOLD}$BOOT_PART${NC}"
+ok "LUKS root:  ${BOLD}$LUKS_PART${NC}  (UUID: $LUKS_UUID)"
+ok "ESP boot:   ${BOLD}$BOOT_PART${NC}"
 spacer
 
+# ─── LUKS unlock ───────────────────────────────────────────────────────────────
+sub_header "Unlocking LUKS encryption"
 if ! cryptsetup status crypt &>/dev/null; then
-  info "Opening LUKS device (enter your passphrase)..."
+  info "Enter your LUKS passphrase to decrypt the root volume:"
+  echo -e "  ${DIM}  ┌───────────────────────────────────────────┐${NC}"
+  echo -e "  ${DIM}  │  ${NC}${BOLD}   LUKS:  $LUKS_PART${NC}${DIM}           │${NC}"
+  echo -e "  ${DIM}  │  ${NC}${DIM}   UUID:  $LUKS_UUID${NC}${DIM}        │${NC}"
+  echo -e "  ${DIM}  └───────────────────────────────────────────┘${NC}"
   cryptsetup open "$LUKS_PART" crypt
 fi
 ok "LUKS device opened"
+spacer
 
-info "Mounting Btrfs subvolumes..."
+# ─── Mount subvolumes ──────────────────────────────────────────────────────────
+sub_header "Mounting Btrfs subvolumes"
 mount -t btrfs -o subvol=nix,noatime /dev/mapper/crypt "$TARGET/nix"
+ok "Mounted /nix"
 mount -t btrfs -o subvol=persistent,noatime /dev/mapper/crypt "$TARGET/persistent"
+ok "Mounted /persistent"
 mount -t btrfs -o subvol=home,noatime /dev/mapper/crypt "$TARGET/home"
+ok "Mounted /home"
 mount -t btrfs -o subvol=var,noatime /dev/mapper/crypt "$TARGET/var"
+ok "Mounted /var"
 mount "$BOOT_PART" "$TARGET/boot"
-ok "Subvolumes mounted"
+ok "Mounted /boot (ESP)"
+spacer
 
 # ─── Password Prompt & Injection ──────────────────────────────────────────────
+sub_header "Configuring user password"
 if [[ "$AUTO" -eq 0 ]]; then
-  spacer
-  echo -e "  ${BOLD}Set a password for user 'yusa':${NC}"
+  info "Set a password for user '${BOLD}yusa${NC}':"
+  echo -e "  ${DIM}  ┌─────────────────────────────────────┐${NC}"
   while :; do
-    read -r -s -p "  ${CYAN}Password:${NC} " PW1
+    read -r -s -p "$(echo -e "  ${DIM}  │ ${NC}  ${CYAN}Password:${NC} ")" PW1
     echo
-    read -r -s -p "  ${CYAN}Confirm:${NC}  " PW2
-    echo
+    read -r -s -p "$(echo -e "  ${DIM}  │ ${NC}  ${CYAN}Confirm:${NC}  ")" PW2
+    echo -e "  ${DIM}  └─────────────────────────────────────┘${NC}"
     if [[ -z "$PW1" ]]; then
-      echo -e "  ${YELLOW}Password cannot be empty.${NC}"
+      echo -e "  ${YELLOW}  ⚠ Password cannot be empty.${NC}"
+      echo -e "  ${DIM}  ┌─────────────────────────────────────┐${NC}"
     elif [[ "$PW1" != "$PW2" ]]; then
-      echo -e "  ${YELLOW}Passwords do not match.${NC}"
+      echo -e "  ${YELLOW}  ⚠ Passwords do not match.${NC}"
+      echo -e "  ${DIM}  ┌─────────────────────────────────────┐${NC}"
     else
       break
     fi
@@ -302,16 +435,25 @@ if [[ "$AUTO" -eq 0 ]]; then
   PW="${PW1}"
 else
   PW="atlas"
+  info "Auto-mode: using default password"
 fi
+ok "Password set"
+spacer
 
-info "Injecting password into Nix config..."
+# ─── Inject password into config ──────────────────────────────────────────────
+sub_header "Injecting password into Nix configuration"
 PW_SAFE="${PW//\"/\\\"}"
 sed -i '/description = "yusa";/a\    initialPassword = "'"$PW_SAFE"'";' \
   "$ROOTDIR/files/core/configuration.nix" && \
   ok "Password injected (NixOS will hash on first boot)" || \
   warn "Could not inject password into configuration.nix"
+spacer
 
-info "Running nixos-install (this will take 5-30 minutes)..."
+# ─── nixos-install ─────────────────────────────────────────────────────────────
+sub_header "Running nixos-install"
+info "${DIM}Installing NixOS to disk — this takes 5-30 minutes.${NC}"
+echo
+
 export DISKO_DEVICE="$DISK"
 echo "$LUKS_UUID" > "$ROOTDIR/.luk-uuid"
 
@@ -323,11 +465,44 @@ else
   SUBSTITUTERS="https://cache.nixos.org"
 fi
 
+# Start nixos-install in background — animate water progress while it runs
 nixos-install --flake "$ROOTDIR#atlas-installer" \
   --root "$TARGET" \
   --no-root-passwd \
-  --option substituters "$SUBSTITUTERS"
-ok "NixOS base system installed"
+  --option substituters "$SUBSTITUTERS" \
+  --accept-flake-config > /tmp/nixos-install.log 2>&1 &
+NIX_PID=$!
+INSTALL_START=$SECONDS
+FRAME=0
+
+printf '\e7'  # save cursor
+while kill -0 "$NIX_PID" 2>/dev/null; do
+  printf '\e8'  # restore cursor to saved position
+  ELAPSED=$((SECONDS - INSTALL_START))
+  PSEUDO=$(( ELAPSED * 100 / 900 ))
+  (( PSEUDO > 92 )) && PSEUDO=92
+  (( ++PSEUDO ))
+
+  water_bar "$PSEUDO" "$((FRAME++))"
+  TAIL=$(tail -1 /tmp/nixos-install.log 2>/dev/null | tr -d '\n\r' | head -c 65)
+  printf "  ${CYAN}⏱${NC} %02d:%02d  ${DIM}%s${NC}\n" $((ELAPSED/60)) $((ELAPSED%60)) "$TAIL"
+  printf '\e[J'  # clear to screen end
+  sleep 0.3
+done
+
+wait "$NIX_PID"
+NIX_EXIT=$?
+
+printf '\e8'
+water_bar 100 "$((FRAME++))"
+TOTAL=$((SECONDS - INSTALL_START))
+printf "  ${GREEN}✓${NC} Installed in ${BOLD}%02d:%02d${NC}\n" $((TOTAL/60)) $((TOTAL%60))
+
+if [[ $NIX_EXIT -ne 0 ]]; then
+  echo
+  fail "nixos-install failed (exit $NIX_EXIT) — check /tmp/nixos-install.log"
+  exit 1
+fi
 
 sed -i '/initialPassword\|initialHashedPassword/d' "$ROOTDIR/files/core/configuration.nix" || true
 ok "Password cleaned from source config"
@@ -443,8 +618,9 @@ if [[ ${#SELECTED_MODULES[@]} -gt 0 ]]; then
     DEST="$OPT_DIR/$TYPE/$FILENAME"
 
     mkdir -p "$OPT_DIR/$TYPE"
-    $CURL -sSo "$DEST" "$RAW_URL/$FILE" 2>&1 | sed 's/^/    /'
-    ok "Downloaded ${FILENAME}"
+    ($CURL -sSo "$DEST" "$RAW_URL/$FILE" 2>/dev/null) &
+    spin $! "Downloading ${FILENAME}"
+    wait $!
   done
 
   chown -R 1000:100 "$OPT_DIR" 2>/dev/null || true
@@ -460,20 +636,28 @@ fi
 
 # ─── Summary ────────────────────────────────────────────────────────────────
 ELAPSED=$(( $(date +%s) - SCRIPT_START ))
-header "Install Complete!"
-echo -e "  ${GREEN}${BOLD}Atlas has been installed successfully!${NC}"
-echo -e "  ${DIM}Total time: ${ELAPSED}s${NC}"
-spacer
+ELAPSED_MIN=$((ELAPSED / 60))
+ELAPSED_SEC=$((ELAPSED % 60))
+
+echo
+celebrate
+echo
+echo -e "  ${BOLD}${GREEN}┌─────────────────────────────────────────────┐${NC}"
+echo -e "  ${BOLD}${GREEN}│  Atlas has been installed successfully!      │${NC}"
+echo -e "  ${BOLD}${GREEN}│  ─────────────────────────────────────────── │${NC}"
+echo -e "  ${BOLD}${GREEN}│  ⏱  Total time: ${BOLD}${ELAPSED_MIN}m ${ELAPSED_SEC}s${NC}${GREEN}                    │${NC}"
+echo -e "  ${BOLD}${GREEN}└─────────────────────────────────────────────┘${NC}"
+echo
 echo -e "  ${BOLD}Next steps:${NC}"
-echo -e "    1. ${CYAN}Reboot${NC} and remove the install media"
-echo -e "    2. Boot into your new system"
-echo -e "    3. Log in with ${YELLOW}username: yusa${NC}"
-echo -e "    4. After login, apply the full configuration:"
+echo -e "    ${CYAN}1.${NC} Reboot and remove the install media"
+echo -e "    ${CYAN}2.${NC} Boot into your new system"
+echo -e "    ${CYAN}3.${NC} Log in with ${YELLOW}username: yusa${NC}"
+echo -e "    ${CYAN}4.${NC} After login, apply the full configuration:"
 echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/atlas#atlas${NC}"
 if [[ ${#SELECTED_MODULES[@]} -eq 0 ]]; then
-  echo -e "    5. To add optional modules later:"
-  echo -e "       ${DIM}Download .nix files to /home/yusa/atlas/files/modules/optional/nixos/ or home/${NC}"
+  echo -e "    ${CYAN}5.${NC} To add optional modules later:"
+echo -e "       ${DIM}Download .nix files to /home/yusa/atlas/files/modules/optional/nixos/ or home/${NC}"
   echo -e "       ${DIM}They're auto-imported from the directory.${NC}"
 fi
-spacer
+echo
 echo -e "  ${DIM}For detailed documentation, see: /home/yusa/atlas/README.md${NC}"
