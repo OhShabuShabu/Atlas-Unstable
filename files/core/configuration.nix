@@ -69,17 +69,14 @@
       enable = true;
       theme = "hyprland-mac-style";
       themePackages = with pkgs; [
-        (pkgs.stdenv.mkDerivation {
-          pname = "plymouth-hyprland-mac-style";
-          version = "1.0";
+        (pkgs.runCommandLocal "plymouth-hyprland-mac-style" {
           src = ./../config/plymouth/hyprland-mac-style;
-          installPhase = ''
-            mkdir -p $out/share/plymouth/themes
-            cp -r "$src" $out/share/plymouth/themes/hyprland-mac-style
-            substituteInPlace $out/share/plymouth/themes/hyprland-mac-style/hyprland-mac-style.plymouth \
-              --replace-fail "/usr/share" "$out/share"
-          '';
-        })
+        } ''
+          mkdir -p $out/share/plymouth/themes
+          cp -r "$src" $out/share/plymouth/themes/hyprland-mac-style
+          substituteInPlace $out/share/plymouth/themes/hyprland-mac-style/hyprland-mac-style.plymouth \
+            --replace-fail "/usr/share" "$out/share"
+        '')
       ];
     };
   };
@@ -125,6 +122,20 @@
   # ============================================================================
   # Enable Nix flakes and commands
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
+
+  # Build optimization: disable store dedup after every build (saves ~30-60s per rebuild)
+  # Dedup runs separately via GC instead
+  nix.settings.auto-optimise-store = false;
+
+  # Build optimization: remove derivation outputs from store faster
+  nix.settings.keep-derivations = false;
+
+  # GC thresholds: keep 1GB min free, clean up to 5GB
+  nix.settings.min-free = 1000000000;
+  nix.settings.max-free = 5000000000;
+
+  # GC: remove generations older than 30 days
+  nix.gc.options = "--delete-older-than 30d";
 
   # Allow unfree packages (NVIDIA, etc.)
   nixpkgs.config.allowUnfree = true;
@@ -534,19 +545,14 @@
     material-design-icons
 
     # Hardware control
-    openrgb
-    freerdp
     wtype
     wlrctl
 
     # Media
-    crosspipe
     pavucontrol
-    easyeffects
 
     # Utilities
     jq
-    appimage-run
     polkit_gnome
     zip
     libpwquality
@@ -564,11 +570,11 @@
     # SDDM Nier Automata theme + Qt6 deps
     (pkgs.stdenv.mkDerivation {
       pname = "sddm-nier-automata-theme";
-      version = "main";
+      version = "6946b53";
       src = pkgs.fetchFromGitHub {
         owner = "Darkkal44";
         repo = "qylock";
-        rev = "main";
+        rev = "6946b53626b4f3c1507ae9a78c287411df5fb36c";
         sha256 = "0kdy4w7az0ygmv3yf92xsyrflak52lm3prp8lickwk207y3qgm7g";
       };
       installPhase = ''
