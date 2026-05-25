@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ config, lib, ... }:
 
 {
   imports = [ ];
@@ -7,9 +7,10 @@
   hardware.graphics.enable = true;
 
   # Load amdgpu in initrd so Plymouth shows KMS at native resolution during LUKS prompt.
-  # Kept per-vendor instead of blanket-importing all GPU drivers (~200MB+ firmware saved).
-  boot.initrd.kernelModules = [ "amdgpu" ];
-  boot.initrd.availableKernelModules = [ "amdgpu" ];
+  # Conditioned on hostname: Atlas has AMD, other machines would bundle ~100MB+ firmware
+  # for hardware they don't have. Create hardware/gpu/<vendor>.nix for your GPU.
+  boot.initrd.kernelModules = lib.mkIf (config.networking.hostName == "atlas") [ "amdgpu" ];
+  boot.initrd.availableKernelModules = lib.mkIf (config.networking.hostName == "atlas") [ "amdgpu" ];
 
   # ollama-rocm moved to optional extras.nix module (atlas-modules)
 }
