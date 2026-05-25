@@ -416,17 +416,16 @@ nixos-install --flake "$ROOTDIR#atlas-installer" \
   --accept-flake-config > /tmp/nixos-install.log 2>&1 &
 NIX_PID=$!
 
-PB_WIDTH=32
 printf '\e[?25l'
 while kill -0 "$NIX_PID" 2>/dev/null; do
   ELAPSED=$((SECONDS - INSTALL_START))
   PSEUDO=$(( ELAPSED * 100 / 900 ))
   (( PSEUDO > 95 )) && PSEUDO=95
   (( ++PSEUDO ))
-  FILL=$(( PSEUDO * PB_WIDTH / 100 ))
-  printf -v BAR '%*s' "$FILL" ''; BAR="${BAR// /█}"
-  printf -v REST '%*s' $((PB_WIDTH-FILL)) ''; REST="${REST// /░}"
-  printf "\r  ${CYAN}┣${NC}${BAR}${REST}${CYAN}┫${NC}  ${BOLD}%3d%%${NC}  ${CYAN}⏱${NC} %02d:%02d" "$PSEUDO" $((ELAPSED/60)) $((ELAPSED%60))
+  FILL=$(( PSEUDO * 36 / 100 ))
+  printf -v BAR '%*s' "$FILL" ''; BAR="${BAR// /━}"
+  printf -v REST '%*s' $((36-FILL)) ''; REST="${REST// /─}"
+  printf "\r  ${CYAN}${BAR}${DIM}${REST}${NC}  ${BOLD}%3d%%${NC}  ${CYAN}⏱${NC} %02d:%02d" "$PSEUDO" $((ELAPSED/60)) $((ELAPSED%60))
   sleep 0.3
 done
 
@@ -434,8 +433,8 @@ wait "$NIX_PID"
 NIX_EXIT=$?
 TOTAL=$((SECONDS - INSTALL_START))
 
-printf -v BAR '%*s' "$PB_WIDTH" ''; BAR="${BAR// /█}"
-printf "\r  ${GREEN}┣${NC}${BAR}${GREEN}┫${NC}  ${BOLD}100%%${NC}  ${GREEN}⏱${NC} %02d:%02d\n" $((TOTAL/60)) $((TOTAL%60))
+printf -v BAR '%*s' '36' ''; BAR="${BAR// /━}"
+printf "\r  ${GREEN}${BAR}${NC}  ${BOLD}100%%${NC}  ${GREEN}⏱${NC} %02d:%02d\n" $((TOTAL/60)) $((TOTAL%60))
 printf '\e[?25h'
 
 if [[ $NIX_EXIT -eq 0 ]]; then
