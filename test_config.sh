@@ -377,6 +377,7 @@ declare -a SERVICES=(
   "aide-init" "aide-check" "quarantine-setup" "quarantine-sanitizer" "metadata-cleaner"
   "metadata-watcher" "setup-mullvad-dirs" "flatpak-repo"
   "polkit-gnome-authentication-agent-1"
+  "metadata-stripper"
 )
 for svc in "${SERVICES[@]}"; do
   if grep -qr "$svc" "$BASE/files/" --include='*.nix' 2>/dev/null || grep -qr "$svc" "$ATLAS_MODULES/" --include='*.nix' 2>/dev/null; then
@@ -406,6 +407,21 @@ header "22. APP LAUNCHER"
 python3 -c "import json; json.load(open('$BASE/files/config/vicinae/vicinae.json'))" 2>/dev/null && \
   pass "vicinae.json is valid JSON" || fail "vicinae.json is not valid JSON"
 grep -q 'vicinae-dark' "$BASE/files/config/vicinae/vicinae.json" && pass "vicinae-dark theme" || fail "vicinae-dark theme not set"
+
+# ============================================================================
+# 22b. METADATA STRIPPER
+# ============================================================================
+header "22b. METADATA STRIPPER"
+MSTRIP="$BASE/files/modules/security/metadata-stripper.nix"
+[ -f "$MSTRIP" ] && pass "metadata-stripper.nix exists" || fail "metadata-stripper.nix MISSING"
+mlgrep "$MSTRIP" 'systemd\.paths\.metadata-stripper-watcher' && pass "metadata-stripper: path watcher defined" || fail "metadata-stripper: path watcher missing"
+mlgrep "$MSTRIP" 'systemd\.services\.metadata-stripper-watcher' && pass "metadata-stripper: watcher service defined" || fail "metadata-stripper: watcher service missing"
+mlgrep "$MSTRIP" 'systemd\.services\.metadata-stripper-daily' && pass "metadata-stripper: daily service defined" || fail "metadata-stripper: daily service missing"
+mlgrep "$MSTRIP" 'systemd\.timers\.metadata-stripper-daily' && pass "metadata-stripper: daily timer defined" || fail "metadata-stripper: daily timer missing"
+mlgrep "$MSTRIP" 'exiftool' && pass "metadata-stripper: uses exiftool" || fail "metadata-stripper: exiftool not referenced"
+mlgrep "$MSTRIP" 'notifyScript' && pass "metadata-stripper: uses notification library" || fail "metadata-stripper: notification library missing"
+mlgrep "$MSTRIP" 'NoNewPrivileges' && pass "metadata-stripper: NoNewPrivileges set" || warn "metadata-stripper: NoNewPrivileges missing"
+mlgrep "$BASE/files/modules/security/default.nix" 'metadata-stripper' && pass "security/default.nix imports metadata-stripper" || fail "security/default.nix missing metadata-stripper import"
 
 # ============================================================================
 # 23. MISC CHECKS

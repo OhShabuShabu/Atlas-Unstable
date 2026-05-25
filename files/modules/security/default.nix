@@ -23,6 +23,7 @@
     ./clamav.nix
     ./auditd-config.nix
     ./quarantine.nix
+    ./metadata-stripper.nix
   ];
 
   # INFO: Security packages
