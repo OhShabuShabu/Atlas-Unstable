@@ -445,6 +445,7 @@ INSTALL_START=$SECONDS
 nixos-install --flake "$ROOTDIR#atlas-installer" \
   --root "$TARGET" \
   --no-root-passwd \
+  --show-trace \
   --option substituters "$SUBSTITUTERS" \
   > /tmp/nixos-install.log 2>&1 &
 NIX_PID=$!
@@ -461,25 +462,27 @@ while kill -0 "$NIX_PID" 2>/dev/null; do
   printf "\r  ${CYAN}${BAR}${DIM}${REST}${NC}  ${BOLD}%3d%%${NC}  ${CYAN}⏱${NC} %02d:%02d" "$PSEUDO" $((ELAPSED/60)) $((ELAPSED%60))
   sleep 0.3
 done
-
-wait "$NIX_PID"
-NIX_EXIT=$?
-TOTAL=$((SECONDS - INSTALL_START))
-
-printf -v BAR '%*s' '36' ''; BAR="${BAR// /━}"
-printf "\r  ${GREEN}${BAR}${NC}  ${BOLD}100%%${NC}  ${GREEN}⏱${NC} %02d:%02d\n" $((TOTAL/60)) $((TOTAL%60))
 printf '\e[?25h'
+
+# Guard against set -e — wait kills the script silently if nixos-install fails
+if wait "$NIX_PID" 2>/dev/null; then
+  NIX_EXIT=0
+else
+  NIX_EXIT=$?
+fi
+TOTAL=$((SECONDS - INSTALL_START))
 
 sed -i '/initialPassword\|initialHashedPassword/d' "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true
 
 if [[ $NIX_EXIT -eq 0 ]]; then
-  ok "Password cleaned from source config"
+  printf -v BAR '%*s' '36' ''; BAR="${BAR// /━}"
+  printf "\r  ${GREEN}${BAR}${NC}  ${BOLD}100%%${NC}  ${GREEN}⏱${NC} %02d:%02d\n" $((TOTAL/60)) $((TOTAL%60))
   ok "NixOS base system installed (${BOLD}$((TOTAL/60))m $((TOTAL%60))s${NC})"
 else
   echo
   fail "nixos-install failed (exit $NIX_EXIT)"
-  echo -e "  ${DIM}Last output:${NC}"
-  tail -5 /tmp/nixos-install.log 2>/dev/null | sed 's/^/  /'
+  echo -e "  ${DIM}Full log (last 30 lines):${NC}"
+  tail -30 /tmp/nixos-install.log 2>/dev/null | sed 's/^/  /'
   exit 1
 fi
 
