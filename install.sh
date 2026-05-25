@@ -239,10 +239,31 @@ ok "System resources ready"
 step 5 "Partitioning & Formatting $DISK"
 spacer
 
+# ─── LUKS Passphrase ────────────────────────────────────────────────────
+echo -e "  ${BOLD}Set a LUKS encryption passphrase for ${DISK}:${NC}"
+echo -e "  ${DIM}This passphrase will be needed at every boot.${NC}"
+while :; do
+  read -r -s -p "  ${CYAN}Passphrase:${NC} " LUKS_PW1
+  echo
+  read -r -s -p "  ${CYAN}Confirm:${NC}  " LUKS_PW2
+  echo
+  if [[ -z "$LUKS_PW1" ]]; then
+    warn "Passphrase cannot be empty."
+  elif [[ "$LUKS_PW1" != "$LUKS_PW2" ]]; then
+    warn "Passphrases do not match."
+  else
+    break
+  fi
+done
+echo -n "$LUKS_PW1" > /tmp/luks-passphrase
+unset LUKS_PW1 LUKS_PW2
+ok "LUKS passphrase confirmed"
+spacer
+
+# ─── Disko Config ───────────────────────────────────────────────────────
 info "Writing partition layout via disko..."
 info "  ${DIM}This will create: ESP (2G), Swap (8G), LUKS+Btrfs (remaining)${NC}"
 
-# Write the disko config as Nix
 cat > /tmp/disko-config.nix << EOF
 {
   disko.devices = {
@@ -275,6 +296,7 @@ cat > /tmp/disko-config.nix << EOF
               type = "luks";
               name = "crypt";
               settings.allowDiscards = true;
+              passwordFile = "/tmp/luks-passphrase";
               content = {
                 type = "btrfs";
                 extraArgs = ["-f"];
@@ -302,12 +324,25 @@ cat > /tmp/disko-config.nix << EOF
 }
 EOF
 
-info "Running disko (enter your LUKS passphrase when prompted)..."
+# ─── Run disko ─────────────────────────────────────────────────────────
+info "Running disko to partition and format..."
 nix run "nixpkgs#disko" \
   --extra-experimental-features "nix-command flakes" \
   --accept-flake-config \
-  -- --mode disko /tmp/disko-config.nix
-ok "Disk partitioned and formatted"
+  -- --mode disko /tmp/disko-config.nix > /tmp/disko-format.log 2>&1 &
+DISKO_PID=$!
+spin $DISKO_PID "Partitioning & formatting disk"
+if wait $DISKO_PID 2>/dev/null; then
+  ok "Disk partitioned and formatted"
+else
+  DISKO_EXIT=$?
+  rm -f /tmp/luks-passphrase
+  fail "disko partitioning failed (exit $DISKO_EXIT)"
+  echo -e "  ${DIM}Last output:${NC}"
+  tail -5 /tmp/disko-format.log 2>/dev/null | sed 's/^/  /'
+  exit 1
+fi
+rm -f /tmp/luks-passphrase
 
 # ═══════════════════════════════════════════════════════════════════════════
 # STEP 6: Mounting & Installing NixOS
@@ -411,7 +446,7 @@ nixos-install --flake "$ROOTDIR#atlas-installer" \
   --root "$TARGET" \
   --no-root-passwd \
   --option substituters "$SUBSTITUTERS" \
-  --accept-flake-config > /tmp/nixos-install.log 2>&1 &
+  > /tmp/nixos-install.log 2>&1 &
 NIX_PID=$!
 
 printf '\e[?25l'
