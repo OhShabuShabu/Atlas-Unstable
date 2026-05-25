@@ -32,7 +32,7 @@ step() {
   local fill=$((num * 36 / total))
   printf -v bar '%*s' "$fill" ''; bar="${bar// /━}"
   printf -v rest '%*s' $((36-fill)) ''; rest="${rest// /─}"
-  if [[ $STEP_PRINTED -eq 1 ]]; then
+  if [[ ${STEP_PRINTED:-0} -eq 1 ]]; then
     printf '\e8'; printf '\e[J'
   fi
   printf '\e7'
