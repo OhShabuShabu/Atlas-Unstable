@@ -596,6 +596,33 @@ else
   info "No modules selected — you can add them later by downloading .nix files to files/modules/optional/"
 fi
 
+# ─── GPU Detection (auto) ─────────────────────────────────────────────────
+# Detect GPU vendor and download ONLY the matching initrd module.
+# Bundling GPU firmware for hardware that doesn't exist fills up /boot.
+spacer
+info "Detecting GPU for initrd configuration..."
+
+VENDOR=$(head -1 /sys/class/drm/*/device/vendor 2>/dev/null | tr -d '\n')
+case "$VENDOR" in
+  "0x1002") GPU_MODULE="gpu-amd.nix"   ; GPU_NAME="AMD" ;;
+  "0x8086") GPU_MODULE="gpu-intel.nix" ; GPU_NAME="Intel" ;;
+  "0x10de") GPU_MODULE="gpu-nvidia.nix"; GPU_NAME="NVIDIA" ;;
+  *) GPU_MODULE="" ; GPU_NAME="" ;;
+esac
+
+if [[ -n "$GPU_MODULE" ]]; then
+  info "Detected ${GPU_NAME} GPU — downloading matching initrd module..."
+  mkdir -p "$OPT_DIR/nixos"
+  ($CURL -sSo "$OPT_DIR/nixos/gpu.nix" "$RAW_URL/$GPU_MODULE" 2>/dev/null) &
+  spin $! "Downloading ${GPU_MODULE}"
+  wait $!
+  ok "GPU initrd module installed: ${GPU_MODULE}"
+else
+  warn "No supported GPU detected — initrd will use basic framebuffer (no KMS)."
+  warn "You can manually download gpu-amd.nix, gpu-intel.nix, or gpu-nvidia.nix"
+  warn "from the atlas-modules repo to files/modules/optional/nixos/gpu.nix"
+fi
+
 # ═══════════════════════════════════════════════════════════════════════════
 # STEP 9: Apply Full Configuration (includes optional modules)
 # ═══════════════════════════════════════════════════════════════════════════
