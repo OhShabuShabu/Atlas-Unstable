@@ -194,6 +194,11 @@
       "wheel"
       "docker"
     ];
+    # Prevent creating files directly in ~/ on tmpfs.
+    # Persisted paths (bind-mounted from /persistent/home/yusa/) remain writable.
+    # Subdirectories like .config/ and .local/ are pre-created via tmpfiles so
+    # home-manager activation and applications can still write into them.
+    homeMode = "0555";
   };
 
 
