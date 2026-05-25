@@ -45,18 +45,20 @@
     # Enable systemd initrd (required for LUKS)
     initrd.systemd.enable = true;
 
+    # Compress initrd with zstd (better ratio than gzip) — shrinks each initrd ~2-3×,
+    # critical for machines with small EFI partitions (512MB)
+    initrd.compressor = "zstd";
+    initrd.compressorArgs = [ "-12" ];
+
     # Limit boot entries to prevent /boot (ESP) from filling up
     # Without this, every rebuild adds another kernel + initrd (~500MB+ with all firmware)
     # and they are never automatically cleaned from the EFI partition
-    loader.systemd-boot.configurationLimit = 5;
+    # Lower on machines with small EFI partitions (512MB common on many devices)
+    loader.systemd-boot.configurationLimit = 3;
 
-    # Load GPU drivers in initrd so Plymouth uses KMS at native resolution during LUKS prompt
-    # List covers AMD, Intel, and NVIDIA — only the matching driver loads per hardware
-    initrd.kernelModules = [
-      "amdgpu"  # AMD/ATI Radeon (GCN 5+ / Navi)
-      "i915"    # Intel integrated (Sandy Bridge+)
-      "nouveau" # NVIDIA (open-source KMS driver)
-    ];
+    # GPU initrd kernel modules moved to hardware/gpu/<vendor>.nix for per-machine selection.
+    # Only include the driver for the actual hardware — all three bundles add ~200MB+ firmware
+    # to every initrd, overwhelming small EFI partitions on non-Atlas machines.
 
     # Ensure Plymouth waits for udev to settle before showing the splash
     # This gives the GPU driver time to load firmware and set up KMS
