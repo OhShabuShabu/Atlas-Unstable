@@ -90,7 +90,6 @@
     vicinae
     ghostty
     xwayland-satellite
-    lua
     adwaita-icon-theme
     papirus-icon-theme
     gnome-themes-extra
@@ -104,7 +103,6 @@
 
 # INFO: Files
   home.file = {
-    ".icons".source                               = ../config/.icons;
     ".config/niri".source                         = ../config/niri;
     ".config/nushell/shellrc.nu".source           = ./config/shellrc.nu;
     ".config/nix".source                          = ./config/nix;

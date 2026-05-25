@@ -90,7 +90,8 @@ mlgrep "$CFG" 'systemd-boot.*enable\s*=\s*true' && pass "systemd-boot enabled" |
 mlgrep "$CFG" 'plymouth.*enable\s*=\s*true' && pass "Plymouth enabled" || fail "Plymouth not enabled"
 mlgrep "$CFG" 'autoLogin.*enable\s*=\s*true' && pass "Auto-login enabled" || warn "Auto-login not enabled"
 mlgrep "$CFG" 'programs\.niri\.enable\s*=\s*true' && pass "Niri WM enabled" || fail "Niri not enabled"
-mlgrep "$CFG" 'pipewire.*enable\s*=\s*true' && pass "Pipewire enabled" || fail "Pipewire not enabled"
+AUDIO_CFG="$BASE/files/hardware/audio/default.nix"
+mlgrep "$CFG" 'pipewire.*enable\s*=\s*true' || mlgrep "$AUDIO_CFG" 'pipewire.*enable\s*=\s*true' && pass "Pipewire enabled" || fail "Pipewire not enabled"
 mlgrep "$CFG" 'xdg\.portal.*enable\s*=\s*true' && pass "XDG Portal enabled" || fail "XDG Portal not enabled"
 mlgrep "$CFG" 'dbus.*implementation.*broker' && pass "dbus-broker enabled" || fail "dbus-broker not enabled"
 mlgrep "$CFG" 'qt.*enable\s*=\s*true' && pass "Qt enabled" || fail "Qt not enabled"
@@ -445,7 +446,7 @@ mlgrep "$BASE/files/modules/security/snort.nix" 'after.*snort-daemon' && pass "S
 mlgrep "$QUAR" 'before.*quarantine-sanitizer' && pass "Quarantine setup before sanitizer" || fail "Quarantine dependency missing"
 mlgrep "$CFG" 'docker' && pass "User in docker group" || fail "User not in docker group"
 mlgrep "$VIRT" 'libvirtd' && pass "User in libvirtd group" || fail "User not in libvirtd group"
-mlgrep "$CFG" 'alsa\.support32Bit\s*=\s*true' && pass "ALSA 32-bit enabled" || fail "ALSA 32-bit not enabled"
+mlgrep "$AUDIO_CFG" 'alsa\.support32Bit\s*=\s*true' && pass "ALSA 32-bit enabled" || fail "ALSA 32-bit not enabled"
 
 # ============================================================================
 # 25. SUMMARY

@@ -127,6 +127,10 @@
   # Dedup runs separately via GC instead
   nix.settings.auto-optimise-store = false;
 
+  # Parallelism: use all available cores for builds
+  nix.settings.max-jobs = "auto";
+  nix.settings.cores = 0;
+
   # Build optimization: remove derivation outputs from store faster
   nix.settings.keep-derivations = false;
 
@@ -134,21 +138,17 @@
   nix.settings.min-free = 1000000000;
   nix.settings.max-free = 5000000000;
 
-  # GC: remove generations older than 30 days
+  # Automatic GC: weekly, remove generations older than 30 days
+  nix.gc.automatic = true;
+  nix.gc.dates = "weekly";
   nix.gc.options = "--delete-older-than 30d";
 
   # Allow unfree packages (NVIDIA, etc.)
   nixpkgs.config.allowUnfree = true;
 
-  # FIX: Disable openldap tests — test017 (syncreplication) is flaky
-  #      in the build sandbox and causes bottles/lutris to fail transitively
-  nixpkgs.overlays = [
-    (final: prev: {
-      openldap = prev.openldap.overrideAttrs (old: {
-        doCheck = false;
-      });
-    })
-  ];
+  # openldap overlay removed — bottles/lutris (the only packages that triggered
+  # the flaky test017) aren't currently installed. Re-add if gaming module is
+  # enabled and openldap tests cause build failures.
 
   # Run dynamically linked executables (bun, etc.)
   programs.nix-ld.enable = true;
@@ -494,33 +494,7 @@
   };
 
 
-  # ============================================================================
-  # SECTION 17: AUDIO (PIPEWIRE)
-  # ============================================================================
-  services.pipewire = {
-    enable = true;
-    alsa.enable = true;
-    alsa.support32Bit = true;
-    pulse.enable = true;
-    wireplumber.enable = true;
-    wireplumber.extraConfig = {
-      "11-analog-default" = {
-        "monitor.alsa.rules" = [
-          {
-            matches = [
-              {
-                # NOTE: PCI address is hardware-specific. Run `wpctl status` to find yours.
-                "device.name" = "~alsa_card.pci-0000_00_1f.3";
-              }
-            ];
-            "apply-properties" = {
-              "device.profile" = "output:analog-stereo+input:analog-stereo";
-            };
-          }
-        ];
-      };
-    };
-  };
+  # Pipewire handled by hardware/audio/default.nix — avoids duplication
 
 
   # ============================================================================
@@ -533,16 +507,15 @@
     inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default
     python3
     curl
-    sqlite
     ffmpeg
-    imagemagick
-    inotify-tools
 
     # Fonts
     nerd-fonts.symbols-only
     roboto
-    roboto-mono
     material-design-icons
+
+    # Cursor theme (oreo_black_cursors — used by Niri)
+    oreo-cursors-plus
 
     # Hardware control
     wtype
@@ -554,7 +527,6 @@
     # Utilities
     jq
     polkit_gnome
-    zip
     libpwquality
     nautilus
     yazi
@@ -617,8 +589,6 @@
   fonts.packages = with pkgs; [
     udev-gothic-nf
     noto-fonts
-    liberation_ttf
-    cantarell-fonts
 
     # Custom Monocraft font (gaming aesthetic)
     (pkgs.stdenv.mkDerivation {
