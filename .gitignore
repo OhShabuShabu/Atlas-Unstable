@@ -49,3 +49,6 @@ core.*
 # Python bytecode
 __pycache__/
 *.pyc
+
+# opencode local session state
+.omo/
