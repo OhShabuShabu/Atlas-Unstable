@@ -205,7 +205,7 @@ for f in clamav snout; do
   mlgrep "$BASE/files/modules/security/$f.nix" 'notifications.nix' && pass "$f: imports notifications" || fail "$f: missing notification library import"
 done
 mlgrep "$BASE/files/modules/security/snort.nix" 'notify-send' && pass "snort: has notify-send" || fail "snort: missing notify-send"
-mlgrep "$ATLAS_MODULES/privacy/privacy.nix" 'notifications.nix' && pass "privacy.nix: imports notifications" || fail "privacy.nix: missing notification library import"
+mlgrep "$ATLAS_MODULES/privacy/privacy.nix" 'notify-user' && pass "privacy.nix: has inline notify-user script" || fail "privacy.nix: missing notify-user script"
 
 # ============================================================================
 # 8. NIRI WM CONFIG

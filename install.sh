@@ -444,13 +444,6 @@ if [[ ${#SELECTED_MODULES[@]} -gt 0 ]]; then
     ok "Downloaded ${FILENAME}"
   done
 
-  if [[ " ${SELECTED_MODULES[*]} " =~ " 2 " ]]; then
-    info "Privacy module selected — downloading shared library..."
-    mkdir -p "$OPT_DIR/lib"
-    $CURL -sSo "$OPT_DIR/lib/notifications.nix" "$RAW_URL/lib/notifications.nix" 2>&1 | sed 's/^/    /'
-    ok "Downloaded lib/notifications.nix"
-  fi
-
   chown -R 1000:100 "$OPT_DIR" 2>/dev/null || true
 
   selected_names=()
