@@ -30,14 +30,16 @@
     # INFO: Snout security monitoring daemon
     ../modules/security/snout.nix
 
-    # INFO: TPM sealing & attestation (LUKS key sealing, PCR integrity check)
-    ../modules/security/tpm-sealing.nix
+    # DISABLED: Firmware tinkering detection services
+    # See: tpm-sealing (TPM PCR attestation), secureboot (Secure Boot verification),
+    #      tpm-monitoring (runtime PCR/UEFI monitoring), firmware-check (BIOS version check)
+    # ../modules/security/tpm-sealing.nix
 
     # INFO: LUKS keyfile with TPM sealing (2FA unlock: passphrase + keyfile)
     ../modules/security/luks-keyfile.nix
 
-    # INFO: Secure Boot kernel signing
-    ../modules/security/secureboot.nix
+    # DISABLED: Secure Boot kernel signing (part of firmware integrity)
+    # ../modules/security/secureboot.nix
 
     # INFO: Memory wipe & anti-forensics (DRAM wipe, log shredding)
     ../modules/security/memory-wipe.nix
@@ -45,11 +47,11 @@
     # INFO: IMA/EVM kernel-level file integrity
     ../modules/security/ima-evm.nix
 
-    # INFO: TPM/UEFI monitoring & tamper detection
-    ../modules/security/tpm-monitoring.nix
+    # DISABLED: TPM/UEFI monitoring & tamper detection
+    # ../modules/security/tpm-monitoring.nix
 
-    # INFO: Firmware version attestation (detects unauthorized BIOS/UEFI updates)
-    ../modules/security/firmware-check.nix
+    # DISABLED: Firmware version attestation (detects unauthorized BIOS/UEFI updates)
+    # ../modules/security/firmware-check.nix
 
     # INFO: LUKS unlock method test suite (test-luks-methods command)
     ../modules/security/luks-test.nix
@@ -85,6 +87,9 @@
     # TPM 2.0 kernel modules for hardware security module access
     # Required for LUKS key sealing, Secure Boot attestation, and tamper detection
     initrd.availableKernelModules = [ "tpm_tis" "tpm_crb" "tpm" ];
+
+    # Load TPM modules in main kernel too (not just initrd) so post-boot TPM services work
+    kernelModules = [ "tpm_tis" "tpm_crb" "tpm" ];
 
     # GPU initrd kernel modules moved to hardware/gpu/<vendor>.nix for per-machine selection.
     # Only include the driver for the actual hardware — all three bundles add ~200MB+ firmware
@@ -135,13 +140,29 @@
   networking.useDHCP = false;
   networking.dhcpcd.enable = false;
 
-  # Custom nameservers (fallback when systemd-resolved is unavailable)
-  # Primary DNS set in services.resolved below
+  # Enable OpenSSH with secure defaults (key-only authentication)
+  services.openssh = {
+    enable = true;
+    settings = {
+      PasswordAuthentication = false;
+      PermitRootLogin = "no";
+      KbdInteractiveAuthentication = false;
+      PubkeyAuthentication = true;
+    };
+    hostKeys = [
+      {
+        path = "/etc/ssh/ssh_host_ed25519_key";
+        type = "ed25519";
+      }
+    ];
+  };
+
+  # Fallback nameservers (only used when systemd-resolved stub is unavailable)
+  # Primary DNS is configured in services.resolved.settings.DNS below
+  # These must differ from resolved's DNS to be useful as a genuine fallback
   networking.nameservers = [
-    "1.1.1.1"
-    "1.0.0.1"
-    "8.8.8.8"
-    "8.8.4.4"
+    "9.9.9.9"    # Quad9 — primary fallback
+    "149.112.112.112"
   ];
 
 
@@ -221,16 +242,18 @@
   users.users.yusa = {
     isNormalUser = true;
     description = "yusa";
+    # Password is injected by install.sh (via initialPassword) during fresh install.
+    # On existing systems, password in /etc/shadow persists across rebuilds.
+    # No default password here — avoids committing a weak credential.
     extraGroups = [
       "networkmanager"
       "wheel"
       "docker"
     ];
-    # Prevent creating files directly in ~/ on tmpfs.
-    # Persisted paths (bind-mounted from /persistent/home/yusa/) remain writable.
-    # Subdirectories like .config/ and .local/ are pre-created via tmpfiles so
-    # home-manager activation and applications can still write into them.
-    homeMode = "0555";
+    homeMode = "0755";
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEZUNUi+15sIyPF4CrpeVjsfRE2JlYwIQlDtaCifRuvA yusa@atlas"
+    ];
   };
 
 
@@ -256,6 +279,80 @@
         RestartSec = 1;
         TimeoutStopSec = 10;
       };
+  };
+
+  # ─── Desktop User Services ────────────────────────────────────────────────
+  # These services run as the logged-in user and auto-start with the desktop
+  # session. They replace the imperative background-spawns that startup.sh used
+  # to do, giving us proper lifecycle management, restart on failure, and
+  # journald logging.
+
+  systemd.user.services.atlas-awww = {
+    description = "Awww Wallpaper Daemon";
+    wantedBy = [ "graphical-session.target" ];
+    partOf = [ "graphical-session.target" ];
+    after = [ "graphical-session.target" ];
+    serviceConfig = {
+      Type = "simple";
+      ExecStart = "${pkgs.awww}/bin/awww-daemon --quiet";
+      Restart = "on-failure";
+      RestartSec = 3;
+      TimeoutStopSec = 10;
+    };
+  };
+
+  systemd.user.services.atlas-vicinae = {
+    description = "Vicinae Application Launcher";
+    wantedBy = [ "graphical-session.target" ];
+    partOf = [ "graphical-session.target" ];
+    after = [ "graphical-session.target" ];
+    serviceConfig = {
+      Type = "simple";
+      ExecStart = "${pkgs.vicinae}/bin/vicinae server";
+      Restart = "on-failure";
+      RestartSec = 3;
+      TimeoutStopSec = 10;
+    };
+  };
+
+  systemd.user.services.atlas-xwayland-satellite = {
+    description = "XWayland Satellite (X11 compatibility)";
+    wantedBy = [ "graphical-session.target" ];
+    partOf = [ "graphical-session.target" ];
+    after = [ "graphical-session.target" ];
+    serviceConfig = {
+      Type = "simple";
+      ExecStart = "${pkgs.xwayland-satellite}/bin/xwayland-satellite";
+      Restart = "on-failure";
+      RestartSec = 3;
+      TimeoutStopSec = 10;
+    };
+  };
+
+  # Startup sound — plays once then exits
+  systemd.user.services.atlas-startup-sound = {
+    description = "Atlas Startup Sound";
+    wantedBy = [ "graphical-session.target" ];
+    partOf = [ "graphical-session.target" ];
+    after = [ "graphical-session.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.ffmpeg}/bin/ffplay -nodisp -autoexit ${./../audio/startup.mp3}";
+      RemainAfterExit = false;
+    };
+  };
+
+  # OpenRGB — delayed RGB lighting config, runs after desktop is settled
+  systemd.user.services.atlas-openrgb = {
+    description = "OpenRGB Lighting Configuration";
+    wantedBy = [ "graphical-session.target" ];
+    partOf = [ "graphical-session.target" ];
+    after = [ "graphical-session.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.bash}/bin/bash -c 'sleep 12 && ${pkgs.openrgb}/bin/openrgb -d 0 -c $(${pkgs.python3}/bin/python3 ${./../bin/python/fix_rgb_color.py} $(tr -d \"#\" < ${./../config/primary_color.txt}))'";
+      RemainAfterExit = false;
+    };
   };
 
   # ============================================================================
@@ -356,6 +453,21 @@
 
   # FIX: Limit sudo execution to wheel group only
   security.sudo.execWheelOnly = true;
+
+  # Allow passwordless sudo for wheel group (desktop convenience tradeoff)
+  # Risk: any process running as a wheel user can escalate to root silently.
+  # Mitigated by: single-user desktop, AppArmor, service hardening, no open SSH passwords.
+  security.sudo.extraRules = [
+    {
+      groups = [ "wheel" ];
+      commands = [
+        {
+          command = "ALL";
+          options = [ "NOPASSWD" ];
+        }
+      ];
+    }
+  ];
 
   # FIX: Protect /proc from unprivileged access
   #      Hide processes from non-privileged users
@@ -628,6 +740,108 @@
     trashy
 
     # INFO: vulnix defined in security/default.nix
+
+    # INFO: Rebuild wrapper — stops tamper-detection services before rebuild to
+    #       prevent them from triggering a shutdown mid-operation. Runs a quick
+    #       health check after successful rebuild.
+    (pkgs.writeShellScriptBin "atlas-rebuild" ''
+      set -euo pipefail
+
+      # Stop all services that detect tinkering (kernel/auditd left alone)
+      sudo systemctl stop \
+        snort-daemon snort-monitor \
+        snout-watcher.service snout-watcher.path \
+        aide-check.service aide-check.timer \
+        firmware-version-check \
+        tpm-attestation-check \
+        secureboot-verify 2>/dev/null || true
+
+      FLAKE="''${FLAKE:-.#atlas}"
+
+      echo "=== Detection services stopped, running nixos-rebuild ==="
+      if nixos-rebuild switch --flake "$FLAKE" "$@"; then
+        echo "=== Build succeeded — running health check ==="
+        atlas-health quick 2>/dev/null || echo "⚠  Health check found issues — run 'atlas-health' for details."
+      fi
+    '')
+
+    # INFO: Unified system health checker — single entry point for status
+    (pkgs.writeShellScriptBin "atlas-health" ''
+      set -euo pipefail
+
+      RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+      BOLD='\033[1m'; DIM='\033[2m'; NC='\033[0m'
+
+      ok()   { echo -e "  ''${GREEN}✓''${NC} $1"; }
+      warn() { echo -e "  ''${YELLOW}⚠''${NC} $1"; }
+      fail() { echo -e "  ''${RED}✗''${NC} $1"; }
+
+      MODE="''${1:-full}"
+
+      if [[ "$MODE" == "quick" ]]; then
+        echo -e "''${BOLD}Atlas Quick Health''${NC}"
+      else
+        echo -e "''${BOLD}══════════════════════════════════════════''${NC}"
+        echo -e "''${BOLD}  Atlas System Health''${NC}"
+        echo -e "''${BOLD}══════════════════════════════════════════''${NC}"
+      fi
+
+      # ── System info ──────────────────────────────────────────────
+      if [[ "$MODE" != "quick" ]]; then
+        echo -e "\n''${BOLD}System:''${NC}"
+        uname -r 2>/dev/null | xargs -I{} echo "  Kernel: {}"
+        uptime -p 2>/dev/null | sed 's/^/  Uptime: /'
+        free -h 2>/dev/null | awk '/^Mem:/ {printf "  Memory: %s used / %s total\n", $3, $2}'
+        df -h /nix 2>/dev/null | awk 'NR==2 {printf "  Nix store: %s used / %s total\n", $3, $2}'
+        echo ""
+      fi
+
+      # ── Security services ────────────────────────────────────────
+      echo -e "''${BOLD}Security:''${NC}"
+      for svc in snort-daemon snout-watcher.service clamav-daemon aide-check.timer; do
+        if systemctl is-active --quiet "$svc" 2>/dev/null; then
+          ok "$svc"
+        else
+          fail "$svc (inactive)"
+        fi
+      done
+
+      # ── Desktop user services ────────────────────────────────────
+      echo -e "\n''${BOLD}Desktop:''${NC}"
+      for svc in atlas-awww atlas-vicinae atlas-xwayland-satellite polkit-gnome-authentication-agent-1; do
+        if systemctl --user is-active --quiet "$svc" 2>/dev/null; then
+          ok "$svc"
+        else
+          warn "$svc (not running — may be normal if not logged into a desktop)"
+        fi
+      done
+
+      # ── Disk health ──────────────────────────────────────────────
+      if [[ "$MODE" != "quick" ]]; then
+        echo -e "\n''${BOLD}Disk:''${NC}"
+        df -h / /nix /persistent /boot 2>/dev/null | awk 'NR==1; NR>1 {printf "  %s  %s used / %s (%s)\n", $1, $3, $2, $5}'
+
+        echo -e "\n''${BOLD}LUKS:''${NC}"
+        if cryptsetup status crypt 2>/dev/null | grep -q "active"; then
+          ok "LUKS container 'crypt' is active"
+        else
+          fail "LUKS container not active (check encryption)"
+        fi
+      fi
+
+      # ── Last security scan results ───────────────────────────────
+      echo -e "\n''${BOLD}Last Scans:''${NC}"
+      if [[ -f /var/log/clamav/scan.log ]]; then
+        tail -3 /var/log/clamav/scan.log 2>/dev/null | head -1 | sed 's/^/  ClamAV: /'
+      fi
+      if journalctl -u aide-check.service --no-pager -n 1 2>/dev/null | grep -q "OK\|completed"; then
+        ok "AIDE last check passed"
+      else
+        warn "AIDE: no recent check logged"
+      fi
+
+      echo ""
+    '')
   ];
 
   # ============================================================================

@@ -1,0 +1,20 @@
+# SOPS configuration for Atlas NixOS
+#
+# HOW TO SET UP AGE KEYS:
+# 1. Build and deploy the system (nixos-rebuild switch --flake .#atlas)
+# 2. Get the age public key from your SSH host key:
+#      cat /etc/ssh/ssh_host_ed25519_key.pub | nix shell nixpkgs#ssh-to-age -c ssh-to-age
+# 3. Replace <age-public-key> below with the output of step 2
+# 4. Run: sops updatekeys files/secrets/secrets.yaml
+#
+# ADDING ADDITIONAL USERS:
+# - To allow another machine/user to decrypt secrets, add their age key as
+#   another entry (e.g., &otheruser age1...), then add them to key_groups.
+# - Run: sops updatekeys files/secrets/secrets.yaml
+
+creation_rules:
+  - path_regex: files/secrets/.*\.yaml
+    key_groups:
+      - age:
+        - &atlas age13ekrjwe9q4ypswjfjfdyftle2j50fwqxc66qtz3283l0th2xm4qstqzern
+        - &yusa age1lmgwn38jcjufmxqqauzqtnzc7d6hyw4lrpu6dwnae8qj6j4w630s6s0tt3

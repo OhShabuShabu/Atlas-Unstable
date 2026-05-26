@@ -27,8 +27,9 @@
     systemd-timesyncd.serviceConfig = {
       PrivateTmp = true;
       PrivateNetwork = false;  # Needs network access
-      # FIX: Sandboxing
-      ProtectSystem = "strict";
+      # FIX: Sandboxing - strict breaks /var/lib/systemd/timesync writes
+      ProtectSystem = "full";
+      ReadWritePaths = [ "/var/lib/systemd" ];
       ProtectHome = true;
       NoNewPrivileges = true;
     };
@@ -74,7 +75,8 @@
   systemd.services.NetworkManager.serviceConfig = {
     NoNewPrivileges = true;
     PrivateTmp = true;
-    ProtectSystem = "strict";
+    ProtectSystem = "full";
+    ReadWritePaths = [ "/etc/NetworkManager" "/var/lib/NetworkManager" ];
     ProtectHome = true;
     ProtectKernelTunables = true;
     ProtectKernelModules = true;
@@ -97,12 +99,12 @@
   };
 
   # FIX: Harden OpenSSH if enabled
+  # NOTE: NoNewPrivileges and ProtectHome intentionally omitted — they propagate
+  #       to user sessions, breaking sudo and home directory access respectively.
+  # NOTE: PrivateNetwork intentionally omitted — sshd needs host network access
+  #       to accept incoming SSH connections from remote clients
   systemd.services.sshd.serviceConfig = lib.mkIf (config.services.openssh.enable or false) {
-    NoNewPrivileges = true;
     PrivateTmp = true;
-    PrivateNetwork = true;
-    ProtectSystem = "strict";
-    ProtectHome = true;
   };
 
   # FIX: Harden nginx if enabled

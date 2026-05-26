@@ -1,2 +1,5 @@
-spawn-at-startup "sh -c $HOME/Atlas/files/bin/shell/startup.sh"
+# Desktop services (awww, vicinae, xwayland-satellite, polkit) are auto-started
+# as systemd user services via graphical-session.target.
+# Only launch what systemd doesn't handle.
+
 spawn-at-startup "noctalia-shell"

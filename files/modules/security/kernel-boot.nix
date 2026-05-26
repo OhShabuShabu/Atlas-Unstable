@@ -15,7 +15,6 @@ let
     # Boot experience
     "quiet"
     "splash"
-    "boot.shell_on_fail"
     "loglevel=3"
 
     # Systemd early boot config

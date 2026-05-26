@@ -230,8 +230,8 @@ in
   # NOTE: If the keyfile is already enrolled, this does nothing (idempotent)
   systemd.services.luks-keyfile-enroll = {
     description = "Auto-enroll TPM-sealed LUKS keyfile";
-    after = [ "persistent-storage.service" ];
-    wants = [ "persistent-storage.service" ];
+    after = [ "persistent.mount" ];
+    wants = [ "persistent.mount" ];
     wantedBy = [ "multi-user.target" ];
     serviceConfig = {
       Type = "oneshot";
@@ -241,6 +241,7 @@ in
       Group = "root";
       NoNewPrivileges = true;
       ProtectSystem = "strict";
+      ReadWritePaths = [ "/persistent" ];
       PrivateTmp = true;
       CapabilityBoundingSet = [ "CAP_SYS_ADMIN" ];
       SuccessExitStatus = [ 0 1 ];

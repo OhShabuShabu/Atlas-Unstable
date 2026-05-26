@@ -23,6 +23,10 @@
     atlas-modules = {
       url = "github:OhShabuShabu/Atlas-Modules";
     };
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
   outputs = inputs @ { self, nixpkgs, home-manager, noctalia, disko, preservation, ... }: {
     formatter.x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.nixpkgs-fmt;
@@ -34,6 +38,7 @@
         specialArgs = { inherit inputs noctalia; };
         modules = [
           preservation.nixosModules.default
+          inputs.sops-nix.nixosModules.sops
           ./files/core/configuration.nix
           ./files/core/current-system.nix
           ./files/core/preservation.nix
@@ -45,6 +50,7 @@
               extraSpecialArgs = { inherit inputs; };
               users.yusa = { pkgs, inputs, ... }: {
                 imports = [
+                  inputs.sops-nix.homeManagerModules.sops
                   noctalia.homeModules.default
                   ./files/core/home.nix
                   ./files/modules/optional/home
@@ -62,6 +68,7 @@
         modules = [
           disko.nixosModules.disko
           preservation.nixosModules.default
+          inputs.sops-nix.nixosModules.sops
           ./files/core/configuration.nix
           ./files/core/disko.nix
           ./files/core/preservation.nix
@@ -73,6 +80,7 @@
               extraSpecialArgs = { inherit inputs; };
               users.yusa = { pkgs, inputs, ... }: {
                 imports = [
+                  inputs.sops-nix.homeManagerModules.sops
                   noctalia.homeModules.default
                   ./files/core/home.nix
                   ./files/modules/optional/home

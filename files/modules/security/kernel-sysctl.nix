@@ -24,7 +24,6 @@ let
   kernelProtection = {
     "kernel.kptr_restrict" = 2;            # FIX: Hide kernel pointers even for CAP_SYSLOG
     "kernel.dmesg_restrict" = 1;           # INFO: Restrict kernel log access
-    "kernel.exec-shield" = 1;               # INFO: Enable exec shield (DEP/NX-like)
   };
 
   # INFO: Exploit mitigation settings
@@ -107,9 +106,9 @@ let
     # "kernel.panic_on_unrecovered_nmi" = 1;
     # "kernel.panic_on_io_nmi" = 1;
     # FIX: Restrict ksm (Kernel Same-page Merging - attack surface)
-    "kernel.ksm.max_kernel_pages" = 0;
-    # FIX: Disable ksm merging for security
-    "kernel.ksm.use_zero_pages" = 0;
+    # NOTE: Only effective if KSM is compiled in (CONFIG_KSM)
+    # "kernel.ksm.max_kernel_pages" = 0;
+    # "kernel.ksm.use_zero_pages" = 0;
     # WARN: Do NOT set net.core.optmem_max = 0 - breaks SO_ATTACH_FILTER
     #       which systemd-logind needs for udev event monitoring
   };

@@ -83,7 +83,7 @@ in
   #    only bind-mounted persisted dirs can be written to)
   # 2. Create subdirs owned by yusa so home-manager + apps can write into them
   systemd.tmpfiles.settings."home-dir" = {
-    "/home/yusa".d = { user = "yusa"; group = "users"; mode = "0555"; };
+    "/home/yusa".d = { user = "yusa"; group = "users"; mode = "0755"; };
     "/home/yusa/.config".d = { user = "yusa"; group = "users"; mode = "0755"; };
     "/home/yusa/.local".d = { user = "yusa"; group = "users"; mode = "0755"; };
     "/home/yusa/.local/share".d = { user = "yusa"; group = "users"; mode = "0755"; };

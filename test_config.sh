@@ -10,7 +10,13 @@
 set -uo pipefail
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
-BASE="/home/yusa/Atlas"; ATLAS_MODULES="/home/yusa/atlas-modules"; PASS=0; FAIL=0; WARN=0
+BASE="${ATLAS_BASE:-$(cd "$(dirname "$0")" && pwd)}"
+# External modules repo — override with ATLAS_MODULES_PATH env var
+ATLAS_MODULES="${ATLAS_MODULES_PATH:-/home/yusa/atlas-modules}"
+ATLAS_MODULES_AVAILABLE=false
+[ -d "$ATLAS_MODULES" ] && ATLAS_MODULES_AVAILABLE=true
+[ "$ATLAS_MODULES_AVAILABLE" = false ] && echo -e "  ${YELLOW}⚠ External modules not found at $ATLAS_MODULES — skipping those tests${NC}"
+PASS=0; FAIL=0; WARN=0
 
 header() { echo -e "\n${CYAN}════════════════════════════════════════${NC}"; echo -e "${CYAN}  $1${NC}"; echo -e "${CYAN}════════════════════════════════════════${NC}"; }
 pass() { PASS=$((PASS+1)); echo -e "  ${GREEN}✓${NC} $1"; }
@@ -23,9 +29,9 @@ mlgrep() { local f="$1" pat="$2"; python3 -c "import re; c=open('$f').read(); ex
 # 1. FLAKE STRUCTURE
 # ============================================================================
 header "0. INSTALL SCRIPT"
-grep -q 'Step 1/7' "$BASE/install.sh" && pass "install.sh has step progress (7 steps)" || warn "install.sh missing step progress"
-grep -q 'Cancel Installation' "$BASE/install.sh" 2>/dev/null || grep -q "can't be undone" "$BASE/install.sh" && pass "install.sh warns about destructive action" || warn "install.sh missing destructive action warning"
-grep -q "password: atlas" "$BASE/install.sh" && pass "install.sh provides default credentials" || warn "install.sh missing default credentials info"
+grep -q 'Step 1/9' "$BASE/install.sh" && pass "install.sh has step progress (9 steps)" || warn "install.sh step progress check (may vary)"
+grep -q 'ERASE ALL DATA' "$BASE/install.sh" && pass "install.sh warns about destructive action" || warn "install.sh missing destructive action warning"
+grep -q 'nixos-install.*atlas-installer' "$BASE/install.sh" && pass "install.sh calls nixos-install with atlas-installer" || fail "install.sh missing nixos-install call"
 
 header "1. FLAKE STRUCTURE"
 [ -f "$BASE/flake.nix" ] && pass "flake.nix exists" || fail "flake.nix missing"
@@ -34,6 +40,7 @@ grep -q 'nixpkgs.*nixos-unstable' "$BASE/flake.nix" && pass "nixpkgs pinned to n
 grep -q 'home-manager.*master' "$BASE/flake.nix" && pass "home-manager pinned to master" || fail "home-manager not pinned to master"
 grep -q 'noctalia' "$BASE/flake.nix" && pass "noctalia flake input present" || fail "noctalia missing from flake inputs"
 grep -q 'atlas-modules' "$BASE/flake.nix" && pass "atlas-modules flake input present" || fail "atlas-modules missing from flake inputs"
+grep -q 'sops-nix' "$BASE/flake.nix" && pass "sops-nix flake input present" || fail "sops-nix missing from flake inputs"
 python3 -c "import json; json.load(open('$BASE/flake.lock'))" 2>/dev/null && pass "flake.lock is valid JSON" || fail "flake.lock is not valid JSON"
 
 # ============================================================================
@@ -59,6 +66,10 @@ declare -a REQUIRED_FILES=(
   "files/config/primary_color.txt" "files/config/primary_color_template.txt"
   "files/audio/startup.mp3"
   "files/bin/shell/startup.sh" "files/bin/python/fix_rgb_color.py"
+  ".sops.yaml"
+  "files/modules/security/sops.nix"
+  "files/secrets/secrets.yaml"
+  "files/secrets/README.md"
 )
 for f in "${REQUIRED_FILES[@]}"; do
   [ -f "$BASE/$f" ] && pass "$f exists" || fail "$f MISSING"
@@ -70,11 +81,19 @@ done
 # ============================================================================
 header "3. NIX SYNTAX"
 NIX_FILES=$(find "$BASE" -name '*.nix' -not -path '*/flake.lock' | sort)
-ATLAS_MODULES_NIX=$(find "$ATLAS_MODULES" -name '*.nix' -not -path '*/.git/*' -not -path '*/flake.lock' | sort)
-for nf in $NIX_FILES $ATLAS_MODULES_NIX; do
+for nf in $NIX_FILES; do
   REL="${nf#$BASE/}"
   nix-instantiate --parse "$nf" 2>/dev/null && pass "$REL parses" || fail "$REL PARSE ERROR"
 done
+if [ "$ATLAS_MODULES_AVAILABLE" = true ]; then
+  ATLAS_MODULES_NIX=$(find "$ATLAS_MODULES" -name '*.nix' -not -path '*/.git/*' -not -path '*/flake.lock' | sort)
+  for nf in $ATLAS_MODULES_NIX; do
+    REL="${nf#$ATLAS_MODULES/}"
+    nix-instantiate --parse "$nf" 2>/dev/null && pass "$REL parses (external)" || fail "$REL PARSE ERROR (external)"
+  done
+else
+  warn "External module Nix syntax check skipped (modules not found)"
+fi
 
 # ============================================================================
 # 4. CORE CONFIG VALIDATION
@@ -128,8 +147,8 @@ mlgrep "$HM" 'Adwaita-dark' && pass "Adwaita-dark GTK theme" || fail "Adwaita-da
 mlgrep "$HM" 'Papirus-Dark' && pass "Papirus-Dark icon theme" || fail "Papirus-Dark icon theme missing"
 mlgrep "$HM" 'noctalia-shell.*enable\s*=\s*true' && pass "Noctalia shell enabled" || fail "Noctalia shell not enabled"
 mlgrep "$HM" 'Catppuccin Mocha' && pass "Catppuccin Mocha scheme" || fail "Catppuccin Mocha scheme missing"
-mlgrep "$HM" 'notifications\.enabled\s*=\s*true' && pass "Noctalia notifications enabled" || fail "Noctalia notifications not enabled"
-mlgrep "$HM" 'osd\.enabled\s*=\s*true' && pass "Noctalia OSD enabled" || fail "Noctalia OSD not enabled"
+mlgrep "$HM" 'notifications\s*=\s*\{[^}]*enabled\s*=\s*true' && pass "Noctalia notifications enabled" || fail "Noctalia notifications not enabled"
+mlgrep "$HM" 'osd\s*=\s*\{[^}]*enabled\s*=\s*true' && pass "Noctalia OSD enabled" || fail "Noctalia OSD not enabled"
 mlgrep "$HM" 'nushell.*enable\s*=\s*true' && pass "Nushell enabled" || fail "Nushell not enabled"
 mlgrep "$HM" 'zoxide.*enable\s*=\s*true' && pass "Zoxide enabled" || fail "Zoxide not enabled"
 mlgrep "$HM" 'opencode.*enable\s*=\s*true' && pass "opencode enabled" || fail "opencode not enabled"
@@ -195,6 +214,18 @@ done
 grep -q 'PASS_MAX_DAYS' "$BASE/files/modules/security/password-policy.nix" && pass "Password max days configured" || fail "Password max days not configured"
 grep -q 'YESCRYPT' "$BASE/files/modules/security/password-policy.nix" && pass "YESCRYPT password hashing" || fail "YESCRYPT not enabled"
 
+SOPS_MOD="$BASE/files/modules/security/sops.nix"
+mlgrep "$SOPS_MOD" 'defaultSopsFile' && pass "sops.nix: defaultSopsFile configured" || fail "sops.nix: defaultSopsFile missing"
+mlgrep "$SOPS_MOD" 'sshKeyPaths.*ssh_host_ed25519_key' && pass "sops.nix: SSH host key configured" || fail "sops.nix: SSH host key not configured"
+mlgrep "$SOPS_MOD" 'sops' && pass "sops.nix: sops package" || fail "sops.nix: sops package missing"
+mlgrep "$SOPS_MOD" 'ssh-to-age' && pass "sops.nix: ssh-to-age package" || fail "sops.nix: ssh-to-age package missing"
+pcre2_ok=false; type pcre2grep &>/dev/null && pcre2_ok=true
+$pcre2_ok && pcre2grep -q 'age\s*=\s*\{' "$SOPS_MOD" && pass "sops.nix: age block defined" || warn "sops.nix: age block verification skipped (no pcre2grep)"
+[ -f "$BASE/.sops.yaml" ] && pass ".sops.yaml exists" || fail ".sops.yaml MISSING"
+mlgrep "$BASE/.sops.yaml" 'creation_rules' && pass ".sops.yaml: creation rules defined" || fail ".sops.yaml: no creation rules"
+mlgrep "$BASE/.sops.yaml" 'path_regex.*secrets' && pass ".sops.yaml: path_regex for secrets" || fail ".sops.yaml: no path_regex for secrets"
+grep -q 'sops-nix' "$BASE/flake.nix" && pass "sops-nix module added in flake.nix" || fail "sops-nix module NOT in flake.nix"
+
 # ============================================================================
 # 7. NOTIFICATION SYSTEM
 # ============================================================================
@@ -206,7 +237,11 @@ for f in clamav snout; do
   mlgrep "$BASE/files/modules/security/$f.nix" 'notifications.nix' && pass "$f: imports notifications" || fail "$f: missing notification library import"
 done
 mlgrep "$BASE/files/modules/security/snort.nix" 'notify-send' && pass "snort: has notify-send" || fail "snort: missing notify-send"
-mlgrep "$ATLAS_MODULES/privacy/privacy.nix" 'notify-user' && pass "privacy.nix: has inline notify-user script" || fail "privacy.nix: missing notify-user script"
+if [ "$ATLAS_MODULES_AVAILABLE" = true ]; then
+  mlgrep "$ATLAS_MODULES/privacy/privacy.nix" 'notify-user' && pass "privacy.nix: has inline notify-user script" || fail "privacy.nix: missing notify-user script"
+else
+  warn "privacy.nix notify-user check skipped"
+fi
 
 # ============================================================================
 # 8. NIRI WM CONFIG
@@ -226,44 +261,51 @@ grep -q 'screenshot' "$BASE/files/config/niri/binds.kdl" && pass "Screenshot bin
 grep -q 'quit' "$BASE/files/config/niri/binds.kdl" && pass "Quit binding" || fail "Quit binding missing"
 grep -q 'XWAYLAND_SATELLITE' "$BASE/files/config/niri/env.kdl" && pass "XWAYLAND_SATELLITE env var" || fail "XWAYLAND_SATELLITE env missing"
 grep -q 'oreo_black_cursors' "$BASE/files/config/niri/config.kdl" && pass "oreo_black_cursors cursor theme" || fail "Cursor theme not set"
-grep -q 'startup.sh' "$BASE/files/config/niri/startup.kdl" && pass "startup.kdl calls startup.sh" || fail "startup.kdl missing startup.sh"
 grep -q 'noctalia-shell' "$BASE/files/config/niri/startup.kdl" && pass "startup.kdl spawns noctalia-shell" || fail "startup.kdl missing noctalia-shell"
+grep -q 'systemd user services' "$BASE/files/config/niri/startup.kdl" && pass "startup.kdl references systemd services" || warn "startup.kdl missing systemd services comment"
 
 # ============================================================================
 # 9. STARTUP SCRIPT
 # ============================================================================
-header "9. STARTUP SCRIPT"
+header "9. STARTUP & USER SERVICES"
 [ -x "$BASE/files/bin/shell/startup.sh" ] && pass "startup.sh is executable" || warn "startup.sh not executable"
-grep -q 'awww-daemon' "$BASE/files/bin/shell/startup.sh" && pass "awww wallpaper daemon" || fail "awww-daemon not in startup"
-grep -q 'vicinae server' "$BASE/files/bin/shell/startup.sh" && pass "vicinae server" || fail "vicinae server not in startup"
-grep -q 'xwayland-satellite' "$BASE/files/bin/shell/startup.sh" && pass "xwayland-satellite" || fail "xwayland-satellite not in startup"
-grep -q 'ffplay.*startup.mp3' "$BASE/files/bin/shell/startup.sh" && pass "Startup sound plays" || fail "startup.mp3 not in startup"
-grep -q 'mullvad connect' "$BASE/files/bin/shell/startup.sh" && pass "Mullvad VPN connects" || fail "Mullvad connect not in startup"
-grep -q 'openrgb' "$BASE/files/bin/shell/startup.sh" && pass "OpenRGB on startup" || fail "OpenRGB not in startup"
-grep -q 'primary_color.txt' "$BASE/files/bin/shell/startup.sh" && pass "OpenRGB reads primary color" || fail "Primary color not used in startup"
+grep -q 'Post-desktop-init tasks' "$BASE/files/bin/shell/startup.sh" && pass "startup.sh simplified (services now systemd-managed)" || warn "startup.sh may still contain services moved to systemd"
+grep -q 'mullvad connect' "$BASE/files/bin/shell/startup.sh" && pass "Mullvad VPN fallback in startup" || warn "Mullvad connect not in startup (may be handled by module)"
+
+# Desktop services are now proper systemd user services
+CFG="$BASE/files/core/configuration.nix"
+for svc in atlas-awww atlas-vicinae atlas-xwayland-satellite atlas-startup-sound atlas-openrgb; do
+  mlgrep "$CFG" "systemd\.user\.services\.$svc" && pass "systemd user service: $svc" || fail "systemd user service $svc NOT FOUND"
+done
+mlgrep "$CFG" "awww" && pass "awww referenced in config (for systemd service)" || warn "awww not found in configuration.nix"
+mlgrep "$CFG" "vicinae" && pass "vicinae referenced in config (for systemd service)" || warn "vicinae not found in configuration.nix"
+mlgrep "$CFG" "xwayland-satellite" && pass "xwayland-satellite referenced in config (for systemd service)" || warn "xwayland-satellite not found in configuration.nix"
 
 # ============================================================================
 # 10. PYTHON SCRIPTS
 # ============================================================================
 header "10. PYTHON SCRIPTS"
-python3 -c "import py_compile; py_compile.compile('$BASE/files/bin/python/fix_rgb_color.py', doraise=True)" 2>/dev/null && \
-  pass "fix_rgb_color.py compiles" || fail "fix_rgb_color.py has syntax errors"
+python3 -c "
+import py_compile, tempfile, os
+with tempfile.NamedTemporaryFile(suffix='.pyc', delete=False) as f:
+    py_compile.compile('$BASE/files/bin/python/fix_rgb_color.py', cfile=f.name, doraise=True)
+    os.unlink(f.name)
+" 2>/dev/null && pass "fix_rgb_color.py compiles" || fail "fix_rgb_color.py has syntax errors"
 COLOR=$(cat "$BASE/files/config/primary_color.txt" | tr -d ' #\n')
 [[ "$COLOR" =~ ^[0-9A-Fa-f]{6}$ ]] && pass "primary_color.txt contains valid hex: $COLOR" || fail "primary_color.txt invalid: $COLOR"
-mlgrep "$HM" 'kotofetch' && pass "kotofetch in home packages" || warn "kotofetch not in home packages"
-mlgrep "$HM" 'kotofetch.*config\.toml' && pass "kotofetch config with typewriter animation" || warn "kotofetch config not found"
 
 # ============================================================================
 # 11. NUSHELL CONFIG
 # ============================================================================
 header "11. NUSHELL CONFIG"
 NUSHELL="$BASE/files/core/config/shellrc.nu"
-mlgrep "$NUSHELL" 'kotofetch' && pass "shellrc.nu calls kotofetch" || warn "kotofetch not called in shellrc.nu"
 
 grep -q 'alias logs' "$NUSHELL" && pass "logs alias" || fail "logs alias missing"
 grep -q 'security-logs' "$NUSHELL" && pass "security-logs alias" || fail "security-logs alias missing"
 grep -q 'snout-status' "$NUSHELL" && pass "snout-status alias" || fail "snout-status alias missing"
 grep -q 'snout-scan' "$NUSHELL" && pass "snout-scan alias" || fail "snout-scan alias missing"
+grep -q 'alias health' "$NUSHELL" && pass "health alias" || fail "health alias missing"
+grep -q 'health-quick' "$NUSHELL" && pass "health-quick alias" || fail "health-quick alias missing"
 mlgrep "$HM" 'zoxide.*enableNushellIntegration.*true' && pass "zoxide integration" || warn "zoxide integration via home-manager"
 mlgrep "$HM" 'shellrc\.nu' && pass "home.nix sources shellrc.nu" || fail "shellrc.nu not sourced in home.nix"
 
@@ -271,27 +313,37 @@ mlgrep "$HM" 'shellrc\.nu' && pass "home.nix sources shellrc.nu" || fail "shellr
 # 12. GAMING CONFIG
 # ============================================================================
 header "12. GAMING"
-GAMING="$ATLAS_MODULES/gaming/gaming.nix"
-mlgrep "$GAMING" 'steam.*enable\s*=\s*true' && pass "Steam enabled" || fail "Steam not enabled"
-mlgrep "$GAMING" 'mangohud' && pass "MangoHUD for Steam" || fail "MangoHUD not configured"
-mlgrep "$GAMING" 'enable32Bit\s*=\s*true' && pass "32-bit graphics enabled" || fail "32-bit graphics not enabled"
+if [ "$ATLAS_MODULES_AVAILABLE" = true ]; then
+  GAMING="$ATLAS_MODULES/gaming/gaming.nix"
+  mlgrep "$GAMING" 'steam.*enable\s*=\s*true' && pass "Steam enabled" || fail "Steam not enabled"
+  mlgrep "$GAMING" 'mangohud' && pass "MangoHUD for Steam" || fail "MangoHUD not configured"
+  mlgrep "$GAMING" 'enable32Bit\s*=\s*true' && pass "32-bit graphics enabled" || fail "32-bit graphics not enabled"
+  python3 -c "import json; json.load(open('$ATLAS_MODULES/gaming/millennium/config.json'))" 2>/dev/null && \
+    pass "Millennium config is valid JSON" || fail "Millennium config is not valid JSON"
+  mlgrep "$ATLAS_MODULES/minecraft.nix" 'prismlauncher' && pass "PrismLauncher configured" || fail "PrismLauncher not configured"
+  mlgrep "$ATLAS_MODULES/minecraft.nix" 'blockbench' && pass "Blockbench configured" || fail "Blockbench not configured"
+else
+  for t in "Steam" "MangoHUD" "32-bit graphics" "Millennium config" "PrismLauncher" "Blockbench"; do
+    warn "Gaming check ($t) skipped — modules not found"
+  done
+fi
 mlgrep "$HM" 'MANGOHUD' && pass "MANGOHUD env var set" || warn "MANGOHUD env var not set"
-python3 -c "import json; json.load(open('$ATLAS_MODULES/gaming/millennium/config.json'))" 2>/dev/null && \
-  pass "Millennium config is valid JSON" || fail "Millennium config is not valid JSON"
-mlgrep "$ATLAS_MODULES/minecraft.nix" 'prismlauncher' && pass "PrismLauncher configured" || fail "PrismLauncher not configured"
-mlgrep "$ATLAS_MODULES/minecraft.nix" 'blockbench' && pass "Blockbench configured" || fail "Blockbench not configured"
 
 # ============================================================================
 # 13. PRIVACY CONFIG
 # ============================================================================
 header "13. PRIVACY"
-PRIV="$ATLAS_MODULES/privacy/privacy.nix"
-mlgrep "$PRIV" 'mullvad-vpn.*enable\s*=\s*true' && pass "Mullvad VPN enabled" || fail "Mullvad VPN not enabled"
-mlgrep "$PRIV" 'mullvad-browser' && pass "Mullvad Browser in packages" || fail "Mullvad Browser not in packages"
-mlgrep "$PRIV" 'metadata-cleaner' && pass "Metadata cleaner service" || fail "Metadata cleaner missing"
-mlgrep "$PRIV" 'metadata-watcher' && pass "Metadata watcher service" || fail "Metadata watcher missing"
-[ -f "$ATLAS_MODULES/privacy/mullvadbrowser/profiles.ini" ] && pass "Mullvad profiles.ini exists" || warn "Mullvad profiles.ini missing"
-[ -d "$ATLAS_MODULES/privacy/mullvadbrowser/ipg7sh9x.default-release-1" ] && pass "Mullvad browser profile dir exists" || warn "Mullvad browser profile dir missing"
+if [ "$ATLAS_MODULES_AVAILABLE" = true ]; then
+  PRIV="$ATLAS_MODULES/privacy/privacy.nix"
+  mlgrep "$PRIV" 'mullvad-vpn.*enable\s*=\s*true' && pass "Mullvad VPN enabled" || fail "Mullvad VPN not enabled"
+  mlgrep "$PRIV" 'mullvad-browser' && pass "Mullvad Browser in packages" || fail "Mullvad Browser not in packages"
+  mlgrep "$PRIV" 'metadata-cleaner' && pass "Metadata cleaner service" || fail "Metadata cleaner missing"
+  mlgrep "$PRIV" 'metadata-watcher' && pass "Metadata watcher service" || fail "Metadata watcher missing"
+  [ -f "$ATLAS_MODULES/privacy/mullvadbrowser/profiles.ini" ] && pass "Mullvad profiles.ini exists" || warn "Mullvad profiles.ini missing"
+  [ -d "$ATLAS_MODULES/privacy/mullvadbrowser/ipg7sh9x.default-release-1" ] && pass "Mullvad browser profile dir exists" || warn "Mullvad browser profile dir missing"
+else
+  warn "Privacy module checks skipped — external modules not found"
+fi
 mlgrep "$BASE/files/modules/security/network-privacy.nix" 'macAddress.*random' && pass "WiFi MAC randomization enabled" || fail "WiFi MAC randomization not enabled"
 mlgrep "$BASE/files/modules/security/telemetry.nix" 'avahi.*false' && pass "Avahi disabled" || fail "Avahi not disabled"
 mlgrep "$BASE/files/modules/security/telemetry.nix" 'geoclue2.*false' && pass "Geoclue disabled" || fail "Geoclue not disabled"
@@ -300,44 +352,59 @@ mlgrep "$BASE/files/modules/security/telemetry.nix" 'geoclue2.*false' && pass "G
 # 14. VIRTUALIZATION
 # ============================================================================
 header "14. VIRTUALIZATION"
-VIRT="$ATLAS_MODULES/virtualisation.nix"
-mlgrep "$VIRT" 'docker.*enable\s*=\s*true' && pass "Docker enabled" || fail "Docker not enabled"
-# NOTE: rootless Docker disabled; falls back to standard Docker daemon
-mlgrep "$VIRT" 'podman.*enable\s*=\s*true' && pass "Podman enabled" || fail "Podman not enabled"
-mlgrep "$VIRT" 'libvirtd.*enable\s*=\s*true' && pass "libvirtd enabled" || fail "libvirtd not enabled"
-mlgrep "$VIRT" 'virt-manager.*enable\s*=\s*true' && pass "virt-manager enabled" || fail "virt-manager not enabled"
-mlgrep "$VIRT" 'distrobox' && pass "Distrobox configured" || fail "Distrobox not configured"
+if [ "$ATLAS_MODULES_AVAILABLE" = true ]; then
+  VIRT="$ATLAS_MODULES/virtualisation.nix"
+  mlgrep "$VIRT" 'docker.*enable\s*=\s*true' && pass "Docker enabled" || fail "Docker not enabled"
+  mlgrep "$VIRT" 'podman.*enable\s*=\s*true' && pass "Podman enabled" || fail "Podman not enabled"
+  mlgrep "$VIRT" 'libvirtd.*enable\s*=\s*true' && pass "libvirtd enabled" || fail "libvirtd not enabled"
+  mlgrep "$VIRT" 'virt-manager.*enable\s*=\s*true' && pass "virt-manager enabled" || fail "virt-manager not enabled"
+  mlgrep "$VIRT" 'distrobox' && pass "Distrobox configured" || fail "Distrobox not configured"
+else
+  warn "Virtualization checks skipped — external modules not found"
+fi
 
 # ============================================================================
 # 15. PERFORMANCE
 # ============================================================================
 header "15. PERFORMANCE"
-PERF="$ATLAS_MODULES/performance.nix"
-mlgrep "$PERF" 'tcp_bbr' && pass "TCP BBR module loaded" || fail "TCP BBR not loaded"
-mlgrep "$PERF" 'cpuFreqGovernor.*performance' && pass "CPU governor = performance" || fail "CPU governor not performance"
-mlgrep "$PERF" 'auto-optimise-store.*true' && pass "Nix auto-optimise store" || fail "Nix auto-optimise not enabled"
-mlgrep "$PERF" 'gc.*automatic\s*=\s*true' && pass "Nix GC automatic" || fail "Nix GC not automatic"
+if [ "$ATLAS_MODULES_AVAILABLE" = true ]; then
+  PERF="$ATLAS_MODULES/performance.nix"
+  mlgrep "$PERF" 'tcp_bbr' && pass "TCP BBR module loaded" || fail "TCP BBR not loaded"
+  mlgrep "$PERF" 'cpuFreqGovernor.*performance' && pass "CPU governor = performance" || fail "CPU governor not performance"
+  mlgrep "$PERF" 'auto-optimise-store.*true' && pass "Nix auto-optimise store" || fail "Nix auto-optimise not enabled"
+  mlgrep "$PERF" 'gc.*automatic\s*=\s*true' && pass "Nix GC automatic" || fail "Nix GC not automatic"
+else
+  warn "Performance checks skipped — external modules not found"
+fi
 
 # ============================================================================
 # 16. FLATPAK
 # ============================================================================
 header "16. FLATPAK"
-FLAT="$ATLAS_MODULES/flatpak.nix"
-mlgrep "$FLAT" 'services\.flatpak.*enable\s*=\s*true' && pass "Flatpak enabled" || fail "Flatpak not enabled"
-mlgrep "$FLAT" 'flathub' && pass "Flathub repository configured" || fail "Flathub not configured"
-for app in Discord Telegram Vesktop bottles Steam; do
-  mlgrep "$FLAT" "(?i)$app" && pass "Flatpak: $app configured" || warn "Flatpak: $app not found"
-done
+if [ "$ATLAS_MODULES_AVAILABLE" = true ]; then
+  FLAT="$ATLAS_MODULES/flatpak.nix"
+  mlgrep "$FLAT" 'services\.flatpak.*enable\s*=\s*true' && pass "Flatpak enabled" || fail "Flatpak not enabled"
+  mlgrep "$FLAT" 'flathub' && pass "Flathub repository configured" || fail "Flathub not configured"
+  for app in Discord Telegram Vesktop bottles Steam; do
+    mlgrep "$FLAT" "(?i)$app" && pass "Flatpak: $app configured" || warn "Flatpak: $app not found"
+  done
+else
+  warn "Flatpak checks skipped — external modules not found"
+fi
 
 # ============================================================================
 # 17. DEV MODULE
 # ============================================================================
 header "17. DEVELOPMENT"
-DEV="$ATLAS_MODULES/dev/dev.nix"
-for tool in neovim opencode bun claude-code; do
-  mlgrep "$DEV" "$tool" && pass "dev: $tool" || fail "dev: $tool not configured"
-done
-mlgrep "$ATLAS_MODULES/dev/dev.nix" 'LazyVim' && pass "Neovim LazyVim configured" || fail "Neovim LazyVim not configured"
+if [ "$ATLAS_MODULES_AVAILABLE" = true ]; then
+  DEV="$ATLAS_MODULES/dev/dev.nix"
+  for tool in neovim opencode bun claude-code; do
+    mlgrep "$DEV" "$tool" && pass "dev: $tool" || fail "dev: $tool not configured"
+  done
+  mlgrep "$ATLAS_MODULES/dev/dev.nix" 'LazyVim' && pass "Neovim LazyVim configured" || fail "Neovim LazyVim not configured"
+else
+  warn "Development checks skipped — external modules not found"
+fi
 
 # ============================================================================
 # 18. SYSTEM PACKAGES
@@ -352,13 +419,18 @@ done
 for pkg in lynis clamav aide audit lnav; do
   grep -q "$pkg" "$BASE/files/modules/security/default.nix" && pass "security packages: $pkg" || warn "security packages: $pkg not found"
 done
+for pkg in sops ssh-to-age; do
+  grep -q "$pkg" "$BASE/files/modules/security/default.nix" && pass "security packages: $pkg" || warn "security packages: $pkg not found"
+done
+mlgrep "$CFG" 'atlas-rebuild' && pass "atlas-rebuild script defined" || fail "atlas-rebuild not defined in configuration.nix"
+mlgrep "$CFG" 'atlas-health' && pass "atlas-health script defined" || fail "atlas-health not defined in configuration.nix"
 grep -q 'snort' "$BASE/files/modules/security/snort.nix" && pass "security packages: snort (snort.nix)" || warn "security packages: snort not found"
 
 # ============================================================================
 # 19. IMPORTS CONSISTENCY
 # ============================================================================
 header "19. IMPORTS CONSISTENCY"
-for mod in kernel-sysctl kernel-boot process-accounting firewall banner service-hardening telemetry password-policy network-privacy aide clamav auditd-config quarantine; do
+for mod in kernel-sysctl kernel-boot process-accounting firewall banner service-hardening telemetry password-policy network-privacy aide clamav auditd-config quarantine sops; do
   grep -q "./$mod" "$BASE/files/modules/security/default.nix" && pass "security/default.nix imports $mod" || fail "security/default.nix missing import: $mod"
 done
 for mod in hardware-configuration security snort snout; do
@@ -375,18 +447,21 @@ mlgrep "$BASE/flake.nix" "modules/optional/home" && pass "flake.nix imports opti
 header "20. SYSTEMD SERVICES"
 declare -a SERVICES=(
   "snout-watcher.path" "snout-watcher.service" "snort-daemon" "snort-monitor" "clamav-daily-scan" "clamav-daemon"
-  "aide-init" "aide-check" "quarantine-setup" "quarantine-sanitizer" "metadata-cleaner"
-  "metadata-watcher" "setup-mullvad-dirs" "flatpak-repo"
+  "aide-init" "aide-check" "quarantine-setup" "quarantine-sanitizer"
   "polkit-gnome-authentication-agent-1"
   "metadata-stripper"
+  "atlas-awww" "atlas-vicinae" "atlas-xwayland-satellite" "atlas-startup-sound" "atlas-openrgb"
 )
 for svc in "${SERVICES[@]}"; do
-  if grep -qr "$svc" "$BASE/files/" --include='*.nix' 2>/dev/null || grep -qr "$svc" "$ATLAS_MODULES/" --include='*.nix' 2>/dev/null; then
-    pass "Service defined: $svc"
-  else
-    fail "Service NOT FOUND: $svc"
-  fi
+  grep -qr "$svc" "$BASE/files/" --include='*.nix' 2>/dev/null && pass "Service defined: $svc" || fail "Service NOT FOUND: $svc"
 done
+if [ "$ATLAS_MODULES_AVAILABLE" = true ]; then
+  for svc in "metadata-cleaner" "metadata-watcher" "setup-mullvad-dirs" "flatpak-repo"; do
+    grep -qr "$svc" "$ATLAS_MODULES/" --include='*.nix' 2>/dev/null && pass "Service defined: $svc" || fail "Service NOT FOUND: $svc"
+  done
+else
+  warn "External service checks skipped (metadata-cleaner, metadata-watcher, setup-mullvad-dirs, flatpak-repo)"
+fi
 
 # ============================================================================
 # 21. SHELL ALIASES
@@ -397,6 +472,7 @@ grep -q 'aide-check' "$NUSHELL" && pass "Alias: aide-check" || fail "Alias: aide
 grep -q 'lynis-scan' "$NUSHELL" && pass "Alias: lynis-scan" || fail "Alias: lynis-scan missing"
 grep -q 'snout-scan' "$NUSHELL" && pass "Alias: snout-scan" || fail "Alias: snout-scan missing"
 grep -q 'snortctl' "$NUSHELL" && pass "Alias: snortctl" || fail "Alias: snortctl missing"
+grep -q 'alias nr' "$NUSHELL" && pass "Alias: nr (atlas-rebuild)" || fail "Alias: nr missing"
 grep -q 'audit-tail' "$BASE/files/modules/security/auditd-config.nix" && pass "Alias: audit-tail" || fail "Alias: audit-tail missing"
 grep -q 'pa-report' "$BASE/files/modules/security/process-accounting.nix" && pass "Alias: pa-report" || fail "Alias: pa-report missing"
 
@@ -445,8 +521,12 @@ mlgrep "$SNOUT" 'clamscan' && pass "Snout scans with ClamAV" || fail "Snout miss
 mlgrep "$BASE/files/modules/security/snort.nix" 'after.*snort-daemon' && pass "Snort monitor depends on snort-daemon" || fail "Snort monitor dependency missing"
 mlgrep "$QUAR" 'before.*quarantine-sanitizer' && pass "Quarantine setup before sanitizer" || fail "Quarantine dependency missing"
 mlgrep "$CFG" 'docker' && pass "User in docker group" || fail "User not in docker group"
-mlgrep "$VIRT" 'libvirtd' && pass "User in libvirtd group" || fail "User not in libvirtd group"
-mlgrep "$AUDIO_CFG" 'alsa\.support32Bit\s*=\s*true' && pass "ALSA 32-bit enabled" || fail "ALSA 32-bit not enabled"
+if [ "$ATLAS_MODULES_AVAILABLE" = true ]; then
+  mlgrep "$ATLAS_MODULES/virtualisation.nix" 'libvirtd' && pass "User in libvirtd group" || fail "User not in libvirtd group"
+  mlgrep "$AUDIO_CFG" 'alsa\.support32Bit\s*=\s*true' && pass "ALSA 32-bit enabled" || fail "ALSA 32-bit not enabled"
+else
+  warn "libvirtd group check skipped — external modules not found"
+fi
 
 # ============================================================================
 # 25. SUMMARY

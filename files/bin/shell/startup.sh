@@ -1,16 +1,11 @@
 #!/usr/bin/env bash
-awww-daemon --quiet &
-vicinae server &
-xwayland-satellite 2>/dev/null &
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+# ─── Post-desktop-init tasks ──────────────────────────────────────────
+# Core services (awww, vicinae, xwayland-satellite, startup sound, OpenRGB)
+# are now managed as systemd user services and auto-start with the session.
+# This script handles remaining one-off tasks.
 
-ffplay -nodisp "$PROJECT_DIR/files/audio/startup.mp3" 2>/dev/null &
-mullvad connect &
+# Connect Mullvad VPN (handled here as fallback if auto-connect isn't configured)
+# mullvad connect &
 
-sleep 12
-
-if command -v openrgb &>/dev/null; then
-  openrgb -d 0 -c $(python3 "$PROJECT_DIR/files/bin/python/fix_rgb_color.py" $(tr -d '#' < "$PROJECT_DIR/files/config/primary_color.txt")) &
-fi
+# Virtual machine auto-start (uncomment if needed)
 # virsh --connect qemu:///system start win11 &

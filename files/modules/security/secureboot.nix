@@ -78,36 +78,21 @@ let
       echo "SBKERN: Signed $BASENAME"
     done
 
-    # Sign all initrd images
-    for INITRD in /boot/initrd-*; do
-      BASENAME=$(basename "$INITRD")
-      if $SBTOOLS/sbverify --cert "$CERT" "$INITRD" 2>/dev/null; then
-        echo "SBKERN: Already signed: $BASENAME"
-        continue
-      fi
-      echo "SBKERN: Signing $BASENAME..."
-      $SBTOOLS/sbsign --key "$KEY" --cert "$CERT" \
-        --output "$INITRD.tmp" "$INITRD" 2>/dev/null && \
-      mv "$INITRD.tmp" "$INITRD" && \
-      SIGNED=$((SIGNED + 1)) && \
-      echo "SBKERN: Signed $BASENAME"
-    done
-
-    # Verify all signatures
-    echo "SBKERN: Verifying signatures..."
+    # Verify kernel signatures only (UEFI Secure Boot verifies kernel EFI stub, not initrd)
+    echo "SBKERN: Verifying kernel signatures..."
     VERIFY_FAIL=0
-    for IMG in /boot/vmlinuz-* /boot/initrd-*; do
-      $SBTOOLS/sbverify --cert "$CERT" "$IMG" 2>/dev/null || {
-        echo "SBKERN: VERIFY FAILED: $IMG" >&2
+    for KERNEL in /boot/vmlinuz-*; do
+      $SBTOOLS/sbverify --cert "$CERT" "$KERNEL" 2>/dev/null || {
+        echo "SBKERN: VERIFY FAILED: $KERNEL" >&2
         VERIFY_FAIL=$((VERIFY_FAIL + 1))
       }
     done
 
     if [ "$SIGNED" -gt 0 ]; then
-      $LOGGER -p auth.info -t secureboot "Signed $SIGNED kernel/initrd images"
+      $LOGGER -p auth.info -t secureboot "Signed $SIGNED kernel images"
     fi
     if [ "$VERIFY_FAIL" -gt 0 ]; then
-      $LOGGER -p auth.err -t secureboot "$VERIFY_FAIL image(s) failed signature verification"
+      $LOGGER -p auth.err -t secureboot "$VERIFY_FAIL kernel(s) failed signature verification"
     fi
     echo "SBKERN: Signing complete ($SIGNED signed, $VERIFY_FAIL verify failures)"
   '';
@@ -174,7 +159,7 @@ let
     if [ -d /sys/firmware/efi ]; then
       SB_FILE=$(ls /sys/firmware/efi/efivars/SecureBoot-* 2>/dev/null || true)
       if [ -n "$SB_FILE" ]; then
-        SB_VAL=$(od -An -tx1 "$SB_FILE" 2>/dev/null | head -1 | awk '{print $1}')
+        SB_VAL=$(od -An -tx1 "$SB_FILE" 2>/dev/null | head -1 | ${pkgs.gawk}/bin/awk '{print $1}')
         if [ "$SB_VAL" = "01" ]; then
           echo "SB-CHECK: ✓ Secure Boot is ENABLED in UEFI"
           $LOGGER -p auth.info -t secureboot "Secure Boot enabled"
@@ -213,8 +198,8 @@ in
   # INFO: Kernel signing key generation (runs once at boot, idempotent)
   systemd.services.secureboot-key-generate = {
     description = "Generate Secure Boot Kernel Signing Key";
-    after = [ "persistent-storage.service" ];
-    wants = [ "persistent-storage.service" ];
+    after = [ "persistent.mount" ];
+    wants = [ "persistent.mount" ];
     wantedBy = [ "multi-user.target" ];
     before = [ "secureboot-sign-kernel.service" ];
     serviceConfig = {
@@ -224,7 +209,8 @@ in
       User = "root";
       Group = "root";
       NoNewPrivileges = true;
-      ProtectSystem = "strict";
+      ProtectSystem = "full";
+      ReadWritePaths = [ "/persistent" ];
       ProtectHome = true;
       CapabilityBoundingSet = [ "CAP_DAC_OVERRIDE" "CAP_CHOWN" "CAP_FOWNER" ];
       TimeoutStartSec = "30s";
@@ -245,7 +231,8 @@ in
       User = "root";
       Group = "root";
       NoNewPrivileges = true;
-      ProtectSystem = "strict";
+      ProtectSystem = "full";
+      ReadWritePaths = [ "/persistent" "/boot" ];
       ProtectHome = true;
       CapabilityBoundingSet = [ "CAP_DAC_OVERRIDE" "CAP_CHOWN" "CAP_FOWNER" ];
       TimeoutStartSec = "60s";

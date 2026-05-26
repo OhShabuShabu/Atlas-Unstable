@@ -246,7 +246,11 @@ while :; do
     break
   fi
 done
+# Write to a restricted-permissions temp file (world-readable /tmp is a leak risk)
+# Cleanup is handled by the EXIT trap below.
+umask 077
 echo -n "$LUKS_PW1" > /tmp/luks-passphrase
+umask 022
 unset LUKS_PW1 LUKS_PW2
 ok "LUKS passphrase confirmed"
 spacer
@@ -327,7 +331,8 @@ if wait $DISKO_PID 2>/dev/null; then
   ok "Disk partitioned and formatted"
 else
   DISKO_EXIT=$?
-  rm -f /tmp/luks-passphrase
+    dd if=/dev/urandom of=/tmp/luks-passphrase bs=4096 count=1 2>/dev/null || true
+    rm -f /tmp/luks-passphrase
   fail "disko partitioning failed (exit $DISKO_EXIT)"
   echo -e "  ${DIM}Last output:${NC}"
   tail -5 /tmp/disko-format.log 2>/dev/null | sed 's/^/  /'
@@ -410,17 +415,29 @@ fi
 ok "Password set"
 spacer
 
-# ─── Inject password into config ──────────────────────────────────────────────
-sub_header "Injecting password into Nix configuration"
+# Hash the password using yescrypt (available on NixOS live ISO)
+# This avoids writing the plaintext password into configuration.nix
+sub_header "Hashing password for configuration injection"
+PW_HASH=$(mkpasswd -m yescrypt <<< "$PW" 2>/dev/null) || {
+  fail "Password hashing failed — mkpasswd not available"
+  exit 1
+}
+unset PW
+ok "Password hashed with yescrypt"
+spacer
+
+# ─── Inject hashed password into config ───────────────────────────────────────
+sub_header "Injecting hashed password into Nix configuration"
 
 # Clean stale password lines first — crash recovery guard against duplication
 sed -i '/initialPassword\|initialHashedPassword/d' "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true
 
-# Escape special sed characters: backslash, ampersand, newline
-PW_SAFE=$(printf '%s\n' "$PW" | sed -e 's/[\/&]/\\&/g')
-sed -i '/description = "yusa";/a\    initialPassword = "'"$PW_SAFE"'";' \
+# Escape the hash for sed (hashes can contain $, ., /, &)
+PW_SAFE=$(printf '%s\n' "$PW_HASH" | sed -e 's/[/\&$]/\\&/g; s/\./\\./g')
+unset PW_HASH
+sed -i '/description = "yusa";/a\    initialHashedPassword = "'"$PW_SAFE"'";' \
   "$ROOTDIR/files/core/configuration.nix" && \
-  ok "Password injected (NixOS will hash on first boot)" || \
+  ok "Hashed password injected (no plaintext in config)" || \
   warn "Could not inject password into configuration.nix"
 spacer
 
@@ -432,7 +449,15 @@ echo
 export DISKO_DEVICE="$DISK"
 echo "$LUKS_UUID" > "$ROOTDIR/.luks-uuid"
 
-trap 'rm -f "$ROOTDIR/.luks-uuid"; sed -i "/initialPassword\|initialHashedPassword/d" "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true' EXIT
+trap '
+  rm -f "$ROOTDIR/.luks-uuid"
+  # Securely wipe the LUKS passphrase file from disk
+  if [ -f /tmp/luks-passphrase ]; then
+    dd if=/dev/urandom of=/tmp/luks-passphrase bs=4096 count=1 2>/dev/null || true
+    rm -f /tmp/luks-passphrase
+  fi
+  sed -i "/initialPassword\|initialHashedPassword/d" "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true
+' EXIT
 
 if [[ -n "$CACHE_URL" ]]; then
   SUBSTITUTERS="$CACHE_URL https://cache.nixos.org"

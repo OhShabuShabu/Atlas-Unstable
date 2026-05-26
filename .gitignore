@@ -22,7 +22,7 @@ Thumbs.db
 *.age
 
 # Installer artifact (LUKS UUID generated at install time)
-.luk-uuid
+.luks-uuid
 
 # Temporary
 tmp/

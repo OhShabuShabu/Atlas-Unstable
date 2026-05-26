@@ -29,11 +29,15 @@ alias trash-put = ^trash put
 # ============================================================================
 
 # NixOS shortcuts
-alias nr = sudo nixos-rebuild switch --flake /home/yusa/Atlas#atlas
+alias nr = atlas-rebuild
 alias nrb = nixos-rebuild build --flake /home/yusa/Atlas#atlas
 alias nix-check = nix flake check --show-trace
 alias nix-show = nix flake show
 alias test-config = bash /home/yusa/Atlas/test_config.sh
+
+# System health
+alias health = atlas-health
+alias health-quick = atlas-health quick
 
 # Nix searching and profiling
 alias nix-search = nix search nixpkgs

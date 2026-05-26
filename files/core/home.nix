@@ -84,21 +84,31 @@
 # INFO: Packages
   # NOTE: libnotify is required for notify-send in ClamAV and other notifications
   home.packages = with pkgs; [
+    # Shell & tools
     nushell
     fzf
     btop
+    tty-clock
+
+    # Desktop
     vicinae
     ghostty
     xwayland-satellite
     adwaita-icon-theme
-    papirus-icon-theme
-    gnome-themes-extra
     libnotify
     wl-clipboard
     xdg-utils
-    tty-clock
+
+    # Theming (Matugen color generation)
     matugen
+
+    # Development
     flatpak-builder
+
+    # NOTE: papirus-icon-theme and gnome-themes-extra are auto-installed
+    # by gtk config above — no need to duplicate here.
+    # NOTE: vscodium is expected for MIME associations below; add it to
+    # system packages or dev module if not already present.
   ];
 
 # INFO: Files

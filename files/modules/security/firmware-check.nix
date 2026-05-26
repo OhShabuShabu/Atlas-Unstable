@@ -63,25 +63,11 @@
         $LOGGER -p auth.crit -t firmware-check "TAMPER DETECTED: firmware changed $BASELINE_VER → $CURRENT"
         ${pkgs.systemd}/bin/systemd-cat -p crit <<< "FIRMWARE TAMPER: Version changed from $BASELINE_VER to $CURRENT"
 
-        # Create approve script for legitimate updates
-        cat > /usr/local/bin/firmware-version-approve-update << 'APPROVE_SCRIPT'
-        #!/usr/bin/env bash
-        # Approve a firmware version change after legitimate BIOS/UEFI update
-        set -euo pipefail
-        if [ $# -ne 1 ]; then
-          echo "Usage: firmware-version-approve-update <new-version-string>"
-          exit 1
-        fi
-        echo "$1" > /persistent/firmware-update-approved
-        chmod 0600 /persistent/firmware-update-approved
-        echo "Approved firmware update to: $1"
-        echo "Run 'sudo systemctl start firmware-version-check' to update baseline"
-APPROVE_SCRIPT
-        chmod 0755 /usr/local/bin/firmware-version-approve-update
       '';
       SuccessExitStatus = [ 0 1 ];
       NoNewPrivileges = true;
-      ProtectSystem = "full";
+      ProtectSystem = "strict";
+      ReadWritePaths = [ "/persistent" ];
       ProtectHome = true;
       PrivateTmp = true;
       CapabilityBoundingSet = [ "CAP_DAC_OVERRIDE" "CAP_CHOWN" ];
@@ -94,5 +80,16 @@ APPROVE_SCRIPT
 
   environment.systemPackages = with pkgs; [
     dmidecode
+    (pkgs.writeShellScriptBin "firmware-version-approve-update" ''
+      set -euo pipefail
+      if [ $# -ne 1 ]; then
+        echo "Usage: firmware-version-approve-update <new-version-string>"
+        exit 1
+      fi
+      echo "$1" > /persistent/firmware-update-approved
+      chmod 0600 /persistent/firmware-update-approved
+      echo "Approved firmware update to: $1"
+      echo "Run 'sudo systemctl start firmware-version-check' to update baseline"
+    '')
   ];
 }

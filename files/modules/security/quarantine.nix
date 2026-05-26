@@ -11,13 +11,13 @@ in
 
   systemd.services.quarantine-setup = {
     description = "Setup sandboxed quarantine directory at ${quarantineDir}";
-    before = [ "snout-daemon.service" "quarantine-sanitizer.service" ];
+    before = [ "snout-watcher.service" "quarantine-sanitizer.service" ];
     wantedBy = [ "multi-user.target" ];
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
       ExecStart = pkgs.writeShellScript "quarantine-setup.sh" ''
-        set -e
+        set -euo pipefail
         QUARANTINE="${quarantineDir}"
         mkdir -p "$QUARANTINE"
         chmod 0700 "$QUARANTINE"
@@ -38,8 +38,12 @@ in
         EOF
         chmod 0600 "$QUARANTINE/README.txt"
 
-        mount --bind "$QUARANTINE" "$QUARANTINE" 2>/dev/null || true
-        mount -o remount,noexec,nosuid,nodev "$QUARANTINE" 2>/dev/null || true
+        # Bind-mount quarantine onto itself with restrictive flags
+        # This prevents execution of any quarantined files even if permissions change
+        if ! mountpoint -q "$QUARANTINE"; then
+          mount --bind "$QUARANTINE" "$QUARANTINE" 2>/dev/null || true
+        fi
+        mount -o remount,noexec,nosuid,nodev,bind "$QUARANTINE" 2>/dev/null || true
       '';
     };
   };
@@ -58,8 +62,9 @@ in
     serviceConfig = {
       Type = "oneshot";
       ExecStart = pkgs.writeShellScript "quarantine-sanitizer.sh" ''
-        set -e
+        set -euo pipefail
         QUARANTINE="${quarantineDir}"
+        [ -d "$QUARANTINE" ] || exit 0
         find "$QUARANTINE" -type f ! -name "README.txt" -exec chmod 0000 {} \; 2>/dev/null || true
         find "$QUARANTINE" -type f ! -name "README.txt" -exec chown root:root {} \; 2>/dev/null || true
       '';
@@ -92,20 +97,17 @@ in
       Type = "oneshot";
       RemainAfterExit = true;
       ExecStart = pkgs.writeShellScript "quarantine-cleanup.sh" ''
-        set -e
+        set -euo pipefail
         QUARANTINE="${quarantineDir}"
 
-        if [ ! -d "$QUARANTINE" ]; then
-          exit 0
-        fi
+        [ -d "$QUARANTINE" ] || exit 0
 
         if command -v chattr &>/dev/null; then
           chattr -a "$QUARANTINE" 2>/dev/null || true
           find "$QUARANTINE" -type f -exec chattr -a {} \; 2>/dev/null || true
         fi
 
-        FILE_COUNT=$(find "$QUARANTINE" -type f 2>/dev/null | wc -l)
-        if [ "$FILE_COUNT" -gt 0 ]; then
+        if [ "$(find "$QUARANTINE" -type f 2>/dev/null | wc -l)" -gt 0 ]; then
           find "$QUARANTINE" -type f -exec ${pkgs.coreutils}/bin/shred -f -u {} \; 2>/dev/null || true
         fi
 
@@ -116,23 +118,24 @@ in
 
   environment.systemPackages = [
     (pkgs.writeShellScriptBin "quarantine-list" ''
+      set -euo pipefail
       QUARANTINE="${quarantineDir}"
-      if [ -d "$QUARANTINE" ] && [ "$(ls -A "$QUARANTINE" 2>/dev/null)" ]; then
-        FILES=$(find "$QUARANTINE" -type f ! -name "README.txt" 2>/dev/null)
-        if [ -n "$FILES" ]; then
-          echo "=== Quarantined Files ($(echo "$FILES" | wc -l) total) ==="
-          echo "$FILES" | while read f; do
-            echo "  $(stat --printf='%s bytes | %y' "$f" 2>/dev/null)  $(basename "$f")"
-          done
-        else
-          echo "Quarantine is empty"
-        fi
+      if [ ! -d "$QUARANTINE" ]; then
+        echo "Quarantine is empty"
+        exit 0
+      fi
+      mapfile -t FILES < <(find "$QUARANTINE" -type f ! -name "README.txt" 2>/dev/null)
+      if [ "''${#FILES[@]}" -gt 0 ]; then
+        echo "=== Quarantined Files (''${#FILES[@]} total) ==="
+        for f in "''${FILES[@]}"; do
+          echo "  $(stat --printf='%s bytes | %y' "$f" 2>/dev/null)  $(basename "$f")"
+        done
       else
         echo "Quarantine is empty"
       fi
     '')
     (pkgs.writeShellScriptBin "quarantine-purge" ''
-      set -e
+      set -euo pipefail
       QUARANTINE="${quarantineDir}"
       if [ ! -d "$QUARANTINE" ]; then
         echo "error: quarantine directory not found" >&2

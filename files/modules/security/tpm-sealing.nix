@@ -89,9 +89,9 @@ in
   # WARN: PCR mismatch triggers emergency shutdown with 30-second countdown
   systemd.services.tpm-attestation-check = {
     description = "TPM PCR Attestation & Tamper Detection";
-    after = [ "systemd-udev-settle.service" ];
-    wants = [ "systemd-udev-settle.service" ];
-    before = [ "tpm-monitoring.service" ];
+    after = [ "persistent.mount" ];
+    wants = [ "persistent.mount" ];
+    before = [ "tpm-pcr-monitor.service" ];
     wantedBy = [ "multi-user.target" ];
     serviceConfig = {
       Type = "oneshot";
@@ -102,6 +102,7 @@ in
       # Security sandboxing
       NoNewPrivileges = true;
       ProtectSystem = "strict";
+      ReadWritePaths = [ "/persistent" ];
       ProtectHome = true;
       PrivateTmp = true;
       CapabilityBoundingSet = [ "CAP_SYS_ADMIN" ];

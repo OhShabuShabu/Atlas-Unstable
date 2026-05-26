@@ -24,13 +24,18 @@
     ./auditd-config.nix
     ./quarantine.nix
     ./metadata-stripper.nix
-    ./tpm-sealing.nix
+    ./sops.nix
+    # DISABLED: Firmware tinkering detection
+    # ./tpm-sealing.nix
     ./luks-keyfile.nix
-    ./secureboot.nix
+    # DISABLED: Secure Boot (firmware integrity)
+    # ./secureboot.nix
     ./memory-wipe.nix
     ./ima-evm.nix
-    ./tpm-monitoring.nix
-    ./firmware-check.nix
+    # DISABLED: TPM/UEFI monitoring (firmware tamper detection)
+    # ./tpm-monitoring.nix
+    # DISABLED: Firmware version attestation
+    # ./firmware-check.nix
     ./luks-test.nix
   ];
 
@@ -41,6 +46,8 @@
     aide          # INFO: File integrity monitor
     lnav          # INFO: Log viewer TUI
     vulnix        # FIX: Package vulnerability scanner (PKGS-7398)
+    sops          # INFO: Encrypted secret management (edit secrets with `sops`)
+    ssh-to-age    # INFO: Convert SSH keys to age keys for sops-nix
   ];
 
 }

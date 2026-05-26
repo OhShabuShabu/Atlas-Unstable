@@ -110,6 +110,8 @@ in
   # ============================================================================
   systemd.services.tpm-pcr-monitor = {
     description = "TPM PCR Integrity Monitor";
+    after = [ "persistent.mount" ];
+    wants = [ "persistent.mount" ];
     serviceConfig = {
       Type = "oneshot";
       ExecStart = "${pcrMonitorScript}";
@@ -117,6 +119,7 @@ in
       Group = "root";
       NoNewPrivileges = true;
       ProtectSystem = "strict";
+      ReadWritePaths = [ "/persistent" ];
       PrivateTmp = true;
       CapabilityBoundingSet = [ "CAP_SYS_ADMIN" "CAP_SYS_BOOT" ];
       TimeoutStartSec = "30s";
@@ -138,6 +141,8 @@ in
   # ============================================================================
   systemd.services.uefi-var-monitor = {
     description = "UEFI Variable Integrity Monitor";
+    after = [ "persistent.mount" ];
+    wants = [ "persistent.mount" ];
     serviceConfig = {
       Type = "oneshot";
       ExecStart = "${uefiMonitorScript}";
@@ -145,6 +150,7 @@ in
       Group = "root";
       NoNewPrivileges = true;
       ProtectSystem = "strict";
+      ReadWritePaths = [ "/persistent" ];
       PrivateTmp = true;
       CapabilityBoundingSet = [ "CAP_SYS_ADMIN" "CAP_SYS_BOOT" ];
       TimeoutStartSec = "30s";
