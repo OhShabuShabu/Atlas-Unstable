@@ -514,8 +514,8 @@ mount "$BOOT_PART" "$TARGET/boot"
 ok "Mounted /boot (ESP)"
 spacer
 
-# ─── Password Prompt & Injection ────────────────────────────────────────────
-sub_header "Configuring user password"
+# ─── Password Prompt, Hashing & Injection ───────────────────────────────────
+sub_header "Setting user password"
 if [[ "$AUTO" -eq 0 ]]; then
   info "Set a password for user '${BOLD}yusa${NC}':"
   while :; do
@@ -536,15 +536,12 @@ elif [[ -n "$AUTO_PASSWORD" ]]; then
   PW="$AUTO_PASSWORD"
   info "Auto-mode: using provided password"
 else
-  warn "Auto-mode: no password provided"
   fail "Auto-mode requires -p/--password flag for security"
   exit 1
 fi
-ok "Password set"
-spacer
 
-# Hash the password using yescrypt.
-sub_header "Hashing password for configuration injection"
+# Hash the password with yescrypt and inject into config — done inline so there's
+# no confusing separate step that looks like another prompt.
 PW_HASH=$(echo "$PW" | mkpasswd -m yescrypt 2>/dev/null) || {
   fail "Password hashing failed — mkpasswd not available"
   echo -e "  ${DIM}On NixOS live ISO, install shadow: nix shell nixpkgs#shadow${NC}"
@@ -552,26 +549,17 @@ PW_HASH=$(echo "$PW" | mkpasswd -m yescrypt 2>/dev/null) || {
   exit 1
 }
 unset PW
-ok "Password hashed with yescrypt"
-spacer
-
-# ─── Inject hashed password into config ─────────────────────────────────────
-sub_header "Injecting hashed password into Nix configuration"
 
 # Clean stale password lines first — crash-recovery guard against duplication.
-# Uses a tighter pattern matching only config assignment lines, not comments.
 sed -i '/^\s*initial\(Hashed\)\?Password\s*=/d' \
   "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true
 
 # Append after the 'description = "yusa";' line inside the user block.
-# The hash is safe to interpolate directly (yescrypt uses $ + alphanumeric + ./. — no backslashes).
-# The `a\` command only treats trailing backslash specially, so no escaping needed.
 sed -i '/description = "yusa";/a\    initialHashedPassword = "'"$PW_HASH"'";' \
   "$ROOTDIR/files/core/configuration.nix" && \
-  ok "Hashed password injected (no plaintext in config)" || \
+  ok "Password configured (hashed with yescrypt)" || \
   warn "Could not inject password into configuration.nix"
 
-# Clear the hash from shell memory immediately after injection
 unset PW_HASH
 spacer
 
