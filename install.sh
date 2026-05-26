@@ -1,41 +1,72 @@
 #!/usr/bin/env bash
+# ============================================================================
+# Atlas NixOS Installer
+# ============================================================================
+# Full-disk installer for NixOS with LUKS encryption, Btrfs subvolumes,
+# tmpfs root, and optional modules (gaming, dev, privacy, etc.).
+#
+# Usage: sudo ./install.sh [options]
+#   -y, --yes         Auto-mode (skip prompts, select defaults)
+#   -c, --cache URL   Binary cache URL for nixos-install
+#   -p, --password    Password for user 'yusa' (auto-mode only)
+#
+# Security warning: Using -p/--password exposes the password via ps(1)
+# on multi-user systems. On the NixOS live ISO (single-user) this is
+# acceptable, but consider omitting it and typing interactively.
+# ============================================================================
+
 set -euo pipefail
 
+# ─── Early Cleanup Trap ────────────────────────────────────────────────────
+# Must be the first thing after strict mode so EVERY resource is tracked.
+# The cleanup() function is defined just below; bash resolves it at trap time.
+CLEANUP_FILES=()
+
+cleanup() {
+  local f
+  # Securely wipe tracked temp files (passphrases, etc.)
+  for f in "${CLEANUP_FILES[@]}"; do
+    if [[ -f "$f" ]]; then
+      dd if=/dev/urandom of="$f" bs=4096 count=1 2>/dev/null || true
+      sync -f "$f" 2>/dev/null || true
+      rm -f "$f"
+    fi
+  done
+  # Remove injected password hash from the config file
+  sed -i '/initialPassword\|initialHashedPassword/d' \
+    "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true
+  # Remove temporary UUID marker
+  rm -f "$ROOTDIR/.luk-uuid" 2>/dev/null || true
+}
+trap cleanup EXIT
+
+# ─── Paths ──────────────────────────────────────────────────────────────────
 ROOTDIR="$(cd "$(dirname "$0")" && pwd)"
 
 # ─── Colors ────────────────────────────────────────────────────────────────
 RED=$'\033[0;31m'; GREEN=$'\033[0;32m'; YELLOW=$'\033[1;33m'; CYAN=$'\033[0;36m'
 BOLD=$'\033[1m'; DIM=$'\033[2m'; NC=$'\033[0m'
 
-# ─── Config ─────────────────────────────────────────────────────────────────
-AUTO=0
-CACHE_URL=""
-AUTO_PASSWORD=""
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    -y|--yes)       AUTO=1; shift ;;
-    -c|--cache)     CACHE_URL="$2"; shift 2 ;;
-    -p|--password)  AUTO_PASSWORD="$2"; shift 2 ;;
-    *)              shift ;;
-  esac
-done
+# ─── Helper Functions ───────────────────────────────────────────────────────
 
-# ─── Helpers ────────────────────────────────────────────────────────────────
 info()   { echo -e "  ${CYAN}→${NC} $1"; }
 ok()     { echo -e "  ${GREEN}✓${NC} $1"; }
 warn()   { echo -e "  ${YELLOW}⚠${NC} $1"; }
 fail()   { echo -e "  ${RED}✗${NC} $1"; }
-spacer() { echo ""; }
+spacer() { echo; }
 
-# ─── Step Progress (refreshes in place) ──────────────────────────────
+sub_header() { echo -e "  ${CYAN}▸${NC} ${BOLD}$1${NC}"; }
+
+# ─── Step Progress (refreshes in place) ─────────────────────────────────────
 step() {
   local num=$1 total=$TOTAL_STEPS title="$2"
   local pct=$((num * 100 / total))
   local fill=$((num * 36 / total))
+  local bar rest
   printf -v bar '%*s' "$fill" ''; bar="${bar// /━}"
-  printf -v rest '%*s' $((36-fill)) ''; rest="${rest// /─}"
+  printf -v rest '%*s' $((36 - fill)) ''; rest="${rest// /─}"
   if [[ ${STEP_PRINTED:-0} -eq 1 ]]; then
-    printf '\e[H\e[J'    # home + clear screen — reliable across scrolls
+    printf '\e[H\e[J'    # home + clear entire screen
   fi
   echo
   echo -e "  ${CYAN}${bar}${DIM}${rest}${NC}  ${BOLD}${pct}%${NC}  ${DIM}Step ${num}/${total}${NC}"
@@ -44,42 +75,109 @@ step() {
   STEP_PRINTED=1
 }
 
-# ─── Braille Spinner ─────────────────────────────────────────────────────
+# ─── Braille Spinner ────────────────────────────────────────────────────────
 SPIN='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
 
 spin() {
-  local pid=$1 msg="${2:-Working...}"
-  local i=0
+  local pid=$1 msg="${2:-Working...}" i=0
   printf '\e[?25l'
   while kill -0 "$pid" 2>/dev/null; do
     printf "\r  ${CYAN}%s${NC} %s " "${SPIN:$i:1}" "$msg"
-    i=$(((i+1)%${#SPIN}))
+    i=$(((i + 1) % ${#SPIN}))
     sleep 0.08
   done
   printf '\e[?25h'
   printf "\r  ${GREEN}✓${NC} %s\n" "$msg"
 }
 
-# ─── Elapsed Timer ──────────────────────────────────────────────────────
+# ─── Elapsed Timer ──────────────────────────────────────────────────────────
 timer_until() {
-  local pid=$1 start=$SECONDS label="${2:-Elapsed}"
+  local pid=$1 start=$SECONDS label="${2:-Elapsed}" e
   printf '\e[?25l'
   while kill -0 "$pid" 2>/dev/null; do
-    local e=$((SECONDS - start))
-    printf "\r  ${CYAN}⏱${NC} ${label}: ${BOLD}%02d:%02d${NC}" $((e/60)) $((e%60))
+    e=$((SECONDS - start))
+    printf "\r  ${CYAN}⏱${NC} ${label}: ${BOLD}%02d:%02d${NC}" $((e / 60)) $((e % 60))
     sleep 1
   done
-  local e=$((SECONDS - start))
-  printf "\r  ${GREEN}✓${NC} ${label}: ${BOLD}%02d:%02d${NC}\n" $((e/60)) $((e%60))
+  e=$((SECONDS - start))
+  printf "\r  ${GREEN}✓${NC} ${label}: ${BOLD}%02d:%02d${NC}\n" $((e / 60)) $((e % 60))
   printf '\e[?25h'
 }
 
+# ─── Foreground command with spinner + exit check ──────────────────────────
+# Usage: if await_pid $pid "message"; then ok "done"; else fail "failed"; fi
+await_pid() {
+  local pid=$1 msg="${2:-Working...}"
+  spin "$pid" "$msg"
+  wait "$pid" 2>/dev/null
+}
+
+# ─── Config / Args ─────────────────────────────────────────────────────────
+AUTO=0
+CACHE_URL=""
+AUTO_PASSWORD=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -y|--yes)       AUTO=1; shift ;;
+    -c|--cache)     CACHE_URL="$2"; shift 2 ;;
+    -p|--password)  AUTO_PASSWORD="$2"; shift 2 ;;
+    *)              shift ;;   # Ignore unknown (lenient for live-ISO scripts)
+  esac
+done
+
+# ─── Constants ──────────────────────────────────────────────────────────────
 TOTAL_STEPS=9
 SCRIPT_START=$(date +%s)
+RAW_URL="https://raw.githubusercontent.com/OhShabuShabu/Atlas-Modules/main"
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════════
+# MODULE DEFINITIONS (Step 8)
+# ═════════════════════════════════════════════════════════════════════════════
+# Centralized data for optional module selection / download.
+# Keep these arrays in sync — index N is the same conceptual module across all three.
+
+MODULE_IDS=(1 2 3 4 5 6 7 8 9)
+
+MODULE_DESC=(
+  [1]="performance   — CPU governor, TCP BBR, Nix GC tuning"
+  [2]="privacy       — Mullvad VPN, metadata cleaner"
+  [3]="gaming        — Steam, MangoHUD overlay"
+  [4]="virtualisation — Docker, Podman, libvirt"
+  [5]="minecraft     — PrismLauncher, Blockbench"
+  [6]="flatpak       — Flathub repository"
+  [7]="dev           — Neovim, VSCodium, bun, opencode"
+  [8]="tools         — yt-dlp, mpv"
+  [9]="extras        — AI/ML (Ollama ROCm), animated wallpapers"
+)
+
+MODULE_FILE=(
+  [1]="performance.nix"
+  [2]="privacy/privacy.nix"
+  [3]="gaming/gaming.nix"
+  [4]="virtualisation.nix"
+  [5]="minecraft.nix"
+  [6]="flatpak.nix"
+  [7]="dev/dev.nix"
+  [8]="tools.nix"
+  [9]="extras.nix"
+)
+
+MODULE_SUBDIR=(
+  [1]="nixos"
+  [2]="nixos"
+  [3]="nixos"
+  [4]="nixos"
+  [5]="nixos"
+  [6]="nixos"
+  [7]="home"
+  [8]="home"
+  [9]="nixos"
+)
+
+# ═════════════════════════════════════════════════════════════════════════════
 # STEP 1: Environment Checks
-# ═══════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════════
 step 1 "Checking Environment"
 spacer
 
@@ -108,19 +206,21 @@ if [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]]; then
     echo -e "  ${BOLD}    Ctrl+Alt+F3   then run:  sudo ./install.sh${NC}"
     spacer
     read -rp "$(echo -e "${YELLOW}  Continue anyway? (y/N): ${NC}")" ANS
-    if [[ "$ANS" != "y" && "$ANS" != "Y" ]]; then
+    shopt -s nocasematch
+    if [[ "$ANS" != "y" ]]; then
       echo -e "  ${RED}Aborted by user.${NC}"
       exit 1
     fi
+    shopt -u nocasematch
   else
     warn "Running from desktop (auto-mode, continuing)"
   fi
 fi
 ok "Environment checks passed"
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════════
 # STEP 2: Disk Selection
-# ═══════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════════
 step 2 "Selecting Target Disk"
 spacer
 
@@ -160,9 +260,9 @@ spacer
 echo -e "  ${BOLD}Selected disk:${NC} $DISK"
 lsblk "$DISK" | sed 's/^/    /'
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════════
 # STEP 3: Confirmation (Destructive Action)
-# ═══════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════════
 step 3 "Confirm Installation"
 spacer
 
@@ -179,27 +279,30 @@ if [[ $AUTO -eq 0 ]]; then
   echo -e "    ${DIM}• Swap file on encrypted /persistent subvol${NC}"
   spacer
   read -rp "$(echo -e ${RED}"  Type 'yes' to continue: "${NC})" CONFIRM
+  shopt -s nocasematch
   if [[ "$CONFIRM" != "yes" ]]; then
     echo -e "  ${YELLOW}Installation cancelled.${NC}"
     exit 1
   fi
+  shopt -u nocasematch
 else
   info "Auto-mode enabled — skipping confirmation"
 fi
 ok "Proceeding with installation"
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════════
 # STEP 4: Preparing System Resources
-# ═══════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════════
 step 4 "Preparing System Resources"
 spacer
 
+# Garbage-collect the live ISO store to free space for the build
 (nix-collect-garbage 2>/dev/null || true) &
-spin $! "Clearing Nix garbage on live ISO"
-wait $!
+GC_PID=$!
+await_pid $GC_PID "Clearing Nix garbage on live ISO"
 
 # Expand live ISO writable store so nix has room to build
-for MP in /nix/.rw-store / ; do
+for MP in /nix/.rw-store /; do
   if mountpoint -q "$MP" 2>/dev/null; then
     FS_TYPE=$(findmnt -n -o FSTYPE "$MP")
     if [[ "$FS_TYPE" == "tmpfs" ]]; then
@@ -213,6 +316,10 @@ ok "Live ISO store expanded"
 # Create zram swap if low memory
 if [[ "$TOTAL_MEM" -lt 8192 ]] && ! swapon --show | grep -q .; then
   info "Low memory (${TOTAL_MEM}MB) — creating compressed swap..."
+  # Reset zram device first in case this is a re-run (avoids EBUSY on disksize write)
+  if [[ -e /sys/block/zram0/reset ]]; then
+    echo reset > /sys/block/zram0/reset 2>/dev/null || true
+  fi
   modprobe zram 2>/dev/null || true
   echo "$((TOTAL_MEM / 2))M" > /sys/block/zram0/disksize 2>/dev/null || true
   mkswap /dev/zram0 2>/dev/null || true
@@ -224,13 +331,13 @@ info "Freeing page cache..."
 sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
 ok "System resources ready"
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════════
 # STEP 5: Partitioning & Formatting
-# ═══════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════════
 step 5 "Partitioning & Formatting $DISK"
 spacer
 
-# ─── LUKS Passphrase ────────────────────────────────────────────────────
+# ─── LUKS Passphrase ──────────────────────────────────────────────────────
 echo -e "  ${BOLD}Set a LUKS encryption passphrase for ${DISK}:${NC}"
 echo -e "  ${DIM}This passphrase will be needed at every boot.${NC}"
 while :; do
@@ -246,16 +353,19 @@ while :; do
     break
   fi
 done
-# Write to a restricted-permissions temp file (world-readable /tmp is a leak risk)
-# Cleanup is handled by the EXIT trap below.
+
+# Write passphrase to a restricted-permissions temp file for disko.
+# Tracked by CLEANUP_FILES so the EXIT trap wipes + removes it automatically.
 umask 077
-echo -n "$LUKS_PW1" > /tmp/luks-passphrase
+LUKS_PW_FILE=$(mktemp -p /tmp luks-passphrase.XXXXXXXX)
+echo -n "$LUKS_PW1" > "$LUKS_PW_FILE"
+CLEANUP_FILES+=("$LUKS_PW_FILE")
 umask 022
 unset LUKS_PW1 LUKS_PW2
 ok "LUKS passphrase confirmed"
 spacer
 
-# ─── Disko Config ───────────────────────────────────────────────────────
+# ─── Disko Config ──────────────────────────────────────────────────────────
 info "Writing partition layout via disko..."
 info "  ${DIM}This will create: ESP (2G), LUKS+Btrfs (remaining), tmpfs for /, /home, /tmp${NC}"
 
@@ -290,15 +400,13 @@ cat > /tmp/disko-config.nix << EOF
               mountOptions = ["fmask=0077" "dmask=0077"];
             };
           };
-          # No swap partition — everything on disk is inside LUKS.
-          # Swap is a file on the LUKS-encrypted /persistent btrfs subvol.
           root = {
             size = "100%";
             content = {
               type = "luks";
               name = "crypt";
               settings.allowDiscards = true;
-              passwordFile = "/tmp/luks-passphrase";
+              passwordFile = "$LUKS_PW_FILE";
               content = {
                 type = "btrfs";
                 extraArgs = ["-f"];
@@ -319,41 +427,37 @@ cat > /tmp/disko-config.nix << EOF
 }
 EOF
 
-# ─── Run disko ─────────────────────────────────────────────────────────
+# ─── Run disko ────────────────────────────────────────────────────────────
 info "Running disko to partition and format..."
 nix run "nixpkgs#disko" \
   --extra-experimental-features "nix-command flakes" \
   --accept-flake-config \
   -- --mode disko /tmp/disko-config.nix > /tmp/disko-format.log 2>&1 &
 DISKO_PID=$!
-spin $DISKO_PID "Partitioning & formatting disk"
-if wait $DISKO_PID 2>/dev/null; then
+if await_pid $DISKO_PID "Partitioning & formatting disk"; then
   ok "Disk partitioned and formatted"
 else
   DISKO_EXIT=$?
-    dd if=/dev/urandom of=/tmp/luks-passphrase bs=4096 count=1 2>/dev/null || true
-    rm -f /tmp/luks-passphrase
   fail "disko partitioning failed (exit $DISKO_EXIT)"
   echo -e "  ${DIM}Last output:${NC}"
   tail -5 /tmp/disko-format.log 2>/dev/null | sed 's/^/  /'
   exit 1
 fi
-rm -f /tmp/luks-passphrase
+# Passphrase file will be wiped by EXIT trap (CLEANUP_FILES)
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════════
 # STEP 6: Mounting & Installing NixOS
-# ═══════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════════
 step 6 "Mounting & Installing NixOS"
 spacer
 
 TARGET=/mnt
 
-# Accept flake config prompts automatically (avoids Noctilia GUI dialog on desktop)
+# Prevent Nix from blocking on interactive prompts during install
+# (Nix may try to confirm config changes; this env var auto-accepts).
 export NIX_ACCEPT_FLAKE_CONFIG=1
 
-# ─── Detect partitions ─────────────────────────────────────────────────────────
-sub_header() { echo -e "  ${CYAN}▸${NC} ${BOLD}$1${NC}"; }
-
+# ─── Detect partitions ──────────────────────────────────────────────────────
 sub_header "Detecting partitions"
 LUKS_PART=$(lsblk -lno PATH,FSTYPE "$DISK" | grep crypto_LUKS | awk '{print $1}')
 BOOT_PART=$(lsblk -lno PATH,FSTYPE "$DISK" | grep vfat | awk '{print $1}')
@@ -362,7 +466,7 @@ ok "LUKS root:  ${BOLD}$LUKS_PART${NC}  (UUID: $LUKS_UUID)"
 ok "ESP boot:   ${BOLD}$BOOT_PART${NC}"
 spacer
 
-# ─── LUKS unlock ───────────────────────────────────────────────────────────────
+# ─── LUKS unlock ────────────────────────────────────────────────────────────
 sub_header "Unlocking LUKS encryption"
 if ! cryptsetup status crypt &>/dev/null; then
   echo -e "  ${DIM}Enter your LUKS passphrase to unlock:${NC}"
@@ -372,7 +476,7 @@ fi
 ok "LUKS device opened"
 spacer
 
-# ─── Mount subvolumes ──────────────────────────────────────────────────────────
+# ─── Mount subvolumes ───────────────────────────────────────────────────────
 sub_header "Mounting Btrfs subvolumes"
 mkdir -p "$TARGET/nix" "$TARGET/persistent" "$TARGET/home" "$TARGET/var" "$TARGET/boot"
 mount -t btrfs -o subvol=nix,noatime /dev/mapper/crypt "$TARGET/nix"
@@ -386,7 +490,7 @@ mount "$BOOT_PART" "$TARGET/boot"
 ok "Mounted /boot (ESP)"
 spacer
 
-# ─── Password Prompt & Injection ──────────────────────────────────────────────
+# ─── Password Prompt & Injection ────────────────────────────────────────────
 sub_header "Configuring user password"
 if [[ "$AUTO" -eq 0 ]]; then
   info "Set a password for user '${BOLD}yusa${NC}':"
@@ -415,49 +519,47 @@ fi
 ok "Password set"
 spacer
 
-# Hash the password using yescrypt (available on NixOS live ISO)
-# This avoids writing the plaintext password into configuration.nix
+# Hash the password using yescrypt.
+# Use a pipe instead of a here-string to avoid leaking $PW into /proc.
+# (The subshell will have it in its env for a moment, but that's unavoidable
+#  since we need to send it to mkpasswd's stdin.)
 sub_header "Hashing password for configuration injection"
-PW_HASH=$(mkpasswd -m yescrypt <<< "$PW" 2>/dev/null) || {
+PW_HASH=$(echo "$PW" | mkpasswd -m yescrypt 2>/dev/null) || {
   fail "Password hashing failed — mkpasswd not available"
+  echo -e "  ${DIM}On NixOS live ISO, install shadow: nix shell nixpkgs#shadow${NC}"
+  unset PW
   exit 1
 }
 unset PW
 ok "Password hashed with yescrypt"
 spacer
 
-# ─── Inject hashed password into config ───────────────────────────────────────
+# ─── Inject hashed password into config ─────────────────────────────────────
 sub_header "Injecting hashed password into Nix configuration"
 
-# Clean stale password lines first — crash recovery guard against duplication
+# Clean stale password lines first — crash-recovery guard against duplication
 sed -i '/initialPassword\|initialHashedPassword/d' "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true
 
-# Escape the hash for sed (hashes can contain $, ., /, &)
+# Escape the hash for sed (hashes often contain $, ., /, &)
 PW_SAFE=$(printf '%s\n' "$PW_HASH" | sed -e 's/[/\&$]/\\&/g; s/\./\\./g')
 unset PW_HASH
+
+# Append after the 'description = "yusa";' line inside the user block.
+# This keeps the hash inside the user attrset without mid-line insertion.
 sed -i '/description = "yusa";/a\    initialHashedPassword = "'"$PW_SAFE"'";' \
   "$ROOTDIR/files/core/configuration.nix" && \
   ok "Hashed password injected (no plaintext in config)" || \
   warn "Could not inject password into configuration.nix"
 spacer
 
-# ─── nixos-install ─────────────────────────────────────────────────────────────
+# ─── nixos-install ──────────────────────────────────────────────────────────
 sub_header "Running nixos-install"
 info "${DIM}Installing NixOS to disk — this takes 5-30 minutes.${NC}"
 echo
 
+# Export variables expected by disko.nix at evaluation time
 export DISKO_DEVICE="$DISK"
-echo "$LUKS_UUID" > "$ROOTDIR/.luks-uuid"
-
-trap '
-  rm -f "$ROOTDIR/.luks-uuid"
-  # Securely wipe the LUKS passphrase file from disk
-  if [ -f /tmp/luks-passphrase ]; then
-    dd if=/dev/urandom of=/tmp/luks-passphrase bs=4096 count=1 2>/dev/null || true
-    rm -f /tmp/luks-passphrase
-  fi
-  sed -i "/initialPassword\|initialHashedPassword/d" "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true
-' EXIT
+echo "$LUKS_UUID" > "$ROOTDIR/.luk-uuid"
 
 if [[ -n "$CACHE_URL" ]]; then
   SUBSTITUTERS="$CACHE_URL https://cache.nixos.org"
@@ -475,6 +577,7 @@ nixos-install --flake "$ROOTDIR#atlas-installer" \
   > /tmp/nixos-install.log 2>&1 &
 NIX_PID=$!
 
+# Manual progress display (more detailed than the generic spinner)
 printf '\e[?25l'
 while kill -0 "$NIX_PID" 2>/dev/null; do
   ELAPSED=$((SECONDS - INSTALL_START))
@@ -484,7 +587,6 @@ while kill -0 "$NIX_PID" 2>/dev/null; do
 done
 printf '\r\033[K\e[?25h'
 
-# Guard against set -e — wait kills the script silently if nixos-install fails
 if wait "$NIX_PID" 2>/dev/null; then
   NIX_EXIT=0
 else
@@ -503,140 +605,118 @@ else
   exit 1
 fi
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════════
 # STEP 7: Copy Configuration to Installed System
-# ═══════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════════
 step 7 "Copying Configuration"
 spacer
 
 info "Persisting machine-id..."
 mkdir -p "$TARGET/persistent/etc"
+# nixos-install may not always write machine-id before script runs
 cp "$TARGET/etc/machine-id" "$TARGET/persistent/etc/machine-id" 2>/dev/null || true
 ok "Machine-id saved"
 
 info "Copying configuration to installed system (persistent storage)..."
 mkdir -p "$TARGET/persistent/home/yusa"
 cp -r "$ROOTDIR" "$TARGET/persistent/home/yusa/Atlas"
+# The 'yusa' user in the installed system has UID 1000:GID 100 (users group)
 chown -R 1000:100 "$TARGET/persistent/home/yusa/Atlas" 2>/dev/null || true
 ok "Config copied to /persistent/home/yusa/Atlas"
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════════
 # STEP 8: Optional Modules (multi-select)
-# ═══════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════════
 step 8 "Optional Modules (Gaming, Dev, Privacy, etc.)"
 spacer
 
-RAW_URL="https://raw.githubusercontent.com/OhShabuShabu/Atlas-Modules/main"
 OPT_DIR="$TARGET/persistent/home/yusa/Atlas/files/modules/optional"
 SELECTED_MODULES=()
 
-declare -A MODULE_DESC
-MODULE_DESC[1]="performance — CPU governor, TCP BBR, Nix GC tuning"
-MODULE_DESC[2]="privacy    — Mullvad VPN, metadata cleaner"
-MODULE_DESC[3]="gaming     — Steam, MangoHUD overlay"
-MODULE_DESC[4]="virtualisation — Docker, Podman, libvirt"
-MODULE_DESC[5]="minecraft  — PrismLauncher, Blockbench"
-MODULE_DESC[6]="flatpak    — Flathub repository"
-MODULE_DESC[7]="dev        — Neovim, VSCodium, bun, opencode"
-MODULE_DESC[8]="tools      — yt-dlp, mpv"
-MODULE_DESC[9]="extras     — AI/ML (Ollama ROCm), animated wallpapers"
-
-declare -A MODULE_FILE
-MODULE_FILE[1]="performance.nix"
-MODULE_FILE[2]="privacy/privacy.nix"
-MODULE_FILE[3]="gaming/gaming.nix"
-MODULE_FILE[4]="virtualisation.nix"
-MODULE_FILE[5]="minecraft.nix"
-MODULE_FILE[6]="flatpak.nix"
-MODULE_FILE[7]="dev/dev.nix"
-MODULE_FILE[8]="tools.nix"
-MODULE_FILE[9]="extras.nix"
-
-declare -A MODULE_DIR
-MODULE_DIR[1]="nixos"
-MODULE_DIR[2]="nixos"
-MODULE_DIR[3]="nixos"
-MODULE_DIR[4]="nixos"
-MODULE_DIR[5]="nixos"
-MODULE_DIR[6]="nixos"
-MODULE_DIR[7]="home"
-MODULE_DIR[8]="home"
-MODULE_DIR[9]="nixos"
-
 if [[ "$AUTO" -eq 0 ]]; then
-  TOGGLED=(0 0 0 0 0 0 0 0 0 0)
+  # Toggle state for each module (indexed by module ID, unset = off)
+  declare -A TOGGLED
 
   echo -e "  ${BOLD}Select optional modules to install:${NC}"
   echo -e "  ${DIM}(type a number to toggle it on/off, press Enter when done)${NC}"
   spacer
 
   while :; do
-    for i in 1 2 3 4 5 6 7 8 9; do
-      MARK="${TOGGLED[$i]:-0}"
-      if [[ "$MARK" -eq 1 ]]; then
-        echo -e "    ${GREEN}[x]${NC} ${CYAN}$i${NC}) ${MODULE_DESC[$i]}"
+    for id in "${MODULE_IDS[@]}"; do
+      if [[ "${TOGGLED[$id]:-0}" -eq 1 ]]; then
+        echo -e "    ${GREEN}[x]${NC} ${CYAN}$id${NC}) ${MODULE_DESC[$id]}"
       else
-        echo -e "    ${DIM}[ ]${NC} ${CYAN}$i${NC}) ${MODULE_DESC[$i]}"
+        echo -e "    ${DIM}[ ]${NC} ${CYAN}$id${NC}) ${MODULE_DESC[$id]}"
       fi
     done
     spacer
     read -rp "$(echo -e "${CYAN}  Toggle number (or Enter to confirm): ${NC}")" ANS
     if [[ -z "$ANS" ]]; then
       break
-    elif [[ "$ANS" =~ ^[0-9]$ ]]; then
+    elif [[ "$ANS" =~ ^[0-9]+$ ]] && [[ "$ANS" -ge 1 ]] && [[ "$ANS" -le 9 ]]; then
       TOGGLED[$ANS]=$((1 - ${TOGGLED[$ANS]:-0}))
-      printf '\033[11A'
+      # Move cursor back up to redraw and clear any remnants
+      printf '\033[11A\033[J'
     fi
   done
 
-  for i in 1 2 3 4 5 6 7 8 9; do
-    if [[ "${TOGGLED[$i]:-0}" -eq 1 ]]; then
-      SELECTED_MODULES+=("$i")
+  for id in "${MODULE_IDS[@]}"; do
+    if [[ "${TOGGLED[$id]:-0}" -eq 1 ]]; then
+      SELECTED_MODULES+=("$id")
     fi
   done
 else
-  SELECTED_MODULES=(1 2 3 4 5 6 7 8 9)
+  SELECTED_MODULES=("${MODULE_IDS[@]}")
 fi
 
+# ─── Download Selected Modules ──────────────────────────────────────────────
 if [[ ${#SELECTED_MODULES[@]} -gt 0 ]]; then
   info "Downloading selected modules from $RAW_URL ..."
 
+  # Download command: prefer host curl, fall back to nix-managed curl
   if command -v curl &>/dev/null; then
-    CURL="curl"
+    CURL_CMD=(curl)
   else
-    CURL="nix run nixpkgs#curl --"
+    # Cache the nix-built curl so subsequent invocations are fast
+    CURL_CMD=(nix run nixpkgs#curl --)
   fi
 
+  # Download all selected modules in parallel for speed
+  DL_PIDS=()
   for s in "${SELECTED_MODULES[@]}"; do
-    TYPE="${MODULE_DIR[$s]}"
+    SUBDIR="${MODULE_SUBDIR[$s]}"
     FILE="${MODULE_FILE[$s]}"
     FILENAME=$(basename "$FILE")
-    DEST="$OPT_DIR/$TYPE/$FILENAME"
+    DEST="$OPT_DIR/$SUBDIR/$FILENAME"
 
-    mkdir -p "$OPT_DIR/$TYPE"
-    timeout 30 $CURL -sSo "$DEST" "$RAW_URL/$FILE" 2>/dev/null &
-    DL_PID=$!
-    spin $DL_PID "Downloading ${FILENAME}"
-    if ! wait $DL_PID 2>/dev/null; then
-      warn "Failed to download ${FILENAME} — skipping"
-      rm -f "$DEST"
-    fi
+    mkdir -p "$OPT_DIR/$SUBDIR"
+    # Retry once on failure
+    timeout 30 "${CURL_CMD[@]}" -sSo "$DEST" "$RAW_URL/$FILE" 2>/dev/null || \
+      timeout 30 "${CURL_CMD[@]}" -sSo "$DEST" "$RAW_URL/$FILE" 2>/dev/null || \
+      { warn "Failed to download ${FILENAME} — skipping"; rm -f "$DEST"; continue; } &
+    DL_PIDS+=($!)
+  done
+
+  # Wait for all downloads and report
+  for pid in "${DL_PIDS[@]}"; do
+    wait "$pid" 2>/dev/null || true
   done
 
   chown -R 1000:100 "$OPT_DIR" 2>/dev/null || true
 
+  # Extract short names from descriptions for the final summary
   selected_names=()
   for s in "${SELECTED_MODULES[@]}"; do
-    selected_names+=("${MODULE_DESC[$s]%% -*}")
+    selected_names+=("${MODULE_DESC[$s]%% — *}")
   done
   ok "Enabled: ${selected_names[*]}"
 else
   info "No modules selected — you can add them later by downloading .nix files to files/modules/optional/"
 fi
 
-# ─── GPU Detection (auto) ─────────────────────────────────────────────────
-# All DRM devices are scanned for GPUs; each detected vendor gets its own
-# module downloaded. Multiple files merge cleanly via NixOS module system.
+# ─── GPU Detection (auto) ──────────────────────────────────────────────────
+# Scans all DRM devices for known GPU vendor IDs and downloads matching
+# initrd modules. Multiple GPUs (e.g., AMD + NVIDIA) each get their own module.
 spacer
 info "Detecting GPU(s) for initrd configuration..."
 mkdir -p "$OPT_DIR/nixos"
@@ -644,7 +724,9 @@ mkdir -p "$OPT_DIR/nixos"
 GPU_FOUND=0
 declare -A DL_DONE
 for vendor_file in /sys/class/drm/*/device/vendor; do
-  VENDOR=$(cat "$vendor_file" 2>/dev/null | tr -d '\n')
+  # Skip if the device/vendor file doesn't exist (render nodes, etc.)
+  [[ -r "$vendor_file" ]] || continue
+  VENDOR=$(< "$vendor_file" tr -d '\n')
   case "$VENDOR" in
     "0x1002") MODULE="gpu-amd.nix"    ;;
     "0x8086") MODULE="gpu-intel.nix"  ;;
@@ -653,15 +735,11 @@ for vendor_file in /sys/class/drm/*/device/vendor; do
   esac
   if [[ -n "$MODULE" && -z "${DL_DONE[$MODULE]:-}" ]]; then
     DL_DONE[$MODULE]=1
-    timeout 30 $CURL -sSo "$OPT_DIR/nixos/$MODULE" "$RAW_URL/$MODULE" 2>/dev/null &
-    DL_PID=$!
-    spin $DL_PID "Downloading ${MODULE}"
-    if wait $DL_PID 2>/dev/null; then
-      GPU_FOUND=1
-    else
-      warn "Failed to download ${MODULE} — skipping"
-      rm -f "$OPT_DIR/nixos/$MODULE"
-    fi
+    # Retry once
+    timeout 30 "${CURL_CMD[@]}" -sSo "$OPT_DIR/nixos/$MODULE" "$RAW_URL/$MODULE" 2>/dev/null || \
+      timeout 30 "${CURL_CMD[@]}" -sSo "$OPT_DIR/nixos/$MODULE" "$RAW_URL/$MODULE" 2>/dev/null || \
+      { warn "Failed to download ${MODULE} — skipping"; rm -f "$OPT_DIR/nixos/$MODULE"; continue; }
+    GPU_FOUND=1
   fi
 done
 
@@ -676,9 +754,9 @@ else
   warn "Place in files/modules/optional/nixos/"
 fi
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════════
 # STEP 9: Apply Full Configuration (includes optional modules)
-# ═══════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════════
 step 9 "Applying Full Configuration"
 spacer
 
@@ -689,9 +767,8 @@ echo
 if command -v nixos-enter &>/dev/null; then
   nixos-enter --root "$TARGET" -c "nixos-rebuild switch --flake /persistent/home/yusa/Atlas#atlas" \
     > /tmp/nixos-rebuild.log 2>&1 &
-  REBUILD_PID=$!
-  timer_until $REBUILD_PID "nixos-rebuild"
-  if wait $REBUILD_PID 2>/dev/null; then
+  timer_until $! "nixos-rebuild"
+  if wait $! 2>/dev/null; then
     ok "Full configuration applied (including optional modules)"
   else
     warn "nixos-rebuild had issues — run it manually after first boot:"
@@ -702,7 +779,7 @@ else
   echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/Atlas#atlas${NC}"
 fi
 
-# ─── Next Steps ──────────────────────────────────────────────────────────
+# ─── Next Steps ───────────────────────────────────────────────────────────
 ELAPSED=$(( $(date +%s) - SCRIPT_START ))
 ELAPSED_MIN=$((ELAPSED / 60))
 ELAPSED_SEC=$((ELAPSED % 60))
