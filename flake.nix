@@ -28,8 +28,17 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
-  outputs = inputs @ { self, nixpkgs, home-manager, noctalia, disko, preservation, ... }: {
-    formatter.x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.nixpkgs-fmt;
+  outputs = inputs @ { self, nixpkgs, home-manager, noctalia, disko, preservation, ... }:
+  let
+    # Supported systems — extend this list for multi-architecture support
+    # NOTE: aarch64-linux requires matching packages (some may be unavailable)
+    supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
+
+    # Helper: generate formatter for each supported system
+    forAllSystems = f: nixpkgs.lib.genAttrs supportedSystems (system: f system);
+  in {
+    # Formatter for all supported architectures
+    formatter = forAllSystems (system: nixpkgs.legacyPackages.${system}.nixpkgs-fmt);
 
     nixosConfigurations = {
       # Current running system — uses existing ext4 layout
