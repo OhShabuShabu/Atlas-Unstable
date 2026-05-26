@@ -37,9 +37,8 @@ cleanup() {
       rm -f "$f"
     fi
   done
-  # Remove injected password hash from the config file
-  # Match only config assignment lines, not documentation comments
-  sed -i '/^\s*initial\(Hashed\)\?Password\s*=/d' \
+  # Remove injected password from the config file
+  sed -i '/^\s*initialPassword\s*=/d' \
     "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true
   # Remove temporary UUID marker
   rm -f "$ROOTDIR/.luk-uuid" 2>/dev/null || true
@@ -514,7 +513,7 @@ mount "$BOOT_PART" "$TARGET/boot"
 ok "Mounted /boot (ESP)"
 spacer
 
-# ─── Password Prompt, Hashing & Injection ───────────────────────────────────
+# ─── Password Prompt & Injection ────────────────────────────────────────────
 sub_header "Setting user password"
 if [[ "$AUTO" -eq 0 ]]; then
   info "Set a password for user '${BOLD}yusa${NC}':"
@@ -539,28 +538,20 @@ else
   fail "Auto-mode requires -p/--password flag for security"
   exit 1
 fi
+ok "Password set"
 
-# Hash the password with yescrypt and inject into config — done inline so there's
-# no confusing separate step that looks like another prompt.
-PW_HASH=$(echo "$PW" | mkpasswd -m yescrypt 2>/dev/null) || {
-  fail "Password hashing failed — mkpasswd not available"
-  echo -e "  ${DIM}On NixOS live ISO, install shadow: nix shell nixpkgs#shadow${NC}"
-  unset PW
-  exit 1
-}
-unset PW
-
-# Clean stale password lines first — crash-recovery guard against duplication.
-sed -i '/^\s*initial\(Hashed\)\?Password\s*=/d' \
+# Inject plaintext as initialPassword — NixOS hashes it during the build.
+# The cleanup EXIT trap strips this line from configuration.nix afterwards.
+# Clean stale password lines first (crash-recovery guard).
+sed -i '/^\s*initialPassword\s*=/d' \
   "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true
 
-# Append after the 'description = "yusa";' line inside the user block.
-sed -i '/description = "yusa";/a\    initialHashedPassword = "'"$PW_HASH"'";' \
+sed -i '/description = "yusa";/a\    initialPassword = "'"$PW"'";' \
   "$ROOTDIR/files/core/configuration.nix" && \
-  ok "Password configured (hashed with yescrypt)" || \
+  ok "Password injected (NixOS will hash on first build)" || \
   warn "Could not inject password into configuration.nix"
 
-unset PW_HASH
+unset PW
 spacer
 
 # ─── nixos-install ──────────────────────────────────────────────────────────
