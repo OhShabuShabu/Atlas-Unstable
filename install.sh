@@ -10,11 +10,13 @@ BOLD=$'\033[1m'; DIM=$'\033[2m'; NC=$'\033[0m'
 # ─── Config ─────────────────────────────────────────────────────────────────
 AUTO=0
 CACHE_URL=""
+AUTO_PASSWORD=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -y|--yes)   AUTO=1; shift ;;
-    -c|--cache) CACHE_URL="$2"; shift 2 ;;
-    *)          shift ;;
+    -y|--yes)       AUTO=1; shift ;;
+    -c|--cache)     CACHE_URL="$2"; shift 2 ;;
+    -p|--password)  AUTO_PASSWORD="$2"; shift 2 ;;
+    *)              shift ;;
   esac
 done
 
@@ -105,7 +107,7 @@ if [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]]; then
     echo -e "  ${YELLOW}terminal (OOM). Switch to a TTY for best results:${NC}"
     echo -e "  ${BOLD}    Ctrl+Alt+F3   then run:  sudo ./install.sh${NC}"
     spacer
-    read -rp "$(echo -e ${YELLOW}"  Continue anyway? (y/N): "${NC})" ANS
+    read -rp "$(echo -e "${YELLOW}  Continue anyway? (y/N): ${NC}")" ANS
     if [[ "$ANS" != "y" && "$ANS" != "Y" ]]; then
       echo -e "  ${RED}Aborted by user.${NC}"
       exit 1
@@ -170,7 +172,7 @@ if [[ $AUTO -eq 0 ]]; then
   echo -e "  ${YELLOW}This action ${BOLD}cannot${NC}${YELLOW} be undone.${NC}"
   spacer
   echo -e "  ${DIM}What will be created:${NC}"
-    echo -e "    ${DIM}• 2GB EFI System Partition (ESP)${NC}"
+  echo -e "    ${DIM}• 2GB EFI System Partition (ESP)${NC}"
   echo -e "    ${DIM}• LUKS-encrypted Btrfs partition (all remaining space)${NC}"
   echo -e "    ${DIM}  - Subvolumes: /nix, /persistent, /var${NC}"
   echo -e "    ${DIM}• tmpfs for /, /home, and /tmp${NC}"
@@ -367,11 +369,11 @@ spacer
 
 # ─── Mount subvolumes ──────────────────────────────────────────────────────────
 sub_header "Mounting Btrfs subvolumes"
+mkdir -p "$TARGET/nix" "$TARGET/persistent" "$TARGET/home" "$TARGET/var" "$TARGET/boot"
 mount -t btrfs -o subvol=nix,noatime /dev/mapper/crypt "$TARGET/nix"
 ok "Mounted /nix"
 mount -t btrfs -o subvol=persistent,noatime /dev/mapper/crypt "$TARGET/persistent"
 ok "Mounted /persistent"
-mkdir -p "$TARGET/home"
 ok "Prepared /home (tmpfs — will be mounted at boot)"
 mount -t btrfs -o subvol=var,noatime /dev/mapper/crypt "$TARGET/var"
 ok "Mounted /var"
@@ -397,9 +399,13 @@ if [[ "$AUTO" -eq 0 ]]; then
     fi
   done
   PW="${PW1}"
+elif [[ -n "$AUTO_PASSWORD" ]]; then
+  PW="$AUTO_PASSWORD"
+  info "Auto-mode: using provided password"
 else
-  PW="atlas"
-  info "Auto-mode: using default password"
+  warn "Auto-mode: no password provided"
+  fail "Auto-mode requires -p/--password flag for security"
+  exit 1
 fi
 ok "Password set"
 spacer
@@ -410,7 +416,8 @@ sub_header "Injecting password into Nix configuration"
 # Clean stale password lines first — crash recovery guard against duplication
 sed -i '/initialPassword\|initialHashedPassword/d' "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true
 
-PW_SAFE="${PW//\"/\\\"}"
+# Escape special sed characters: backslash, ampersand, newline
+PW_SAFE=$(printf '%s\n' "$PW" | sed -e 's/[\/&]/\\&/g')
 sed -i '/description = "yusa";/a\    initialPassword = "'"$PW_SAFE"'";' \
   "$ROOTDIR/files/core/configuration.nix" && \
   ok "Password injected (NixOS will hash on first boot)" || \
@@ -423,9 +430,9 @@ info "${DIM}Installing NixOS to disk — this takes 5-30 minutes.${NC}"
 echo
 
 export DISKO_DEVICE="$DISK"
-echo "$LUKS_UUID" > "$ROOTDIR/.luk-uuid"
+echo "$LUKS_UUID" > "$ROOTDIR/.luks-uuid"
 
-trap 'rm -f "$ROOTDIR/.luk-uuid"; sed -i "/initialPassword\|initialHashedPassword/d" "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true' EXIT
+trap 'rm -f "$ROOTDIR/.luks-uuid"; sed -i "/initialPassword\|initialHashedPassword/d" "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true' EXIT
 
 if [[ -n "$CACHE_URL" ]]; then
   SUBSTITUTERS="$CACHE_URL https://cache.nixos.org"
@@ -548,13 +555,13 @@ if [[ "$AUTO" -eq 0 ]]; then
       fi
     done
     spacer
-    read -rp "$(echo -e ${CYAN}"  Toggle number (or Enter to confirm): "${NC})" ANS
+    read -rp "$(echo -e "${CYAN}  Toggle number (or Enter to confirm): ${NC}")" ANS
     if [[ -z "$ANS" ]]; then
       break
     elif [[ "$ANS" =~ ^[0-9]$ ]]; then
       TOGGLED[$ANS]=$((1 - ${TOGGLED[$ANS]:-0}))
+      printf '\033[11A'
     fi
-    echo -en "\033[10A"
   done
 
   for i in 1 2 3 4 5 6 7 8 9; do
@@ -582,9 +589,13 @@ if [[ ${#SELECTED_MODULES[@]} -gt 0 ]]; then
     DEST="$OPT_DIR/$TYPE/$FILENAME"
 
     mkdir -p "$OPT_DIR/$TYPE"
-    ($CURL -sSo "$DEST" "$RAW_URL/$FILE" 2>/dev/null) &
-    spin $! "Downloading ${FILENAME}"
-    wait $!
+    timeout 30 $CURL -sSo "$DEST" "$RAW_URL/$FILE" 2>/dev/null &
+    DL_PID=$!
+    spin $DL_PID "Downloading ${FILENAME}"
+    if ! wait $DL_PID 2>/dev/null; then
+      warn "Failed to download ${FILENAME} — skipping"
+      rm -f "$DEST"
+    fi
   done
 
   chown -R 1000:100 "$OPT_DIR" 2>/dev/null || true
@@ -617,10 +628,15 @@ for vendor_file in /sys/class/drm/*/device/vendor; do
   esac
   if [[ -n "$MODULE" && -z "${DL_DONE[$MODULE]:-}" ]]; then
     DL_DONE[$MODULE]=1
-    ($CURL -sSo "$OPT_DIR/nixos/$MODULE" "$RAW_URL/$MODULE" 2>/dev/null) &
-    spin $! "Downloading ${MODULE}"
-    wait $!
-    GPU_FOUND=1
+    timeout 30 $CURL -sSo "$OPT_DIR/nixos/$MODULE" "$RAW_URL/$MODULE" 2>/dev/null &
+    DL_PID=$!
+    spin $DL_PID "Downloading ${MODULE}"
+    if wait $DL_PID 2>/dev/null; then
+      GPU_FOUND=1
+    else
+      warn "Failed to download ${MODULE} — skipping"
+      rm -f "$OPT_DIR/nixos/$MODULE"
+    fi
   fi
 done
 
@@ -629,7 +645,8 @@ if [[ $GPU_FOUND -eq 1 ]]; then
 elif ls "$OPT_DIR/nixos/"gpu-*.nix &>/dev/null; then
   ok "GPU initrd modules already present"
 else
-  warn "No supported GPU detected — initrd will use basic framebuffer (no KMS)."
+  warn "No supported GPU detected — initrd will use basic framebuffer mode (VESA)."
+  warn "This means no GPU acceleration in early boot. GPU drivers will load after boot."
   warn "Manually download from atlas-modules: gpu-amd.nix, gpu-intel.nix, gpu-nvidia.nix"
   warn "Place in files/modules/optional/nixos/"
 fi
