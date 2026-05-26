@@ -6,7 +6,9 @@
 # INFO: Kernel command-line hardening and module security
 # NOTE: Boot parameters use kernelParams, modules use modprobeConfig
 # WARN: Some blocked modules may break hardware - review before deploying
+# WARN: Thunderbolt blocking prevents use of USB-C docks, external GPUs, etc.
 # NOTE: Updated for NixOS 25.x/2026 security standards
+# ============================================================================
 
 let
   # INFO: Kernel boot parameters for security
@@ -21,10 +23,6 @@ let
     "rd.systemd.show_status=false"
     "rd.udev.log_level=3"
     "udev.log_priority=3"
-
-    # CPU performance tuning
-    "intel_pstate=active"
-    "tsc=reliable"
 
     # Security hardening
     "slab_nomerge"                       # INFO: Disable slab merging
@@ -52,11 +50,12 @@ let
     # "random.trust_cpu=off"              # INFO: Don't trust CPU RNG entropy
     # "random.trust_bootloader=off"       # INFO: Don't trust bootloader RNG entropy
     "console=tty0"                      # INFO: Restrict console to main display
-    "intel_iommu=on"                    # INFO: Enable Intel IOMMU (VT-d)
   ];
 
   # INFO: Modules to block via modprobe (returns /bin/false)
-  # NOTE: Hardware that needs these modules should add them to boot.kernelModules
+  # NOTE: Firewire/1394 is always blocked (high risk, very uncommon).
+  # NOTE: Thunderbolt is configurable via hardware.security.blockThunderbolt.
+  # NOTE: usb-storage is NOT blocked (breaks USB boot, initrd keyboard, removable media).
   blockedModules = ''
     install firewire-core /bin/false
     install firewire_core /bin/false
@@ -65,12 +64,15 @@ let
     install firewire_sbp2 /bin/false
     install firewire-sbp2 /bin/false
     install firewire-net /bin/false
-    install thunderbolt /bin/false
     install ohci1394 /bin/false
     install sbp2 /bin/false
     install dv1394 /bin/false
     install raw1394 /bin/false
     install video1394 /bin/false
+    # Thunderbolt: blocked by default for DMA protection, but can be
+    # unblocked for Thunderbolt docks, eGPUs, and NVMe enclosures.
+    # Set hardware.security.blockThunderbolt = false in configuration.nix.
+    ${lib.optionalString config.hardware.security.blockThunderbolt "install thunderbolt /bin/false"}
     # WARN: usb-storage BLOCKED - breaks USB boot and initrd USB keyboard
     # WARN: Uncomment below only if you're sure you don't boot from USB
     # install usb-storage /bin/false
@@ -94,21 +96,43 @@ let
 in
 
 {
-  # INFO: Apply kernel boot parameters
-  boot.kernelParams = bootParams;
+  # INFO: ==========================================================================
+  # OPTIONS
+  # INFO: ==========================================================================
+  options.hardware.security = {
+    blockThunderbolt = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Block the Thunderbolt kernel module for DMA attack protection.
+        Disable this if you use Thunderbolt devices (docks, eGPUs, NVMe enclosures).
+        Note: Thunderbolt's DMA protection reduces risk, but blocking eliminates it.
+        
+        Set hardware.security.blockThunderbolt = false; in configuration.nix to allow.
+      '';
+    };
+  };
 
-  # Silent boot - reduce console noise
-  boot.consoleLogLevel = 0;
-  boot.initrd.verbose = false;
+  # INFO: ==========================================================================
+  # CONFIG
+  # INFO: ==========================================================================
+  config = {
+    # INFO: Apply kernel boot parameters
+    boot.kernelParams = bootParams;
 
-  # INFO: Apply module blocking config
-  boot.extraModprobeConfig = blockedModules;
+    # Silent boot - reduce console noise
+    boot.consoleLogLevel = 0;
+    boot.initrd.verbose = false;
 
-  # INFO: Blacklist dangerous modules
-  boot.blacklistedKernelModules = blacklistedModules;
+    # INFO: Apply module blocking config
+    boot.extraModprobeConfig = blockedModules;
 
-  # NOTE: Lock kernel module loading is now handled by security.lockKernelModules
-  #       in configuration.nix - keeping this as backup
-  # WARN: This service may conflict with security.lockKernelModules
-  # systemd.services."lock-kernel-modules".enable = false;
+    # INFO: Blacklist dangerous modules
+    boot.blacklistedKernelModules = blacklistedModules;
+
+    # NOTE: Lock kernel module loading is now handled by security.lockKernelModules
+    #       in configuration.nix - keeping this as backup
+    # WARN: This service may conflict with security.lockKernelModules
+    # systemd.services."lock-kernel-modules".enable = false;
+  };
 }
