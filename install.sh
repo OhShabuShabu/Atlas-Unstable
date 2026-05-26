@@ -599,30 +599,39 @@ else
 fi
 
 # ─── GPU Detection (auto) ─────────────────────────────────────────────────
-# Detect GPU vendor and download ONLY the matching initrd module.
-# Bundling GPU firmware for hardware that doesn't exist fills up /boot.
+# All DRM devices are scanned for GPUs; each detected vendor gets its own
+# module downloaded. Multiple files merge cleanly via NixOS module system.
 spacer
-info "Detecting GPU for initrd configuration..."
+info "Detecting GPU(s) for initrd configuration..."
+mkdir -p "$OPT_DIR/nixos"
 
-VENDOR=$(head -1 /sys/class/drm/*/device/vendor 2>/dev/null | tr -d '\n')
-case "$VENDOR" in
-  "0x1002") GPU_MODULE="gpu-amd.nix"   ; GPU_NAME="AMD" ;;
-  "0x8086") GPU_MODULE="gpu-intel.nix" ; GPU_NAME="Intel" ;;
-  "0x10de") GPU_MODULE="gpu-nvidia.nix"; GPU_NAME="NVIDIA" ;;
-  *) GPU_MODULE="" ; GPU_NAME="" ;;
-esac
+GPU_FOUND=0
+declare -A DL_DONE
+for vendor_file in /sys/class/drm/*/device/vendor; do
+  VENDOR=$(cat "$vendor_file" 2>/dev/null | tr -d '\n')
+  case "$VENDOR" in
+    "0x1002") MODULE="gpu-amd.nix"    ;;
+    "0x8086") MODULE="gpu-intel.nix"  ;;
+    "0x10de") MODULE="gpu-nvidia.nix" ;;
+    *)        MODULE=""               ;;
+  esac
+  if [[ -n "$MODULE" && -z "${DL_DONE[$MODULE]:-}" ]]; then
+    DL_DONE[$MODULE]=1
+    ($CURL -sSo "$OPT_DIR/nixos/$MODULE" "$RAW_URL/$MODULE" 2>/dev/null) &
+    spin $! "Downloading ${MODULE}"
+    wait $!
+    GPU_FOUND=1
+  fi
+done
 
-if [[ -n "$GPU_MODULE" ]]; then
-  info "Detected ${GPU_NAME} GPU — downloading matching initrd module..."
-  mkdir -p "$OPT_DIR/nixos"
-  ($CURL -sSo "$OPT_DIR/nixos/gpu.nix" "$RAW_URL/$GPU_MODULE" 2>/dev/null) &
-  spin $! "Downloading ${GPU_MODULE}"
-  wait $!
-  ok "GPU initrd module installed: ${GPU_MODULE}"
+if [[ $GPU_FOUND -eq 1 ]]; then
+  ok "GPU initrd module(s) installed: ${!DL_DONE[*]}"
+elif ls "$OPT_DIR/nixos/"gpu-*.nix &>/dev/null; then
+  ok "GPU initrd modules already present"
 else
   warn "No supported GPU detected — initrd will use basic framebuffer (no KMS)."
-  warn "You can manually download gpu-amd.nix, gpu-intel.nix, or gpu-nvidia.nix"
-  warn "from the atlas-modules repo to files/modules/optional/nixos/gpu.nix"
+  warn "Manually download from atlas-modules: gpu-amd.nix, gpu-intel.nix, gpu-nvidia.nix"
+  warn "Place in files/modules/optional/nixos/"
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
