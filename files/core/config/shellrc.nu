@@ -38,6 +38,7 @@ alias test-config = bash /home/yusa/Atlas/test_config.sh
 # System health
 alias health = atlas-health
 alias health-quick = atlas-health quick
+alias hardware-detect = atlas-hardware-detect
 
 # Nix searching and profiling
 alias nix-search = nix search nixpkgs

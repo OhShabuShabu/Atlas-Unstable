@@ -157,6 +157,15 @@
   };
   programs.home-manager.enable = true;
 
+  # TODO: Migrate to sops-nix for multi-machine portability.
+  #   Add to files/secrets/secrets.yaml via `sops files/secrets/secrets.yaml`:
+  #     git-name: OhShabuShabu
+  #     git-email: greens2acc@gmail.com
+  #   Then use:
+  #     sops.secrets.git-name = { sopsFile = ../secrets/secrets.yaml; };
+  #     sops.secrets.git-email = { sopsFile = ../secrets/secrets.yaml; };
+  #     programs.git.settings.user.name = config.sops.secrets.git-name.path;
+  #     programs.git.settings.user.email = config.sops.secrets.git-email.path;
   programs.git = {
     enable = true;
     settings = {
@@ -636,52 +645,56 @@
         overviewEnabled = true;
         gridSnap = true;
         gridSnapScale = true;
+        # NOTE: Replace "eDP-1" or "DP-1" with your actual monitor name.
+        #       Run `niri msg outputs` in a terminal to list connected outputs.
+        #       Desktop widgets will only be shown on the named monitor.
+        #       Set to empty array ([]) to show on the primary monitor only.
         monitorWidgets = [
-          {
-            name = "DP-1";
-            widgets = [
-              {
-                diskPath = "/";
-                id = "SystemStat";
-                layout = "bottom";
-                roundedCorners = true;
-                showBackground = true;
-                statType = "CPU";
-                x = 20;
-                y = 100;
-              }
-              {
-                diskPath = "/";
-                id = "SystemStat";
-                layout = "bottom";
-                roundedCorners = true;
-                showBackground = true;
-                statType = "Memory";
-                x = 20;
-                y = 240;
-              }
-              {
-                diskPath = "/";
-                id = "SystemStat";
-                layout = "bottom";
-                roundedCorners = true;
-                showBackground = true;
-                statType = "Disk";
-                x = 20;
-                y = 380;
-              }
-              {
-                diskPath = "/";
-                id = "SystemStat";
-                layout = "bottom";
-                roundedCorners = true;
-                showBackground = true;
-                statType = "Network";
-                x = 20;
-                y = 520;
-              }
-            ];
-          }
+          # {
+          #   name = "eDP-1";
+          #   widgets = [
+          #     {
+          #       diskPath = "/";
+          #       id = "SystemStat";
+          #       layout = "bottom";
+          #       roundedCorners = true;
+          #       showBackground = true;
+          #       statType = "CPU";
+          #       x = 20;
+          #       y = 100;
+          #     }
+          #     {
+          #       diskPath = "/";
+          #       id = "SystemStat";
+          #       layout = "bottom";
+          #       roundedCorners = true;
+          #       showBackground = true;
+          #       statType = "Memory";
+          #       x = 20;
+          #       y = 240;
+          #     }
+          #     {
+          #       diskPath = "/";
+          #       id = "SystemStat";
+          #       layout = "bottom";
+          #       roundedCorners = true;
+          #       showBackground = true;
+          #       statType = "Disk";
+          #       x = 20;
+          #       y = 380;
+          #     }
+          #     {
+          #       diskPath = "/";
+          #       id = "SystemStat";
+          #       layout = "bottom";
+          #       roundedCorners = true;
+          #       showBackground = true;
+          #       statType = "Network";
+          #       x = 20;
+          #       y = 520;
+          #     }
+          #   ];
+          # }
         ];
       };
     };
