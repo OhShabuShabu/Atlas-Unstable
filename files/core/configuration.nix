@@ -146,25 +146,6 @@
 
 
   # ============================================================================
-  # SECTION 2.5: SSH SERVER
-  # ============================================================================
-  # Enable OpenSSH for local password-authenticated connections.
-  # The service-hardening module sets PrivateNetwork=true which would prevent
-  # sshd from binding to the network — override it here.
-  services.openssh = {
-    enable = true;
-    settings = {
-      PasswordAuthentication = true;
-      PermitRootLogin = "no";
-      KbdInteractiveAuthentication = true;
-    };
-  };
-  systemd.services.sshd.serviceConfig = {
-    PrivateNetwork = lib.mkForce false;
-  };
-
-
-  # ============================================================================
   # SECTION 3: HOME MANAGER
   # ============================================================================
   # Enable Home Manager
