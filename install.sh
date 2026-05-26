@@ -406,6 +406,10 @@ spacer
 
 # ─── Inject password into config ──────────────────────────────────────────────
 sub_header "Injecting password into Nix configuration"
+
+# Clean stale password lines first — crash recovery guard against duplication
+sed -i '/initialPassword\|initialHashedPassword/d' "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true
+
 PW_SAFE="${PW//\"/\\\"}"
 sed -i '/description = "yusa";/a\    initialPassword = "'"$PW_SAFE"'";' \
   "$ROOTDIR/files/core/configuration.nix" && \
@@ -421,7 +425,7 @@ echo
 export DISKO_DEVICE="$DISK"
 echo "$LUKS_UUID" > "$ROOTDIR/.luk-uuid"
 
-trap 'rm -f "$ROOTDIR/.luk-uuid"' EXIT
+trap 'rm -f "$ROOTDIR/.luk-uuid"; sed -i "/initialPassword\|initialHashedPassword/d" "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true' EXIT
 
 if [[ -n "$CACHE_URL" ]]; then
   SUBSTITUTERS="$CACHE_URL https://cache.nixos.org"
@@ -455,8 +459,6 @@ else
   NIX_EXIT=$?
 fi
 TOTAL=$((SECONDS - INSTALL_START))
-
-sed -i '/initialPassword\|initialHashedPassword/d' "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true
 
 if [[ $NIX_EXIT -eq 0 ]]; then
   echo
