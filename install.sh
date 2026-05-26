@@ -6,7 +6,8 @@
 # tmpfs root, and optional modules (gaming, dev, privacy, etc.).
 #
 # Usage: sudo ./install.sh [options]
-#   -y, --yes         Auto-mode (skip prompts, select defaults)
+#   -h, --help        Show this help message
+#   -y, --yes         Auto-mode (skip prompts, select all modules)
 #   -c, --cache URL   Binary cache URL for nixos-install
 #   -p, --password    Password for user 'yusa' (auto-mode only)
 #
@@ -17,13 +18,17 @@
 
 set -euo pipefail
 
+# ─── Paths ──────────────────────────────────────────────────────────────────
+# Defined FIRST so cleanup() can reference them at trap registration time.
+ROOTDIR="$(cd "$(dirname "$0")" && pwd)"
+
 # ─── Early Cleanup Trap ────────────────────────────────────────────────────
-# Must be the first thing after strict mode so EVERY resource is tracked.
-# The cleanup() function is defined just below; bash resolves it at trap time.
 CLEANUP_FILES=()
 
 cleanup() {
   local f
+  # Restore terminal cursor in case spinner/timer crashed mid-way
+  printf '\e[?25h' 2>/dev/null || true
   # Securely wipe tracked temp files (passphrases, etc.)
   for f in "${CLEANUP_FILES[@]}"; do
     if [[ -f "$f" ]]; then
@@ -33,15 +38,13 @@ cleanup() {
     fi
   done
   # Remove injected password hash from the config file
-  sed -i '/initialPassword\|initialHashedPassword/d' \
+  # Match only config assignment lines, not documentation comments
+  sed -i '/^\s*initial\(Hashed\)\?Password\s*=/d' \
     "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true
   # Remove temporary UUID marker
   rm -f "$ROOTDIR/.luk-uuid" 2>/dev/null || true
 }
 trap cleanup EXIT
-
-# ─── Paths ──────────────────────────────────────────────────────────────────
-ROOTDIR="$(cd "$(dirname "$0")" && pwd)"
 
 # ─── Colors ────────────────────────────────────────────────────────────────
 RED=$'\033[0;31m'; GREEN=$'\033[0;32m'; YELLOW=$'\033[1;33m'; CYAN=$'\033[0;36m'
@@ -58,6 +61,9 @@ spacer() { echo; }
 sub_header() { echo -e "  ${CYAN}▸${NC} ${BOLD}$1${NC}"; }
 
 # ─── Step Progress (refreshes in place) ─────────────────────────────────────
+readonly TOTAL_STEPS=9
+STEP_PRINTED=0
+
 step() {
   local num=$1 total=$TOTAL_STEPS title="$2"
   local pct=$((num * 100 / total))
@@ -65,7 +71,7 @@ step() {
   local bar rest
   printf -v bar '%*s' "$fill" ''; bar="${bar// /━}"
   printf -v rest '%*s' $((36 - fill)) ''; rest="${rest// /─}"
-  if [[ ${STEP_PRINTED:-0} -eq 1 ]]; then
+  if [[ $STEP_PRINTED -eq 1 ]]; then
     printf '\e[H\e[J'    # home + clear entire screen
   fi
   echo
@@ -76,7 +82,7 @@ step() {
 }
 
 # ─── Braille Spinner ────────────────────────────────────────────────────────
-SPIN='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+readonly SPIN='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
 
 spin() {
   local pid=$1 msg="${2:-Working...}" i=0
@@ -105,11 +111,29 @@ timer_until() {
 }
 
 # ─── Foreground command with spinner + exit check ──────────────────────────
-# Usage: if await_pid $pid "message"; then ok "done"; else fail "failed"; fi
 await_pid() {
   local pid=$1 msg="${2:-Working...}"
   spin "$pid" "$msg"
   wait "$pid" 2>/dev/null
+}
+
+# ─── Usage ──────────────────────────────────────────────────────────────────
+usage() {
+  cat <<EOF
+Usage: sudo $(basename "$0") [options]
+
+Options:
+  -h, --help        Show this help message and exit
+  -y, --yes         Auto-mode (skip prompts, select all modules)
+  -c, --cache URL   Binary cache URL for nixos-install
+  -p, --password    Password for user 'yusa' (auto-mode only)
+
+Full-disk installer for NixOS with LUKS encryption, Btrfs subvolumes,
+tmpfs root, and optional modules.
+
+Run from a NixOS live ISO. The target disk will be COMPLETELY ERASED.
+EOF
+  exit 0
 }
 
 # ─── Config / Args ─────────────────────────────────────────────────────────
@@ -119,17 +143,19 @@ AUTO_PASSWORD=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    -h|--help)      usage ;;
     -y|--yes)       AUTO=1; shift ;;
     -c|--cache)     CACHE_URL="$2"; shift 2 ;;
     -p|--password)  AUTO_PASSWORD="$2"; shift 2 ;;
-    *)              shift ;;   # Ignore unknown (lenient for live-ISO scripts)
+    *)
+      warn "Unknown option: $1 (ignored)"
+      shift ;;
   esac
 done
 
 # ─── Constants ──────────────────────────────────────────────────────────────
-TOTAL_STEPS=9
 SCRIPT_START=$(date +%s)
-RAW_URL="https://raw.githubusercontent.com/OhShabuShabu/Atlas-Modules/main"
+readonly RAW_URL="https://raw.githubusercontent.com/OhShabuShabu/Atlas-Modules/main"
 
 # ═════════════════════════════════════════════════════════════════════════════
 # MODULE DEFINITIONS (Step 8)
@@ -137,9 +163,9 @@ RAW_URL="https://raw.githubusercontent.com/OhShabuShabu/Atlas-Modules/main"
 # Centralized data for optional module selection / download.
 # Keep these arrays in sync — index N is the same conceptual module across all three.
 
-MODULE_IDS=(1 2 3 4 5 6 7 8 9)
+readonly MODULE_IDS=(1 2 3 4 5 6 7 8 9)
 
-MODULE_DESC=(
+readonly MODULE_DESC=(
   [1]="performance   — CPU governor, TCP BBR, Nix GC tuning"
   [2]="privacy       — Mullvad VPN, metadata cleaner"
   [3]="gaming        — Steam, MangoHUD overlay"
@@ -151,7 +177,7 @@ MODULE_DESC=(
   [9]="extras        — AI/ML (Ollama ROCm), animated wallpapers"
 )
 
-MODULE_FILE=(
+readonly MODULE_FILE=(
   [1]="performance.nix"
   [2]="privacy/privacy.nix"
   [3]="gaming/gaming.nix"
@@ -163,7 +189,7 @@ MODULE_FILE=(
   [9]="extras.nix"
 )
 
-MODULE_SUBDIR=(
+readonly MODULE_SUBDIR=(
   [1]="nixos"
   [2]="nixos"
   [3]="nixos"
@@ -195,7 +221,7 @@ if ! command -v nix &>/dev/null; then
 fi
 ok "Nix is available"
 
-TOTAL_MEM=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo)
+readonly TOTAL_MEM=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo)
 ok "Detected ${TOTAL_MEM}MB RAM"
 
 if [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]]; then
@@ -355,12 +381,10 @@ while :; do
 done
 
 # Write passphrase to a restricted-permissions temp file for disko.
-# Tracked by CLEANUP_FILES so the EXIT trap wipes + removes it automatically.
-umask 077
-LUKS_PW_FILE=$(mktemp -p /tmp luks-passphrase.XXXXXXXX)
+# The subshell ensures umask 077 doesn't leak to the outer scope.
+LUKS_PW_FILE=$(umask 077 && mktemp -p /tmp luks-passphrase.XXXXXXXX)
 echo -n "$LUKS_PW1" > "$LUKS_PW_FILE"
 CLEANUP_FILES+=("$LUKS_PW_FILE")
-umask 022
 unset LUKS_PW1 LUKS_PW2
 ok "LUKS passphrase confirmed"
 spacer
@@ -451,7 +475,7 @@ fi
 step 6 "Mounting & Installing NixOS"
 spacer
 
-TARGET=/mnt
+readonly TARGET=/mnt
 
 # Prevent Nix from blocking on interactive prompts during install
 # (Nix may try to confirm config changes; this env var auto-accepts).
@@ -469,9 +493,9 @@ spacer
 # ─── LUKS unlock ────────────────────────────────────────────────────────────
 sub_header "Unlocking LUKS encryption"
 if ! cryptsetup status crypt &>/dev/null; then
-  echo -e "  ${DIM}Enter your LUKS passphrase to unlock:${NC}"
-  echo -e "  ${DIM}  Device: ${BOLD}$LUKS_PART${NC}${DIM}  UUID: $LUKS_UUID${NC}"
-  cryptsetup open "$LUKS_PART" crypt
+  echo -e "  ${DIM}Unlocking LUKS device ${BOLD}$LUKS_PART${NC}${DIM}...${NC}"
+  # Use the passphrase file collected earlier — avoids a second interactive prompt
+  cryptsetup open --key-file "$LUKS_PW_FILE" "$LUKS_PART" crypt
 fi
 ok "LUKS device opened"
 spacer
@@ -520,9 +544,6 @@ ok "Password set"
 spacer
 
 # Hash the password using yescrypt.
-# Use a pipe instead of a here-string to avoid leaking $PW into /proc.
-# (The subshell will have it in its env for a moment, but that's unavoidable
-#  since we need to send it to mkpasswd's stdin.)
 sub_header "Hashing password for configuration injection"
 PW_HASH=$(echo "$PW" | mkpasswd -m yescrypt 2>/dev/null) || {
   fail "Password hashing failed — mkpasswd not available"
@@ -537,19 +558,21 @@ spacer
 # ─── Inject hashed password into config ─────────────────────────────────────
 sub_header "Injecting hashed password into Nix configuration"
 
-# Clean stale password lines first — crash-recovery guard against duplication
-sed -i '/initialPassword\|initialHashedPassword/d' "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true
-
-# Escape the hash for sed (hashes often contain $, ., /, &)
-PW_SAFE=$(printf '%s\n' "$PW_HASH" | sed -e 's/[/\&$]/\\&/g; s/\./\\./g')
-unset PW_HASH
+# Clean stale password lines first — crash-recovery guard against duplication.
+# Uses a tighter pattern matching only config assignment lines, not comments.
+sed -i '/^\s*initial\(Hashed\)\?Password\s*=/d' \
+  "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true
 
 # Append after the 'description = "yusa";' line inside the user block.
-# This keeps the hash inside the user attrset without mid-line insertion.
-sed -i '/description = "yusa";/a\    initialHashedPassword = "'"$PW_SAFE"'";' \
+# The hash is safe to interpolate directly (yescrypt uses $ + alphanumeric + ./. — no backslashes).
+# The `a\` command only treats trailing backslash specially, so no escaping needed.
+sed -i '/description = "yusa";/a\    initialHashedPassword = "'"$PW_HASH"'";' \
   "$ROOTDIR/files/core/configuration.nix" && \
   ok "Hashed password injected (no plaintext in config)" || \
   warn "Could not inject password into configuration.nix"
+
+# Clear the hash from shell memory immediately after injection
+unset PW_HASH
 spacer
 
 # ─── nixos-install ──────────────────────────────────────────────────────────
@@ -592,7 +615,7 @@ if wait "$NIX_PID" 2>/dev/null; then
 else
   NIX_EXIT=$?
 fi
-TOTAL=$((SECONDS - INSTALL_START))
+readonly TOTAL=$((SECONDS - INSTALL_START))
 
 if [[ $NIX_EXIT -eq 0 ]]; then
   echo
@@ -613,9 +636,12 @@ spacer
 
 info "Persisting machine-id..."
 mkdir -p "$TARGET/persistent/etc"
-# nixos-install may not always write machine-id before script runs
-cp "$TARGET/etc/machine-id" "$TARGET/persistent/etc/machine-id" 2>/dev/null || true
-ok "Machine-id saved"
+if [[ -f "$TARGET/etc/machine-id" ]]; then
+  cp "$TARGET/etc/machine-id" "$TARGET/persistent/etc/machine-id" 2>/dev/null || true
+  ok "Machine-id saved"
+else
+  warn "machine-id not found — will be generated on first boot"
+fi
 
 info "Copying configuration to installed system (persistent storage)..."
 mkdir -p "$TARGET/persistent/home/yusa"
@@ -630,7 +656,7 @@ ok "Config copied to /persistent/home/yusa/Atlas"
 step 8 "Optional Modules (Gaming, Dev, Privacy, etc.)"
 spacer
 
-OPT_DIR="$TARGET/persistent/home/yusa/Atlas/files/modules/optional"
+readonly OPT_DIR="$TARGET/persistent/home/yusa/Atlas/files/modules/optional"
 SELECTED_MODULES=()
 
 if [[ "$AUTO" -eq 0 ]]; then
@@ -640,6 +666,9 @@ if [[ "$AUTO" -eq 0 ]]; then
   echo -e "  ${BOLD}Select optional modules to install:${NC}"
   echo -e "  ${DIM}(type a number to toggle it on/off, press Enter when done)${NC}"
   spacer
+
+  # Calculate display height for cursor-up redraw: module entries + spacer line + prompt line
+  readonly MODULE_DISPLAY_LINES=$(( ${#MODULE_IDS[@]} + 2 ))
 
   while :; do
     for id in "${MODULE_IDS[@]}"; do
@@ -655,8 +684,8 @@ if [[ "$AUTO" -eq 0 ]]; then
       break
     elif [[ "$ANS" =~ ^[0-9]+$ ]] && [[ "$ANS" -ge 1 ]] && [[ "$ANS" -le 9 ]]; then
       TOGGLED[$ANS]=$((1 - ${TOGGLED[$ANS]:-0}))
-      # Move cursor back up to redraw and clear any remnants
-      printf '\033[11A\033[J'
+      # Move cursor back up to redraw — uses actual module count for accuracy
+      printf "\033[${MODULE_DISPLAY_LINES}A\033[J"
     fi
   done
 
@@ -690,10 +719,13 @@ if [[ ${#SELECTED_MODULES[@]} -gt 0 ]]; then
     DEST="$OPT_DIR/$SUBDIR/$FILENAME"
 
     mkdir -p "$OPT_DIR/$SUBDIR"
-    # Retry once on failure
-    timeout 30 "${CURL_CMD[@]}" -sSo "$DEST" "$RAW_URL/$FILE" 2>/dev/null || \
-      timeout 30 "${CURL_CMD[@]}" -sSo "$DEST" "$RAW_URL/$FILE" 2>/dev/null || \
-      { warn "Failed to download ${FILENAME} — skipping"; rm -f "$DEST"; continue; } &
+    (
+      if ! timeout 30 "${CURL_CMD[@]}" -sSo "$DEST" "$RAW_URL/$FILE" 2>/dev/null &&
+         ! timeout 30 "${CURL_CMD[@]}" -sSo "$DEST" "$RAW_URL/$FILE" 2>/dev/null; then
+        warn "Failed to download ${FILENAME} — skipping"
+        rm -f "$DEST"
+      fi
+    ) &
     DL_PIDS+=($!)
   done
 
