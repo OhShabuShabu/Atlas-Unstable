@@ -30,6 +30,30 @@
     # INFO: Snout security monitoring daemon
     ../modules/security/snout.nix
 
+    # INFO: TPM sealing & attestation (LUKS key sealing, PCR integrity check)
+    ../modules/security/tpm-sealing.nix
+
+    # INFO: LUKS keyfile with TPM sealing (2FA unlock: passphrase + keyfile)
+    ../modules/security/luks-keyfile.nix
+
+    # INFO: Secure Boot kernel signing
+    ../modules/security/secureboot.nix
+
+    # INFO: Memory wipe & anti-forensics (DRAM wipe, log shredding)
+    ../modules/security/memory-wipe.nix
+
+    # INFO: IMA/EVM kernel-level file integrity
+    ../modules/security/ima-evm.nix
+
+    # INFO: TPM/UEFI monitoring & tamper detection
+    ../modules/security/tpm-monitoring.nix
+
+    # INFO: Firmware version attestation (detects unauthorized BIOS/UEFI updates)
+    ../modules/security/firmware-check.nix
+
+    # INFO: LUKS unlock method test suite (test-luks-methods command)
+    ../modules/security/luks-test.nix
+
     # INFO: Feature modules (from external atlas-modules repo)
     ../modules/optional/nixos
   ];
@@ -41,6 +65,8 @@
   boot = {
     loader.systemd-boot.enable = true;
     loader.efi.canTouchEfiVariables = true;
+    # Secure Boot support is handled by sbctl + manual kernel signing (Wave 3, tasks 9-11)
+    # Key management tools: programs.sbctl or manual sbsign per task 9
 
     # Enable systemd initrd (required for LUKS)
     initrd.systemd.enable = true;
@@ -55,6 +81,10 @@
     # and they are never automatically cleaned from the EFI partition
     # Lower on machines with small EFI partitions (512MB common on many devices)
     loader.systemd-boot.configurationLimit = 3;
+
+    # TPM 2.0 kernel modules for hardware security module access
+    # Required for LUKS key sealing, Secure Boot attestation, and tamper detection
+    initrd.availableKernelModules = [ "tpm_tis" "tpm_crb" "tpm" ];
 
     # GPU initrd kernel modules moved to hardware/gpu/<vendor>.nix for per-machine selection.
     # Only include the driver for the actual hardware — all three bundles add ~200MB+ firmware
@@ -267,6 +297,14 @@
   # FIX: Flush L1 data cache on context switch (VM isolation)
   security.virtualisation.flushL1DataCache = "always";
 
+  # FIX: Enable TPM2 subsystem for hardware root of trust
+  #      Used for LUKS key sealing, Secure Boot attestation, and tamper detection
+  security.tpm2 = {
+    enable = true;
+    # Enable TSS 2.0 (ESAPI) for encryption operations
+    tctiEnvironment.enable = true;
+  };
+
   # ============================================================================
   # SECTION 10: LYNIS-BASED HARDENING IMPROVEMENTS
   # ============================================================================
@@ -344,6 +382,18 @@
       create = "0640 root adm";
     };
   };
+
+  # INFO: Remote syslog forwarding for audit, ClamAV, Snout logs
+  # NOTE: Configure remote server in /etc/rsyslog.d/remote.conf
+  #       Uncomment the remote forwarding lines with your syslog server address
+  services.rsyslogd.enable = true;
+  services.rsyslogd.extraConfig = ''
+    # Include remote forwarding config
+    $IncludeConfig /etc/rsyslog.d/remote.conf
+  '';
+
+  # INFO: Deploy remote syslog configuration
+  environment.etc."rsyslog.d/remote.conf".source = ./../etc/rsyslog.d/remote.conf;
 
   # FIX: Configure PAM for password strength and secure login
   # NOTE: Using libpwquality for password quality checks
@@ -532,6 +582,7 @@
     # Hardware control
     wtype
     wlrctl
+    tpm2-tools          # TPM 2.0 command suite for key sealing, PCR operations, attestation
 
     # Media
     pavucontrol

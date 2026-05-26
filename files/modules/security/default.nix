@@ -24,6 +24,14 @@
     ./auditd-config.nix
     ./quarantine.nix
     ./metadata-stripper.nix
+    ./tpm-sealing.nix
+    ./luks-keyfile.nix
+    ./secureboot.nix
+    ./memory-wipe.nix
+    ./ima-evm.nix
+    ./tpm-monitoring.nix
+    ./firmware-check.nix
+    ./luks-test.nix
   ];
 
   # INFO: Security packages
