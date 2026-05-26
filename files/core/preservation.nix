@@ -1,7 +1,12 @@
 { config, lib, ... }:
 let
+  # ── User identity ──────────────────────────────────────────────────
+  # Change these values to reconfigure the primary user for this machine.
+  userName = "yusa";
+  userHome = "/home/${userName}";
+
   # Folders from ~/Folder Structure/ that should be created in ~/ on boot and persist
-  # These are bind-mounted from /persistent/home/yusa/<name> to /home/yusa/<name>
+  # These are bind-mounted from /persistent/${userHome}/<name> to ${userHome}/<name>
   folderStructureDirs = [
     "Atlas"
     "Desktop"
@@ -36,7 +41,7 @@ in
 {
   # Impermanent / + /home: only explicitly listed paths survive reboot.
   # System paths are persisted via bind-mounts from /persistent/...
-  # User home paths are persisted via bind-mounts from /persistent/home/yusa/...
+  # User home paths are persisted via bind-mounts from /persistent${userHome}/...
 
   preservation = {
     enable = true;
@@ -56,10 +61,10 @@ in
         }
       ];
 
-      # User home directories — persisted from /persistent/home/yusa/<name>
-      # to /home/yusa/<name> via bind mount
+      # User home directories — persisted from /persistent${userHome}/<name>
+      # to ${userHome}/<name> via bind mount
       users = {
-        yusa = {
+        "${userName}" = {
           # Directory listing must be explicit since /home is tmpfs:
           # only paths listed here survive reboot.
           directories = folderStructureDirs ++ criticalDirs ++ appStateDirs;
@@ -79,15 +84,15 @@ in
   # Home directory + intermediate parents need explicit ownership.
   # With /home on tmpfs, these dirs don't survive reboot and must be recreated.
   #
-  # 1. Create /home/yusa with mode 0555 (not writable by user —
+  # 1. Create ${userHome} with mode 0755 (not writable by user —
   #    only bind-mounted persisted dirs can be written to)
-  # 2. Create subdirs owned by yusa so home-manager + apps can write into them
+  # 2. Create subdirs owned by ${userName} so home-manager + apps can write into them
   systemd.tmpfiles.settings."home-dir" = {
-    "/home/yusa".d = { user = "yusa"; group = "users"; mode = "0755"; };
-    "/home/yusa/.config".d = { user = "yusa"; group = "users"; mode = "0755"; };
-    "/home/yusa/.local".d = { user = "yusa"; group = "users"; mode = "0755"; };
-    "/home/yusa/.local/share".d = { user = "yusa"; group = "users"; mode = "0755"; };
-    "/home/yusa/.local/state".d = { user = "yusa"; group = "users"; mode = "0755"; };
-    "/home/yusa/.cache".d = { user = "yusa"; group = "users"; mode = "0755"; };
+    "${userHome}".d = { user = "${userName}"; group = "users"; mode = "0755"; };
+    "${userHome}/.config".d = { user = "${userName}"; group = "users"; mode = "0755"; };
+    "${userHome}/.local".d = { user = "${userName}"; group = "users"; mode = "0755"; };
+    "${userHome}/.local/share".d = { user = "${userName}"; group = "users"; mode = "0755"; };
+    "${userHome}/.local/state".d = { user = "${userName}"; group = "users"; mode = "0755"; };
+    "${userHome}/.cache".d = { user = "${userName}"; group = "users"; mode = "0755"; };
   };
 }

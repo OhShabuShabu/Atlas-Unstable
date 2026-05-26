@@ -7,6 +7,24 @@
 # ============================================================================
 
 { config, pkgs, lib, inputs, ... }:
+
+# ============================================================================
+# HARDWARE COMPATIBILITY NOTE
+# ============================================================================
+# This configuration is designed to auto-detect and adapt to different
+# hardware via the files/hardware/detect/ infrastructure:
+#
+#   - CPU vendor (Intel/AMD/generic) → appropriate kvm module + microcode
+#   - GPU vendor (AMD/Intel/NVIDIA/generic) → driver + initrd KMS modules
+#   - RAM size → adaptive swap size, tmpfs limits, nix parallelism
+#
+# Override auto-detection in your hardware-configuration.nix or here:
+#   hardware.cpu.vendor = lib.mkForce "amd";
+#   hardware.gpu.vendor = lib.mkForce "intel";
+#   hardware.memory.totalMB = lib.mkForce 4096;
+#
+# Undetected/generic hardware gets safe fallbacks that always boot.
+# ============================================================================
 {
   # ============================================================================
   # MODULE IMPORTS
@@ -84,12 +102,17 @@
     # Lower on machines with small EFI partitions (512MB common on many devices)
     loader.systemd-boot.configurationLimit = 3;
 
-    # TPM 2.0 kernel modules for hardware security module access
-    # Required for LUKS key sealing, Secure Boot attestation, and tamper detection
-    initrd.availableKernelModules = [ "tpm_tis" "tpm_crb" "tpm" ];
+    # TPM 2.0 kernel modules — loaded only if TPM hardware is present.
+    # On systems without TPM (older hardware, VMs, some laptops), loading
+    # these modules just wastes memory and slows boot by probing for
+    # non-existent hardware. The detection reads /sys/class/tpm/ at eval time.
+    initrd.availableKernelModules =
+      let tpmPresent = builtins.tryEval (builtins.pathExists "/sys/class/tpm/tpm0");
+      in lib.mkIf (tpmPresent.success && tpmPresent.value) [ "tpm_tis" "tpm_crb" "tpm" ];
 
-    # Load TPM modules in main kernel too (not just initrd) so post-boot TPM services work
-    kernelModules = [ "tpm_tis" "tpm_crb" "tpm" ];
+    kernelModules =
+      let tpmPresent = builtins.tryEval (builtins.pathExists "/sys/class/tpm/tpm0");
+      in lib.mkIf (tpmPresent.success && tpmPresent.value) [ "tpm_tis" "tpm_crb" "tpm" ];
 
     # GPU initrd kernel modules moved to hardware/gpu/<vendor>.nix for per-machine selection.
     # Only include the driver for the actual hardware — all three bundles add ~200MB+ firmware
@@ -129,9 +152,7 @@
   # ============================================================================
   # SECTION 2: NETWORK CONFIGURATION
   # ============================================================================
-  # Host name
-  networking.hostName = "atlas";
-
+  # Host name — defined in profiles/atlas.nix
   # Use NetworkManager with systemd-resolved for DNSSEC + DNS-over-TLS
   networking.networkmanager.enable = true;
   networking.networkmanager.dns = "systemd-resolved";
@@ -192,9 +213,15 @@
   # Build optimization: remove derivation outputs from store faster
   nix.settings.keep-derivations = false;
 
-  # GC thresholds: keep 1GB min free, clean up to 5GB
-  nix.settings.min-free = 1000000000;
-  nix.settings.max-free = 5000000000;
+  # GC thresholds: scale with detected RAM (min 1GB / max 5GB default)
+  # Low-memory systems keep less free space to avoid OOM during builds
+  nix.settings.min-free = let memMB = config.hardware.memory.totalMB;
+    in if memMB < 4096 then 500000000     # < 4GB RAM: keep 500MB free
+       else 1000000000;                    # ≥ 4GB RAM: keep 1GB free
+  nix.settings.max-free = let memMB = config.hardware.memory.totalMB;
+    in if memMB < 4096 then 2000000000    # < 4GB RAM: clean to 2GB
+       else if memMB < 8192 then 3000000000  # 4-8GB RAM: clean to 3GB
+       else 5000000000;                     # ≥ 8GB RAM: clean to 5GB
 
   # Automatic GC: weekly, remove generations older than 30 days
   nix.gc.automatic = true;
@@ -215,24 +242,7 @@
   # ============================================================================
   # SECTION 5: TIMEZONE & LOCALIZATION
   # ============================================================================
-  # Set timezone
-  time.timeZone = "Europe/Berlin";
-
-  # Default locale
-  i18n.defaultLocale = "en_US.UTF-8";
-
-  # Additional locale settings (German)
-  i18n.extraLocaleSettings = {
-    LC_ADDRESS = "de_DE.UTF-8";
-    LC_IDENTIFICATION = "de_DE.UTF-8";
-    LC_MEASUREMENT = "de_DE.UTF-8";
-    LC_MONETARY = "de_DE.UTF-8";
-    LC_NAME = "de_DE.UTF-8";
-    LC_NUMERIC = "de_DE.UTF-8";
-    LC_PAPER = "de_DE.UTF-8";
-    LC_TELEPHONE = "de_DE.UTF-8";
-    LC_TIME = "de_DE.UTF-8";
-  };
+  # Timezone, locale, domain — defined in profiles/atlas.nix
 
 
   # ============================================================================
@@ -534,8 +544,7 @@
     };
   };
 
-  # FIX: Set domain for DNS
-  networking.domain = "local";
+  # Domain — defined in profiles/atlas.nix
 
   # FIX: Enable USBGuard for USB device authorization
   #      Allow all USB devices (relaxed policy); tighten with:
@@ -619,7 +628,7 @@
   # FIX: Use a fallback path that works even before user config is fully evaluated
   environment.sessionVariables = {
     "QT_QPA_PLATFORMTHEME" = "kde";
-    "KDE_COLOR_SCHEME" = "/home/yusa/.local/share/color-schemes/SkwdMatugen.colors";
+    "KDE_COLOR_SCHEME" = "${config.users.users.yusa.home}/.local/share/color-schemes/SkwdMatugen.colors";
     XDG_CURRENT_DESKTOP = "niri";
     XDG_SESSION_TYPE = "wayland";
     XDG_SESSION_DESKTOP = "niri";
@@ -695,6 +704,11 @@
     wtype
     wlrctl
     tpm2-tools          # TPM 2.0 command suite for key sealing, PCR operations, attestation
+
+    # Hardware detection and compatibility report
+    (pkgs.writeShellScriptBin "atlas-hardware-detect" ''
+      exec ${../bin/shell/detect-hardware.sh} "$@"
+    '')
 
     # Media
     pavucontrol
