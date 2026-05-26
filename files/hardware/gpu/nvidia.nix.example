@@ -1,5 +1,18 @@
 { pkgs, lib, ... }:
 
+# ============================================================================
+# NVIDIA GPU CONFIGURATION EXAMPLE
+# ============================================================================
+# NOTE: This file is an EXAMPLE reference. The system now uses
+#       files/hardware/gpu/nvidia.nix (active) which is auto-detected
+#       when an NVIDIA GPU is found in /sys/class/drm/.
+#
+#       To force NVIDIA GPU configuration regardless of detection:
+#         hardware.gpu.vendor = lib.mkForce "nvidia";
+#
+#       NOTE: Requires allowUnfree = true (set globally in configuration.nix).
+# ============================================================================
+
 {
   imports = [ ];
 
@@ -9,7 +22,24 @@
     enable = true;
   };
 
+  hardware.nvidia = {
+    modesetting.enable = true;    # Required for Wayland (Niri)
+    nvencSupport = true;
+    cudaSupport = true;
+    powerManagement.enable = true;
+    dynamicBoost.enable = true;
+  };
+
+  # NVIDIA initrd modules for early KMS
+  boot.initrd.kernelModules = [ "nvidia" "nvidia_modeset" "nvidia_uvm" "nvidia_drm" ];
+  boot.initrd.availableKernelModules = [ "nvidia" ];
+
+  boot.extraModprobeConfig = ''
+    options nvidia_drm modeset=1 fbdev=1
+  '';
+
   environment.systemPackages = with pkgs; [
     nvidia-vaapi-driver
+    nvidia-settings
   ];
 }

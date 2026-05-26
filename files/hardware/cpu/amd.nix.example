@@ -1,7 +1,24 @@
 { pkgs, lib, ... }:
 
+# ============================================================================
+# AMD CPU CONFIGURATION EXAMPLE
+# ============================================================================
+# NOTE: This file is an EXAMPLE reference. The system now uses
+#       files/hardware/cpu/amd.nix (active) which is auto-detected
+#       when an AMD CPU is found in /proc/cpuinfo.
+#
+#       To force AMD CPU configuration regardless of detection:
+#         hardware.cpu.vendor = lib.mkForce "amd";
+# ============================================================================
+
 {
   imports = [ ];
 
   hardware.cpu.amd.updateMicrocode = true;
+
+  boot.kernelParams = [
+    "amd_iommu=on"
+    "amd_pstate=guided"
+    "tsc=reliable"
+  ];
 }

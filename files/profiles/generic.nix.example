@@ -1,5 +1,23 @@
 { config, pkgs, lib, ... }:
 
+# ============================================================================
+# GENERIC MACHINE PROFILE EXAMPLE
+# ============================================================================
+# This is a template for adding a new machine to the Atlas flake.
+# Copy this to profiles/<hostname>.nix and customize.
+#
+# Hardware settings are auto-detected by files/hardware/detect/.
+# Override detection in your machine profile:
+#   hardware.cpu.vendor = lib.mkForce "amd";
+#   hardware.gpu.vendor = lib.mkForce "intel";
+#   hardware.memory.totalMB = lib.mkForce 16384;
+#
+# To add this machine to the flake, add a new nixosConfigurations entry
+# in flake.nix referencing ./files/profiles/<hostname>.nix.
+#
+# See README.md or AGENTS.md for full instructions.
+# ============================================================================
+
 {
   imports = [ ];
 
