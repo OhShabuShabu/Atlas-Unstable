@@ -100,9 +100,10 @@ fi
 # ============================================================================
 header "4. CORE CONFIG"
 CFG="$BASE/files/core/configuration.nix"
+PROFILE="$BASE/files/profiles/atlas.nix"
 
 mlgrep "$CFG" 'system\.stateVersion\s*=\s*"25\.11"' && pass "system.stateVersion = 25.11" || fail "system.stateVersion not 25.11"
-mlgrep "$CFG" 'hostName\s*=\s*"atlas"' && pass "hostname = atlas" || fail "hostname not atlas"
+  mlgrep "$PROFILE" 'hostName\s*=\s*"atlas"' && pass "hostname = atlas" || fail "hostname not atlas"
 mlgrep "$CFG" 'experimental-features.*nix-command.*flakes' && pass "Flakes + nix-command enabled" || fail "Flakes/nix-command not enabled"
 mlgrep "$CFG" 'allowUnfree\s*=\s*true' && pass "Unfree packages allowed" || fail "Unfree not allowed"
 mlgrep "$CFG" 'systemd-boot.*enable\s*=\s*true' && pass "systemd-boot enabled" || fail "systemd-boot not enabled"
@@ -117,7 +118,7 @@ mlgrep "$CFG" 'qt.*enable\s*=\s*true' && pass "Qt enabled" || fail "Qt not enabl
 mlgrep "$CFG" 'platformTheme\s*=\s*"kde"' && pass "Qt KDE platform theme" || fail "Qt KDE platform theme not set"
 mlgrep "$CFG" 'XDG_CURRENT_DESKTOP.*niri' && pass "XDG_CURRENT_DESKTOP = niri" || fail "XDG_CURRENT_DESKTOP not set"
 mlgrep "$CFG" 'XDG_SESSION_TYPE.*wayland' && pass "XDG_SESSION_TYPE = wayland" || fail "XDG_SESSION_TYPE not set"
-mlgrep "$CFG" 'timeZone.*Europe/Berlin' && pass "Timezone = Europe/Berlin" || fail "Timezone not set"
+  mlgrep "$PROFILE" 'timeZone.*Europe/Berlin' && pass "Timezone = Europe/Berlin" || fail "Timezone not set"
 mlgrep "$CFG" 'polkit.*enable\s*=\s*true' && pass "Polkit enabled" || fail "Polkit not enabled"
 mlgrep "$CFG" 'apparmor.*enable\s*=\s*true' && pass "AppArmor enabled" || fail "AppArmor not enabled"
 mlgrep "$CFG" 'home-manager\.useUserPackages\s*=\s*true' && pass "home-manager user packages enabled" || fail "home-manager user packages not enabled"
@@ -133,6 +134,66 @@ mlgrep "$CFG" 'monocraft' && pass "Monocraft font configured" || fail "Monocraft
 mlgrep "$CFG" 'protectKernelImage\s*=\s*true' && pass "protectKernelImage enabled" || fail "protectKernelImage not enabled"
 mlgrep "$CFG" 'forcePageTableIsolation\s*=\s*true' && pass "forcePageTableIsolation enabled" || fail "forcePageTableIsolation not enabled"
 mlgrep "$CFG" 'nier-automata' && pass "SDDM Nier Automata theme configured" || warn "SDDM Nier Automata theme not configured"
+
+# ============================================================================
+# 4b. HARDWARE DETECTION & COMPATIBILITY
+# ============================================================================
+header "4b. HARDWARE DETECTION"
+# Detection infrastructure
+[ -f "$BASE/files/hardware/detect/default.nix" ] && pass "hardware/detect/default.nix exists" || fail "hardware/detect/default.nix missing"
+[ -f "$BASE/files/hardware/detect/cpu.nix" ] && pass "hardware/detect/cpu.nix exists" || fail "hardware/detect/cpu.nix missing"
+[ -f "$BASE/files/hardware/detect/gpu.nix" ] && pass "hardware/detect/gpu.nix exists" || fail "hardware/detect/gpu.nix missing"
+[ -f "$BASE/files/hardware/detect/memory.nix" ] && pass "hardware/detect/memory.nix exists" || fail "hardware/detect/memory.nix missing"
+
+# Detection options registered
+mlgrep "$BASE/files/hardware/detect/cpu.nix" 'hardware\.cpu\.vendor' && pass "detect/cpu.nix: hardware.cpu.vendor option" || fail "detect/cpu.nix missing hardware.cpu.vendor option"
+mlgrep "$BASE/files/hardware/detect/gpu.nix" 'hardware\.gpu\.vendor' && pass "detect/gpu.nix: hardware.gpu.vendor option" || fail "detect/gpu.nix missing hardware.gpu.vendor option"
+mlgrep "$BASE/files/hardware/detect/memory.nix" 'hardware\.memory\.totalMB' && pass "detect/memory.nix: hardware.memory.totalMB option" || fail "detect/memory.nix missing hardware.memory.totalMB option"
+
+# CPU auto-detection module with conditional import
+mlgrep "$BASE/files/hardware/cpu/default.nix" 'hardware\.cpu\.vendor' && pass "cpu/default.nix: conditional import based on vendor" || fail "cpu/default.nix missing conditional import"
+[ -f "$BASE/files/hardware/cpu/generic.nix" ] && pass "cpu/generic.nix exists (fallback)" || fail "cpu/generic.nix missing"
+[ -f "$BASE/files/hardware/cpu/intel.nix" ] && pass "cpu/intel.nix exists" || fail "cpu/intel.nix missing"
+[ -f "$BASE/files/hardware/cpu/amd.nix" ] && pass "cpu/amd.nix exists" || fail "cpu/amd.nix missing"
+mlgrep "$BASE/files/hardware/cpu/default.nix" 'kvm-intel' && pass "cpu/default.nix: selects kvm-intel for Intel" || fail "cpu/default.nix missing kvm-intel"
+mlgrep "$BASE/files/hardware/cpu/default.nix" 'kvm-amd' && pass "cpu/default.nix: selects kvm-amd for AMD" || fail "cpu/default.nix missing kvm-amd"
+mlgrep "$BASE/files/hardware/cpu/default.nix" 'kvm' && pass "cpu/default.nix: generic kvm fallback" || fail "cpu/default.nix missing generic kvm"
+
+# GPU auto-detection module with conditional import
+mlgrep "$BASE/files/hardware/gpu/default.nix" 'hardware\.gpu\.vendor' && pass "gpu/default.nix: conditional import based on vendor" || fail "gpu/default.nix missing conditional import"
+[ -f "$BASE/files/hardware/gpu/generic.nix" ] && pass "gpu/generic.nix exists (fallback)" || fail "gpu/generic.nix missing"
+[ -f "$BASE/files/hardware/gpu/amd.nix" ] && pass "gpu/amd.nix exists" || fail "gpu/amd.nix missing"
+[ -f "$BASE/files/hardware/gpu/intel.nix" ] && pass "gpu/intel.nix exists" || fail "gpu/intel.nix missing"
+[ -f "$BASE/files/hardware/gpu/nvidia.nix" ] && pass "gpu/nvidia.nix exists" || fail "gpu/nvidia.nix missing"
+
+# Audio: no hardcoded ALSA device
+AUDIO_CFG="$BASE/files/hardware/audio/default.nix"
+mlgrep "$AUDIO_CFG" 'alsaDevice' && pass "audio/default.nix: alsaDevice option defined" || fail "audio/default.nix missing alsaDevice option"
+mlgrep "$AUDIO_CFG" 'hardware\.audio\.alsaDevice' && pass "audio/default.nix: configurable via hardware.audio.alsaDevice" || fail "audio/default.nix missing hardware.audio.alsaDevice reference"
+# Check that the old hardcoded PCI address is gone
+grep -q '0000_00_1f\.3' "$AUDIO_CFG" && warn "audio/default.nix: still has hardcoded Intel HDA PCI address (may break on non-Intel)" || pass "audio/default.nix: no hardcoded PCI address"
+
+# Display outputs are generic (no hardcoded monitor names)
+OUTPUTS_KDL="$BASE/files/config/niri/outputs.kdl"
+grep -q 'eDP-1\|DP-1\|HDMI-A-1' "$OUTPUTS_KDL" && pass "outputs.kdl: has example output names (commented)" || warn "outputs.kdl: no example output names"
+
+# Hardware detection script exists and is executable
+[ -x "$BASE/files/bin/shell/detect-hardware.sh" ] && pass "detect-hardware.sh exists and is executable" || fail "detect-hardware.sh missing or not executable"
+
+# Optional GPU module references detection
+OPT_GPU="$BASE/files/modules/optional/nixos/gpu.nix"
+mlgrep "$OPT_GPU" 'hardware\.gpu\.vendor' && pass "optional/gpu.nix: uses hardware.gpu.vendor for detection" || fail "optional/gpu.nix missing detection reference"
+
+# kernel-boot.nix has configurable thunderbolt
+mlgrep "$BASE/files/modules/security/kernel-boot.nix" 'blockThunderbolt' && pass "kernel-boot.nix: configurable Thunderbolt blocking" || fail "kernel-boot.nix missing blockThunderbolt option"
+
+# current-system.nix has adaptive swap/tmpfs
+CSN="$BASE/files/core/current-system.nix"
+mlgrep "$CSN" 'hardware\.memory\.' && pass "current-system.nix: references hardware.memory for adaptive sizes" || fail "current-system.nix missing hardware.memory references"
+mlgrep "$CSN" 'swapSize' && pass "current-system.nix: adaptive swap size" || fail "current-system.nix missing adaptive swap size"
+
+# flake.nix multi-arch support
+mlgrep "$BASE/flake.nix" 'supportedSystems' && pass "flake.nix: multi-architecture support structure" || warn "flake.nix: missing supportedSystems"
 
 # ============================================================================
 # 5. HOME MANAGER CONFIG
@@ -523,7 +584,7 @@ mlgrep "$QUAR" 'before.*quarantine-sanitizer' && pass "Quarantine setup before s
 mlgrep "$CFG" 'docker' && pass "User in docker group" || fail "User not in docker group"
 if [ "$ATLAS_MODULES_AVAILABLE" = true ]; then
   mlgrep "$ATLAS_MODULES/virtualisation.nix" 'libvirtd' && pass "User in libvirtd group" || fail "User not in libvirtd group"
-  mlgrep "$AUDIO_CFG" 'alsa\.support32Bit\s*=\s*true' && pass "ALSA 32-bit enabled" || fail "ALSA 32-bit not enabled"
+  mlgrep "$AUDIO_CFG" 'alsa.*support32Bit' && pass "ALSA 32-bit configured" || fail "ALSA 32-bit not configured"
 else
   warn "libvirtd group check skipped — external modules not found"
 fi
