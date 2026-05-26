@@ -24,6 +24,13 @@
     neededForBoot = true;
   };
 
+  fileSystems."/tmp" = {
+    device = "tmpfs";
+    fsType = "tmpfs";
+    options = [ "size=25%" "mode=1777" ];
+    neededForBoot = true;
+  };
+
   fileSystems."/home" = {
     device = "tmpfs";
     fsType = "tmpfs";
