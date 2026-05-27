@@ -1,4 +1,4 @@
-{ pkgs, lib, ... }:
+{ config, pkgs, lib, ... }:
 
 # ============================================================================
 # GENERIC GPU CONFIGURATION
@@ -10,11 +10,10 @@
 # This is a GRACEFUL DEGRADATION path — the system boots and runs a desktop,
 # but without GPU acceleration. Users should install the correct GPU module
 # for their hardware.
+# Guarded by mkIf so it only activates when hardware.gpu.vendor == "generic".
 # ============================================================================
 
-{
-  imports = [ ];
-
+lib.mkIf (config.hardware.gpu.vendor == "generic") {
   hardware.graphics = {
     enable = true;
     # No vendor-specific VA-API or Vulkan packages

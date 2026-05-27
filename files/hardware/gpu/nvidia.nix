@@ -1,4 +1,4 @@
-{ pkgs, lib, config, ... }:
+{ config, pkgs, lib, ... }:
 
 # ============================================================================
 # NVIDIA GPU CONFIGURATION
@@ -8,14 +8,13 @@
 #
 # NOTE: Requires allowUnfree = true (set in configuration.nix).
 # NOTE: Optimus/Prime laptops need special handling (not covered here).
+# Guarded by mkIf so it only activates when hardware.gpu.vendor == "nvidia".
 # ============================================================================
 
 let
   # Use the latest stable NVIDIA driver branch
   nvidiaPackage = config.boot.kernelPackages.nvidiaPackages.stable;
-in {
-  imports = [ ];
-
+in lib.mkIf (config.hardware.gpu.vendor == "nvidia") {
   services.xserver.videoDrivers = [ "nvidia" ];
 
   hardware.graphics = {

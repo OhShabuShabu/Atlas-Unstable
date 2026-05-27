@@ -1,8 +1,6 @@
-{ ... }:
+{ config, lib, ... }:
 
-{
-  imports = [ ];
-
+lib.mkIf (config.hardware.gpu.vendor == "amd") {
   # RADV open-source Vulkan driver is enabled by default on AMD GPUs
   hardware.graphics.enable = true;
 

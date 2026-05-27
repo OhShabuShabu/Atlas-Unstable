@@ -1,15 +1,14 @@
-{ pkgs, lib, ... }:
+{ config, pkgs, lib, ... }:
 
 # ============================================================================
 # INTEL GPU CONFIGURATION
 # ============================================================================
 # Intel integrated graphics with full VA-API hardware acceleration.
 # Works on Intel HD Graphics 2000+ through Arc/Xe.
+# Guarded by mkIf so it only activates when hardware.gpu.vendor == "intel".
 # ============================================================================
 
-{
-  imports = [ ];
-
+lib.mkIf (config.hardware.gpu.vendor == "intel") {
   hardware.graphics = {
     enable = true;
     extraPackages = with pkgs; [
