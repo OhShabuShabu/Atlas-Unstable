@@ -30,9 +30,6 @@ in lib.mkIf (config.hardware.gpu.vendor == "nvidia") {
     # Enable modesetting for Wayland (required for Niri)
     modesetting.enable = true;
 
-    # Enable NVENC/NVDEC hardware encoding
-    nvencSupport = true;
-
     # Power management (requires GPU firmware)
     powerManagement.enable = true;
 
