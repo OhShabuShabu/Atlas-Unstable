@@ -1,4 +1,4 @@
-{ pkgs, lib, ... }:
+{ config, pkgs, lib, ... }:
 
 # ============================================================================
 # GENERIC CPU CONFIGURATION
@@ -6,9 +6,10 @@
 # Safe defaults that work on any CPU vendor.
 # No vendor-specific microcode, no vendor-specific pstate drivers.
 # Used as fallback when CPU vendor cannot be detected.
+# Guarded by mkIf so it only activates when hardware.cpu.vendor == "generic".
 # ============================================================================
 
-{
+lib.mkIf (config.hardware.cpu.vendor == "generic") {
   imports = [ ];
 
   # No vendor-specific microcode (requires unfree firmware)

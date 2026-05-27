@@ -1,16 +1,14 @@
-{ pkgs, lib, ... }:
+{ config, pkgs, lib, ... }:
 
 # ============================================================================
 # INTEL CPU CONFIGURATION
 # ============================================================================
 # Intel-specific kernel parameters and microcode updates.
-# Imported automatically when hardware.cpu.vendor == "intel".
+# Guarded by mkIf so it only activates when hardware.cpu.vendor == "intel".
 # ============================================================================
 
-{
+lib.mkIf (config.hardware.cpu.vendor == "intel") {
   imports = [ ];
-
-  hardware.cpu.intel.updateMicrocode = lib.mkDefault true;
 
   boot.kernelParams = [
     "intel_pstate=active"     # Active energy-efficient performance scaling
