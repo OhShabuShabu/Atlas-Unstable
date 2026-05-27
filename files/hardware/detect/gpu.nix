@@ -6,10 +6,10 @@
 # Reads /proc/bus/pci/devices to detect AMD vs Intel vs NVIDIA vs generic GPU.
 # Falls back to "generic" if detection is unavailable.
 #
-# NOTE: Uses builtins.readFile (not readDir) because readDir on absolute paths
-# crashes in pure evaluation mode (nixos-install) and tryEval cannot catch
-# that error. readFile IS properly catchable by tryEval, so this module
-# safely falls back to "generic" during builds where /proc isn't available.
+# NOTE: Guards readFile with builtins.pathExists because pathExists returns false
+# cleanly in pure evaluation mode (nixos-install), while tryEval does NOT catch
+# readFile's path access errors. The guarded readFile is lazy — the then-branch
+# is never evaluated in pure mode.
 #
 # Manual override:
 #   hardware.gpu.vendor = lib.mkForce "intel";
@@ -18,16 +18,18 @@
 let
   # PCI vendor detection via /proc/bus/pci/devices
   # Vendor IDs: 1002=AMD, 8086=Intel, 10de=NVIDIA
-  pciDevices = builtins.tryEval (builtins.readFile "/proc/bus/pci/devices");
+  pciDevices = if builtins.pathExists "/proc/bus/pci/devices"
+    then builtins.readFile "/proc/bus/pci/devices"
+    else "";
 
-  hasAmd = if pciDevices.success then
-    builtins.match ".*1002.*" pciDevices.value != null
+  hasAmd = if pciDevices != "" then
+    builtins.match ".*1002.*" pciDevices != null
     else false;
-  hasIntel = if pciDevices.success then
-    builtins.match ".*8086.*" pciDevices.value != null
+  hasIntel = if pciDevices != "" then
+    builtins.match ".*8086.*" pciDevices != null
     else false;
-  hasNvidia = if pciDevices.success then
-    builtins.match ".*10de.*" pciDevices.value != null
+  hasNvidia = if pciDevices != "" then
+    builtins.match ".*10de.*" pciDevices != null
     else false;
 
   # Priority: If multiple GPUs detected, prefer AMD > NVIDIA > Intel

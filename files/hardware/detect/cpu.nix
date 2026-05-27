@@ -4,7 +4,12 @@
 # CPU VENDOR DETECTION
 # ============================================================================
 # Reads /proc/cpuinfo to detect Intel vs AMD vs generic CPU.
-# Falls back to "generic" if /proc/cpuinfo is unavailable (e.g., CI build).
+# Falls back to "generic" if /proc/cpuinfo is unavailable (e.g., CI build, pure eval).
+#
+# NOTE: Guards readFile with builtins.pathExists because pathExists returns false
+# cleanly in pure evaluation mode (nixos-install), while tryEval does NOT catch
+# readFile's path access errors. The guarded readFile is lazy — the then-branch
+# is never evaluated in pure mode.
 #
 # The detected vendor controls which CPU-specific module is imported:
 #   - "intel"   → imports files/hardware/cpu/intel.nix
@@ -16,13 +21,16 @@
 # ============================================================================
 
 let
-  # Try to read /proc/cpuinfo — fails gracefully if unavailable
-  cpuInfo = builtins.tryEval (builtins.readFile "/proc/cpuinfo");
+  # Read /proc/cpuinfo — guarded by pathExists to avoid pure-eval crash
+  # pathExists returns false for inaccessible paths in pure mode (no error)
+  cpuInfo = if builtins.pathExists "/proc/cpuinfo"
+    then builtins.readFile "/proc/cpuinfo"
+    else "";
   
   # Detect vendor from CPU flags/vendor string
-  detected = if cpuInfo.success then
-    if builtins.match ".*GenuineIntel.*" cpuInfo.value != null then "intel"
-    else if builtins.match ".*AuthenticAMD.*" cpuInfo.value != null then "amd"
+  detected = if cpuInfo != "" then
+    if builtins.match ".*GenuineIntel.*" cpuInfo != null then "intel"
+    else if builtins.match ".*AuthenticAMD.*" cpuInfo != null then "amd"
     else "generic"
   else "generic";
 in {

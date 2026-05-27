@@ -4,7 +4,10 @@
 # MEMORY DETECTION
 # ============================================================================
 # Reads /proc/meminfo to detect total physical RAM.
-# Falls back to 2048 MB (2 GB) if /proc/meminfo is unavailable.
+# Falls back to 2048 MB (2 GB) if /proc/meminfo is unavailable (e.g., pure eval).
+#
+# NOTE: Guards readFile with builtins.pathExists because pathExists returns false
+# cleanly in pure evaluation mode, while tryEval does NOT catch readFile's errors.
 #
 # The detected values control:
 #   - Swap file size (proportional to RAM)
@@ -16,13 +19,16 @@
 # ============================================================================
 
 let
-  memInfo = builtins.tryEval (builtins.readFile "/proc/meminfo");
+  # Read /proc/meminfo — guarded by pathExists to avoid pure-eval crash
+  memInfo = if builtins.pathExists "/proc/meminfo"
+    then builtins.readFile "/proc/meminfo"
+    else "";
   
   # Parse MemTotal from /proc/meminfo (in kB, convert to MB)
-  totalMB = if memInfo.success then
+  totalMB = if memInfo != "" then
     let
       # Extract the MemTotal value (e.g., "MemTotal:       16354328 kB")
-      match = builtins.match "[^0-9]*\n?MemTotal:\\s*(\\d+)\\s*kB" memInfo.value;
+      match = builtins.match "[^0-9]*\n?MemTotal:\\s*(\\d+)\\s*kB" memInfo;
       memTotalKB = if match != null then builtins.fromJSON (builtins.head match) else 0;
     in
       if memTotalKB > 0 then memTotalKB / 1024 else 2048  # fallback to 2GB
