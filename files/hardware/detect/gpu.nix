@@ -3,54 +3,32 @@
 # ============================================================================
 # GPU VENDOR DETECTION
 # ============================================================================
-# Reads /sys/class/drm/ to detect AMD vs Intel vs NVIDIA vs generic GPU.
+# Reads /proc/bus/pci/devices to detect AMD vs Intel vs NVIDIA vs generic GPU.
 # Falls back to "generic" if detection is unavailable.
 #
-# The detected vendor controls which GPU module is imported and which
-# initrd kernel modules are loaded for KMS (Kernel Mode Setting):
-#   - "amd"     → amdgpu driver, RADV Vulkan
-#   - "intel"   → i915 driver, intel-media-driver VA-API
-#   - "nvidia"  → nvidia driver (proprietary), nvidia-vaapi-driver
-#   - "generic" → no GPU-specific drivers (uses modesetting/KMS fallback)
-#
-# NOTE: Detection reads /sys/class/drm/ which lists available DRM devices.
-# Each GPU driver creates a directory like "card0" or "card0-<vendor>".
-# We also check /sys/devices/ for PCI vendor IDs as a secondary source.
+# NOTE: Uses builtins.readFile (not readDir) because readDir on absolute paths
+# crashes in pure evaluation mode (nixos-install) and tryEval cannot catch
+# that error. readFile IS properly catchable by tryEval, so this module
+# safely falls back to "generic" during builds where /proc isn't available.
 #
 # Manual override:
 #   hardware.gpu.vendor = lib.mkForce "intel";
 # ============================================================================
 
 let
-  # Try DRM class detection (primary method)
-  drmDir = builtins.tryEval (builtins.readDir "/sys/class/drm");
-  
-  hasAmdDrm = if drmDir.success then
-    builtins.any (n: builtins.match ".*amdgpu.*" n != null) (builtins.attrNames drmDir.value)
-    else false;
-  hasIntelDrm = if drmDir.success then
-    builtins.any (n: builtins.match ".*i915.*" n != null || builtins.match ".*intel.*" n != null) (builtins.attrNames drmDir.value)
-    else false;
-  hasNvidiaDrm = if drmDir.success then
-    builtins.any (n: builtins.match ".*nvidia.*" n != null) (builtins.attrNames drmDir.value)
-    else false;
-
-  # Fallback: try PCI vendor detection via lspci (less reliable)
+  # PCI vendor detection via /proc/bus/pci/devices
+  # Vendor IDs: 1002=AMD, 8086=Intel, 10de=NVIDIA
   pciDevices = builtins.tryEval (builtins.readFile "/proc/bus/pci/devices");
-  hasAmdPci = if pciDevices.success then
-    builtins.match ".*1002.*" pciDevices.value != null  # AMD PCI vendor ID
-    else false;
-  hasIntelPci = if pciDevices.success then
-    builtins.match ".*8086.*" pciDevices.value != null  # Intel PCI vendor ID
-    else false;
-  hasNvidiaPci = if pciDevices.success then
-    builtins.match ".*10de.*" pciDevices.value != null  # NVIDIA PCI vendor ID
-    else false;
 
-  # Combine: DRM detection is primary, PCI is fallback
-  hasAmd = hasAmdDrm || (!drmDir.success && hasAmdPci);
-  hasIntel = hasIntelDrm || (!drmDir.success && hasIntelPci);
-  hasNvidia = hasNvidiaDrm || (!drmDir.success && hasNvidiaPci);
+  hasAmd = if pciDevices.success then
+    builtins.match ".*1002.*" pciDevices.value != null
+    else false;
+  hasIntel = if pciDevices.success then
+    builtins.match ".*8086.*" pciDevices.value != null
+    else false;
+  hasNvidia = if pciDevices.success then
+    builtins.match ".*10de.*" pciDevices.value != null
+    else false;
 
   # Priority: If multiple GPUs detected, prefer AMD > NVIDIA > Intel
   # (AMD has best open-source driver support on modern kernels)
@@ -63,10 +41,10 @@ in {
     vendor = lib.mkOption {
       type = lib.types.enum [ "amd" "intel" "nvidia" "generic" ];
       default = detected;
-      defaultText = lib.literalExpression "Auto-detected from /sys/class/drm/";
+      defaultText = lib.literalExpression "Auto-detected from /proc/bus/pci/devices";
       description = ''
         GPU vendor for hardware-specific drivers and firmware.
-        Auto-detected at evaluation time from /sys/class/drm/.
+        Auto-detected at evaluation time from PCI vendor IDs.
         Set manually to override:
         - "amd"     → amdgpu initrd, RADV, VA-API (amdgpu)
         - "intel"   → i915 initrd, Intel media driver, VA-API
