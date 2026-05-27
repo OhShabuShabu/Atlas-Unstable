@@ -10,8 +10,6 @@
 # ============================================================================
 
 lib.mkIf (config.hardware.cpu.vendor == "generic") {
-  imports = [ ];
-
   # No vendor-specific microcode (requires unfree firmware)
   # hardware.cpu.intel.updateMicrocode = false;
   # hardware.cpu.amd.updateMicrocode = false;

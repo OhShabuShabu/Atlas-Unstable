@@ -8,8 +8,6 @@
 # ============================================================================
 
 lib.mkIf (config.hardware.cpu.vendor == "intel") {
-  imports = [ ];
-
   boot.kernelParams = [
     "intel_pstate=active"     # Active energy-efficient performance scaling
     "tsc=reliable"            # TSC is invariant on modern Intel CPUs
