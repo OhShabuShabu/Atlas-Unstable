@@ -25,7 +25,9 @@
   hardware.nvidia = {
     modesetting.enable = true;    # Required for Wayland (Niri)
     nvencSupport = true;
-    cudaSupport = true;
+    # Note: hardware.nvidia.cudaSupport was removed in nixpkgs-unstable.
+    # CUDA runtime is included in the NVIDIA driver package itself.
+    # For system-wide CUDA package support, use: nixpkgs.config.cudaSupport = true
     powerManagement.enable = true;
     dynamicBoost.enable = true;
   };

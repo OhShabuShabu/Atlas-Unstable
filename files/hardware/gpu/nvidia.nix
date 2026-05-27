@@ -33,9 +33,6 @@ in lib.mkIf (config.hardware.gpu.vendor == "nvidia") {
     # Enable NVENC/NVDEC hardware encoding
     nvencSupport = true;
 
-    # Enable CUDA support
-    cudaSupport = true;
-
     # Power management (requires GPU firmware)
     powerManagement.enable = true;
 
