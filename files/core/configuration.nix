@@ -880,7 +880,8 @@
         aide-check.service aide-check.timer \
         firmware-version-check \
         tpm-attestation-check \
-        secureboot-verify 2>/dev/null || true
+        secureboot-verify \
+        mullvad-daemon 2>/dev/null || true
 
       FLAKE="''${FLAKE:-.#atlas}"
 
