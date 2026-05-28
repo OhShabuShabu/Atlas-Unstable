@@ -227,6 +227,107 @@ extract_script_from_nix() {
   "$BASE/tests/tools/extract_writeShellScript.py" "$nix_file" "$script_name" 2>/dev/null || return 1
 }
 
+# ─── Kernel/Memory/Module Test Helpers ──────────────────────────────────────
+
+# Validate a kernel sysctl value exists in the Nix config
+check_sysctl_value() {
+  local nix_file="$1" sysctl_name="$2" expected_value="$3"
+  local label="${4:-sysctl $sysctl_name = $expected_value}"
+  if grep -q "\"$sysctl_name\".*=.*$expected_value" "$nix_file" 2>/dev/null; then
+    pass "$label"
+    return 0
+  else
+    fail "$label (not found in $nix_file)"
+    return 1
+  fi
+}
+
+# Validate a kernel boot parameter exists
+check_boot_param() {
+  local nix_file="$1" param="$2"
+  local label="${3:-boot param: $param}"
+  if grep -q "\"$param\"" "$nix_file" 2>/dev/null; then
+    pass "$label"
+    return 0
+  else
+    fail "$label (not found in $nix_file)"
+    return 1
+  fi
+}
+
+# Check that a blocked/blacklisted module exists
+check_blocked_module() {
+  local nix_file="$1" module="$2"
+  local label="${3:-blocked module: $module}"
+  if grep -q "$module" "$nix_file" 2>/dev/null; then
+    pass "$label"
+    return 0
+  else
+    fail "$label (not blocked in $nix_file)"
+    return 1
+  fi
+}
+
+# Check a Nix config value exists with given pattern
+check_nix_value() {
+  local nix_file="$1" pattern="$2"
+  local label="${3:-config: $pattern}"
+  if grep -q "$pattern" "$nix_file" 2>/dev/null; then
+    pass "$label"
+    return 0
+  else
+    fail "$label (not found)"
+    return 1
+  fi
+}
+
+# ─── Service Discovery Utilities ────────────────────────────────────────────
+
+# Discover all systemd.services defined in a .nix file
+discover_services() {
+  local nix_file="$1"
+  grep -oP 'systemd\.services\.\K["]?[a-zA-Z0-9._-]+["]?' "$nix_file" 2>/dev/null | tr -d '"' | sort -u || true
+}
+
+# Discover all systemd.paths defined in a .nix file
+discover_paths() {
+  local nix_file="$1"
+  grep -oP 'systemd\.paths\.\K["]?[a-zA-Z0-9._-]+["]?' "$nix_file" 2>/dev/null | tr -d '"' | sort -u || true
+}
+
+# Discover all systemd.timers defined in a .nix file
+discover_timers() {
+  local nix_file="$1"
+  grep -oP 'systemd\.timers\.\K["]?[a-zA-Z0-9._-]+["]?' "$nix_file" 2>/dev/null | tr -d '"' | sort -u || true
+}
+
+# Discover all systemd.user.services defined in a .nix file
+discover_user_services() {
+  local nix_file="$1"
+  grep -oP 'systemd\.user\.services\.\K["]?[a-zA-Z0-9._-]+["]?' "$nix_file" 2>/dev/null | tr -d '"' | sort -u || true
+}
+
+# ─── Service Hardening Utilities ────────────────────────────────────────────
+
+# Check that a service in a Nix file has a specific hardening directive
+check_service_hardening() {
+  local nix_file="$1" service_name="$2" directive="$3"
+  local label="${4:-$service_name: has $directive}"
+
+  # Look for the directive within the serviceConfig block of the named service
+  if grep -zP "services\.$service_name.*?serviceConfig.*?$directive" "$nix_file" 2>/dev/null | tr '\0' '\n' | grep -q "$directive"; then
+    pass "$label"
+    return 0
+  fi
+  # Broader search: just check directive appears near service name
+  if grep -A30 "services\.$service_name\|services\.\"$service_name\"" "$nix_file" 2>/dev/null | grep -q "$directive"; then
+    pass "$label"
+    return 0
+  fi
+  fail "$label"
+  return 1
+}
+
 # ─── Summary ────────────────────────────────────────────────────────────────
 print_summary() {
   local suite_name="${1:-Daemon Behavioral Tests}"

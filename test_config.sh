@@ -44,6 +44,104 @@ grep -q 'sops-nix' "$BASE/flake.nix" && pass "sops-nix flake input present" || f
 python3 -c "import json; json.load(open('$BASE/flake.lock'))" 2>/dev/null && pass "flake.lock is valid JSON" || fail "flake.lock is not valid JSON"
 
 # ============================================================================
+# 1b. MODULE MANAGER
+# ============================================================================
+header "1b. MODULE MANAGER"
+# Core files
+[ -f "$BASE/files/lib/module-registry.nix" ] && pass "module-registry.nix exists" || fail "module-registry.nix missing"
+[ -f "$BASE/files/lib/module-registry.sh" ] && pass "module-registry.sh exists" || fail "module-registry.sh missing"
+[ -f "$BASE/files/bin/atlas-module-manager.sh" ] && pass "atlas-module-manager.sh exists" || fail "atlas-module-manager.sh missing"
+[ -f "$BASE/files/bin/atlas-module-apply.sh" ] && pass "atlas-module-apply.sh exists" || fail "atlas-module-apply.sh missing"
+[ -f "$BASE/files/bin/atlas-module.sh" ] && pass "atlas-module.sh exists (unified CLI)" || fail "atlas-module.sh missing"
+[ -f "$BASE/files/bin/atlas-module-verify.sh" ] && pass "atlas-module-verify.sh exists (load verification)" || fail "atlas-module-verify.sh missing"
+[ -f "$BASE/files/modules/module-manager/default.nix" ] && pass "module-manager/default.nix exists" || fail "module-manager/default.nix missing"
+
+# Module files
+[ -f "$BASE/files/modules/optional/nixos/default.nix" ] && pass "optional/nixos/default.nix exists" || fail "optional/nixos/default.nix missing"
+[ -f "$BASE/files/modules/optional/home/default.nix" ] && pass "optional/home/default.nix exists" || fail "optional/home/default.nix missing"
+
+# Module manager imports in configuration.nix
+mlgrep "$BASE/files/core/configuration.nix" 'atlas-module-manager\.enable' && pass "Module manager enabled in configuration.nix" || fail "Module manager not enabled in configuration.nix"
+mlgrep "$BASE/files/core/configuration.nix" 'modules/module-manager/default\.nix' && pass "Module manager imported in configuration.nix" || fail "Module manager not imported in configuration.nix"
+
+# Registry-based filtering enabled
+mlgrep "$BASE/files/modules/optional/nixos/default.nix" 'import.*module-registry\.nix' && pass "optional/nixos uses registry filtering" || fail "optional/nixos does NOT use registry filtering"
+mlgrep "$BASE/files/modules/optional/home/default.nix" 'import.*module-registry\.nix' && pass "optional/home uses registry filtering" || fail "optional/home does NOT use registry filtering"
+
+# Registry functions present
+mlgrep "$BASE/files/lib/module-registry.nix" 'validateDeps' && pass "module-registry.nix has validateDeps" || fail "module-registry.nix missing validateDeps"
+mlgrep "$BASE/files/lib/module-registry.nix" 'getReverseDeps' && pass "module-registry.nix has getReverseDeps" || fail "module-registry.nix missing getReverseDeps"
+mlgrep "$BASE/files/lib/module-registry.nix" 'getEnabledIds' && pass "module-registry.nix has getEnabledIds" || fail "module-registry.nix missing getEnabledIds"
+mlgrep "$BASE/files/lib/module-registry.nix" 'getDisabledIds' && pass "module-registry.nix has getDisabledIds" || fail "module-registry.nix missing getDisabledIds"
+mlgrep "$BASE/files/lib/module-registry.nix" 'generateStateSummary' && pass "module-registry.nix has generateStateSummary" || fail "module-registry.nix missing generateStateSummary"
+mlgrep "$BASE/files/lib/module-registry.nix" 'modulesByCategory' && pass "module-registry.nix has modulesByCategory" || fail "module-registry.nix missing modulesByCategory"
+
+# Registry shell script additions
+mlgrep "$BASE/files/lib/module-registry.sh" 'is_module_installed' && pass "module-registry.sh has is_module_installed" || fail "module-registry.sh missing is_module_installed"
+mlgrep "$BASE/files/lib/module-registry.sh" 'get_reverse_deps' && pass "module-registry.sh has get_reverse_deps" || fail "module-registry.sh missing get_reverse_deps"
+mlgrep "$BASE/files/lib/module-registry.sh" 'validate_deps' && pass "module-registry.sh has validate_deps" || fail "module-registry.sh missing validate_deps"
+mlgrep "$BASE/files/lib/module-registry.sh" 'MODULE_CATEGORIES' && pass "module-registry.sh has MODULE_CATEGORIES" || fail "module-registry.sh missing MODULE_CATEGORIES"
+
+# State management functions in module-registry.sh
+mlgrep "$BASE/files/lib/module-registry.sh" 'ensure_state' && pass "module-registry.sh has ensure_state" || fail "module-registry.sh missing ensure_state"
+mlgrep "$BASE/files/lib/module-registry.sh" 'read_state' && pass "module-registry.sh has read_state" || fail "module-registry.sh missing read_state"
+mlgrep "$BASE/files/lib/module-registry.sh" 'write_state' && pass "module-registry.sh has write_state" || fail "module-registry.sh missing write_state"
+
+# Shared logging library
+[ -f "$BASE/files/lib/logging.sh" ] && pass "lib/logging.sh exists" || fail "lib/logging.sh missing"
+mlgrep "$BASE/files/lib/logging.sh" 'log_header' && pass "lib/logging.sh has log_header" || fail "lib/logging.sh missing log_header"
+mlgrep "$BASE/files/lib/logging.sh" 'confirm' && pass "lib/logging.sh has confirm prompt" || fail "lib/logging.sh missing confirm"
+mlgrep "$BASE/files/lib/logging.sh" 'status_symbol' && pass "lib/logging.sh has status_symbol" || fail "lib/logging.sh missing status_symbol"
+mlgrep "$BASE/files/lib/logging.sh" 'log_to_journal' && pass "lib/logging.sh has log_to_journal" || fail "lib/logging.sh missing log_to_journal"
+
+# Module load verification script
+mlgrep "$BASE/files/bin/atlas-module-verify.sh" 'verify_module' && pass "atlas-module-verify.sh has verify_module function" || fail "atlas-module-verify.sh missing verify_module"
+mlgrep "$BASE/files/bin/atlas-module-verify.sh" 'quick_verify' && pass "atlas-module-verify.sh has quick_verify function" || fail "atlas-module-verify.sh missing quick_verify"
+mlgrep "$BASE/files/bin/atlas-module-verify.sh" 'list_checks' && pass "atlas-module-verify.sh has list_checks function" || fail "atlas-module-verify.sh missing list_checks"
+
+# UI backend selection in module manager
+mlgrep "$BASE/files/bin/atlas-module-manager.sh" 'select_backend' && pass "atlas-module-manager.sh has select_backend function" || fail "atlas-module-manager.sh missing select_backend"
+mlgrep "$BASE/files/bin/atlas-module-manager.sh" 'tty_main_menu' && pass "atlas-module-manager.sh has tty_main_menu fallback" || fail "atlas-module-manager.sh missing tty_main_menu"
+mlgrep "$BASE/files/bin/atlas-module-manager.sh" 'ATLAS_MODULE_UI' && pass "atlas-module-manager.sh supports ATLAS_MODULE_UI env" || fail "atlas-module-manager.sh missing ATLAS_MODULE_UI support"
+
+# Verify subcommand in unified CLI
+mlgrep "$BASE/files/bin/atlas-module.sh" 'atlas-module-verify' && pass "atlas-module.sh has verify subcommand" || fail "atlas-module.sh missing verify subcommand"
+mlgrep "$BASE/files/bin/atlas-module.sh" '\btui\b' && pass "atlas-module.sh has tui subcommand" || fail "atlas-module.sh missing tui subcommand"
+
+# Shared libs sourced by CLI scripts
+mlgrep "$BASE/files/bin/atlas-module.sh" 'lib/logging.sh' && pass "atlas-module.sh sources logging.sh" || fail "atlas-module.sh missing logging.sh import"
+mlgrep "$BASE/files/bin/atlas-module-manager.sh" 'lib/logging.sh' && pass "atlas-module-manager.sh sources logging.sh" || fail "atlas-module-manager.sh missing logging.sh import"
+mlgrep "$BASE/files/bin/atlas-module-apply.sh" 'lib/logging.sh' && pass "atlas-module-apply.sh sources logging.sh" || fail "atlas-module-apply.sh missing logging.sh import"
+
+# Unified CLI tool
+mlgrep "$BASE/files/bin/atlas-module.sh" 'cmd_enable' && pass "atlas-module.sh has cmd_enable" || fail "atlas-module.sh missing cmd_enable"
+mlgrep "$BASE/files/bin/atlas-module.sh" 'cmd_disable' && pass "atlas-module.sh has cmd_disable" || fail "atlas-module.sh missing cmd_disable"
+mlgrep "$BASE/files/bin/atlas-module.sh" 'cmd_install' && pass "atlas-module.sh has cmd_install" || fail "atlas-module.sh missing cmd_install"
+mlgrep "$BASE/files/bin/atlas-module.sh" 'cmd_remove' && pass "atlas-module.sh has cmd_remove" || fail "atlas-module.sh missing cmd_remove"
+mlgrep "$BASE/files/bin/atlas-module.sh" 'cmd_update' && pass "atlas-module.sh has cmd_update" || fail "atlas-module.sh missing cmd_update"
+mlgrep "$BASE/files/bin/atlas-module.sh" 'cmd_info' && pass "atlas-module.sh has cmd_info" || fail "atlas-module.sh missing cmd_info"
+mlgrep "$BASE/files/bin/atlas-module.sh" 'cmd_status' && pass "atlas-module.sh has cmd_status" || fail "atlas-module.sh missing cmd_status"
+mlgrep "$BASE/files/bin/atlas-module.sh" 'cmd_validate' && pass "atlas-module.sh has cmd_validate" || fail "atlas-module.sh missing cmd_validate"
+mlgrep "$BASE/files/bin/atlas-module.sh" 'cmd_search' && pass "atlas-module.sh has cmd_search" || fail "atlas-module.sh missing cmd_search"
+mlgrep "$BASE/files/bin/atlas-module.sh" 'cmd_category' && pass "atlas-module.sh has cmd_category" || fail "atlas-module.sh missing cmd_category"
+# Apply subcommand uses PATH-based exec (not broken Nix variable reference)
+mlgrep "$BASE/files/bin/atlas-module.sh" 'exec atlas-module-apply' && pass "atlas-module.sh apply uses PATH-based exec" || fail "atlas-module.sh apply uses stale Nix variable ref"
+
+# Desktop entry
+grep -q 'makeDesktopItem' "$BASE/files/modules/module-manager/default.nix" && pass "Desktop entry defined in module-manager" || fail "Desktop entry not defined"
+grep -q 'terminal = true' "$BASE/files/modules/module-manager/default.nix" && pass "Desktop entry launches in terminal" || fail "Desktop entry not set to terminal launch"
+
+# Systemd integration
+mlgrep "$BASE/files/modules/module-manager/default.nix" 'atlas-module-update-check' && pass "Systemd update-check service defined" || fail "Systemd update-check service missing"
+mlgrep "$BASE/files/modules/module-manager/default.nix" 'atlas-module-health' && pass "Systemd health-check service defined" || fail "Systemd health-check service missing"
+mlgrep "$BASE/files/modules/module-manager/default.nix" 'atlas-module-verify' && pass "Systemd module-verify service defined" || fail "Systemd module-verify service missing"
+mlgrep "$BASE/files/modules/module-manager/default.nix" 'gum' && pass "gum dependency declared" || fail "gum dependency missing"
+mlgrep "$BASE/files/modules/module-manager/default.nix" 'dialog' && pass "dialog dependency declared" || fail "dialog dependency missing"
+mlgrep "$BASE/files/modules/module-manager/default.nix" 'whiptail' && pass "whiptail dependency declared" || fail "whiptail dependency missing"
+mlgrep "$BASE/files/modules/module-manager/default.nix" 'moduleVerifyScript' && pass "moduleVerifyScript declared" || fail "moduleVerifyScript not declared"
+mlgrep "$BASE/files/modules/module-manager/default.nix" 'enableVerifyTimer' && pass "enableVerifyTimer option declared" || fail "enableVerifyTimer option not declared"
+
+# ============================================================================
 # 2. FILE EXISTENCE
 # ============================================================================
 header "2. FILE EXISTENCE"
@@ -534,6 +632,18 @@ grep -q 'lynis-scan' "$NUSHELL" && pass "Alias: lynis-scan" || fail "Alias: lyni
 grep -q 'snout-scan' "$NUSHELL" && pass "Alias: snout-scan" || fail "Alias: snout-scan missing"
 grep -q 'snortctl' "$NUSHELL" && pass "Alias: snortctl" || fail "Alias: snortctl missing"
 grep -q 'alias nr' "$NUSHELL" && pass "Alias: nr (atlas-rebuild)" || fail "Alias: nr missing"
+grep -q 'alias mod ' "$NUSHELL" && pass "Alias: mod (atlas-module)" || fail "Alias: mod missing"
+grep -q 'alias mod-list' "$NUSHELL" && pass "Alias: mod-list" || fail "Alias: mod-list missing"
+grep -q 'alias mod-enable' "$NUSHELL" && pass "Alias: mod-enable" || fail "Alias: mod-enable missing"
+grep -q 'alias mod-disable' "$NUSHELL" && pass "Alias: mod-disable" || fail "Alias: mod-disable missing"
+grep -q 'alias mod-install' "$NUSHELL" && pass "Alias: mod-install" || fail "Alias: mod-install missing"
+grep -q 'alias mod-remove' "$NUSHELL" && pass "Alias: mod-remove" || fail "Alias: mod-remove missing"
+grep -q 'alias mod-update' "$NUSHELL" && pass "Alias: mod-update" || fail "Alias: mod-update missing"
+grep -q 'alias mod-info' "$NUSHELL" && pass "Alias: mod-info" || fail "Alias: mod-info missing"
+grep -q 'alias mod-status' "$NUSHELL" && pass "Alias: mod-status" || fail "Alias: mod-status missing"
+grep -q 'alias mod-validate' "$NUSHELL" && pass "Alias: mod-validate" || fail "Alias: mod-validate missing"
+grep -q 'alias mod-apply' "$NUSHELL" && pass "Alias: mod-apply" || fail "Alias: mod-apply missing"
+grep -q 'alias mod-manager' "$NUSHELL" && pass "Alias: mod-manager" || fail "Alias: mod-manager missing"
 grep -q 'audit-tail' "$BASE/files/modules/security/auditd-config.nix" && pass "Alias: audit-tail" || fail "Alias: audit-tail missing"
 grep -q 'pa-report' "$BASE/files/modules/security/process-accounting.nix" && pass "Alias: pa-report" || fail "Alias: pa-report missing"
 
@@ -590,7 +700,88 @@ else
 fi
 
 # ============================================================================
-# 25. SUMMARY
+# 25. PERSISTENCE CONFIGURATION
+# ============================================================================
+header "25. PERSISTENCE"
+PRESERVE="$BASE/files/core/preservation.nix"
+
+# Preservation module imported
+mlgrep "$BASE/flake.nix" 'preservation' && pass "preservation flake input present" || fail "preservation flake input missing"
+mlgrep "$BASE/flake.nix" 'preservation\.nixosModules\.default' && pass "preservation module loaded in flake" || fail "preservation module not loaded"
+mlgrep "$BASE/flake.nix" 'preservation\.nix' && pass "preservation.nix imported in flake" || fail "preservation.nix not imported"
+
+# Preservation enabled
+grep -q 'enable = true' "$PRESERVE" && pass "preservation.enable = true" || fail "preservation not enabled"
+
+# System identity paths
+mlgrep "$PRESERVE" '/etc/ssh' && pass "Persistent: /etc/ssh (SSH host keys)" || fail "/etc/ssh not persisted"
+mlgrep "$PRESERVE" '/etc/machine-id' && pass "Persistent: /etc/machine-id (system identity)" || fail "/etc/machine-id not persisted"
+mlgrep "$PRESERVE" '/etc/nixos' && pass "Persistent: /etc/nixos (flake symlink)" || fail "/etc/nixos not persisted"
+
+# Root credentials
+mlgrep "$PRESERVE" '/root/\.ssh' && pass "Persistent: /root/.ssh (root SSH keys)" || warn "/root/.ssh not persisted"
+mlgrep "$PRESERVE" '/root/\.gnupg' && pass "Persistent: /root/.gnupg (root GPG keys)" || warn "/root/.gnupg not persisted"
+
+# User credentials
+mlgrep "$PRESERVE" '"\.ssh"' && pass "Persistent: ~/.ssh/ (SSH keys)" || fail "~/.ssh/ not persisted"
+mlgrep "$PRESERVE" '"\.gnupg"' && pass "Persistent: ~/.gnupg/ (GPG keys)" || warn "~/.gnupg/ not persisted"
+mlgrep "$PRESERVE" '\.password-store' && pass "Persistent: ~/.password-store/ (pass)" || warn "~/.password-store/ not persisted"
+mlgrep "$PRESERVE" 'keyrings' && pass "Persistent: ~/.local/share/keyrings/ (keyrings)" || fail "keyrings not persisted"
+
+# Nix/Home-manager state
+mlgrep "$PRESERVE" '\.local/state/nix' && pass "Persistent: ~/.local/state/nix/ (nix profiles)" || fail "nix profile state not persisted"
+mlgrep "$PRESERVE" '\.local/state/home-manager' && pass "Persistent: ~/.local/state/home-manager/ (HM state)" || fail "HM state not persisted"
+
+# Shell history
+mlgrep "$PRESERVE" '\.bash_history' && pass "Persistent: ~/.bash_history" || warn "bash_history not persisted"
+mlgrep "$PRESERVE" 'nushell' && pass "Persistent: ~/.local/state/nushell/ (nu history)" || warn "nushell state not persisted"
+
+# Flatpak
+mlgrep "$PRESERVE" '"\.var"' && pass "Persistent: ~/.var/ (Flatpak)" || fail "~/.var/ not persisted"
+mlgrep "$PRESERVE" '\.local/share/flatpak' && pass "Persistent: ~/.local/share/flatpak/ (Flatpak data)" || fail "Flatpak data not persisted"
+
+# Gaming
+mlgrep "$PRESERVE" '"\.steam"' && pass "Persistent: ~/.steam/ (Steam)" || fail "~/.steam/ not persisted"
+
+# VPN
+mlgrep "$PRESERVE" 'mullvad-vpn' && pass "Persistent: ~/.local/share/mullvad-vpn/ (VPN state)" || warn "Mullvad VPN state not persisted"
+
+# App configs
+mlgrep "$PRESERVE" '\.config/mpv' && pass "Persistent: ~/.config/mpv/" || warn "mpv config not persisted"
+mlgrep "$PRESERVE" '\.config/btop' && pass "Persistent: ~/.config/btop/" || warn "btop config not persisted"
+
+# User fonts
+mlgrep "$PRESERVE" '\.local/share/fonts' && pass "Persistent: ~/.local/share/fonts/ (user fonts)" || warn "user fonts not persisted"
+
+# Development state
+mlgrep "$PRESERVE" 'direnv' && pass "Persistent: ~/.direnv/ (direnv state)" || warn "direnv state not persisted"
+mlgrep "$PRESERVE" 'nvim' && pass "Persistent: ~/.local/share/nvim/ (neovim state)" || warn "neovim state not persisted"
+
+# Cache exceptions
+mlgrep "$PRESERVE" '\.cache/awww' && pass "Persistent: ~/.cache/awww/ (wallpaper cache)" || warn "awww cache not persisted"
+
+# Folder structure
+for dir in Atlas Desktop Documents Downloads "Encrypted Storage" Games Music Pictures Public Templates Videos; do
+  mlgrep "$PRESERVE" "$dir" && pass "Persistent: ~/$dir/ (folder structure)" || fail "~/$dir/ not persisted"
+done
+
+# Tmpfiles home directory setup
+mlgrep "$PRESERVE" 'tmpfiles.*settings.*home-dir' && pass "tmpfiles: home directory skeleton" || fail "tmpfiles home skeleton missing"
+
+# Explicitly ephemeral note
+grep -q 'Explicitly ephemeral' "$PRESERVE" && pass "Ephemeral paths documented" || warn "Ephemeral paths not documented in preservation.nix"
+
+# /var based persistence (commented note about persistent subvols)
+mlgrep "$PRESERVE" '/var/lib/clamav' && pass "Note: /var/lib/clamav on persistent subvol" || warn "No documentation of /var persistence"
+
+# Folder structure enum is in the file (check for every entry)
+MLGREP_FILE="$PRESERVE"
+for dir in Atlas Desktop Documents Downloads "Encrypted Storage" Games Music Pictures Public Templates Videos; do
+  mlgrep "$MLGREP_FILE" "\"$dir\"" && pass "folderStructureDirs includes $dir" || fail "folderStructureDirs missing $dir"
+done
+
+# ============================================================================
+# 26. SUMMARY
 # ============================================================================
 header "TEST RESULTS"
 TOTAL=$((PASS + FAIL + WARN))

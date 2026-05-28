@@ -1,12 +1,10 @@
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
 let
   # ── User identity ──────────────────────────────────────────────────
-  # Change these values to reconfigure the primary user for this machine.
   userName = "yusa";
   userHome = "/home/${userName}";
 
   # Folders from ~/Folder Structure/ that should be created in ~/ on boot and persist
-  # These are bind-mounted from /persistent/${userHome}/<name> to ${userHome}/<name>
   folderStructureDirs = [
     "Atlas"
     "Desktop"
@@ -21,78 +19,210 @@ let
     "Videos"
   ];
 
-  # Critical dotfiles/dotdirs that must survive tmpfs reboot
-  criticalDirs = [
-    # SSH keys (auth)
-    { directory = ".ssh"; mode = "0700"; }
+  # ============================================================================
+  # CRITICAL: Must persist — data loss or system breakage without these
+  # ============================================================================
 
-    # Nix/home-manager profile state — without this, HM activation breaks on reboot
+  # System identity — without these, machine changes identity every reboot
+  systemIdentityDirs = [
+    "/etc/ssh"
+    "/etc/nixos"
+  ];
+
+  systemIdentityFiles = [
+    {
+      file = "/etc/machine-id";
+      inInitrd = true;
+    }
+  ];
+
+  # Root credentials — ssh/gpg for automation/remote access
+  rootCredDirs = [
+    "/root/.ssh"
+    "/root/.gnupg"
+  ];
+
+  # User credentials — authentication material that MUST survive reboot
+  userCredDirs = [
+    { directory = ".ssh"; mode = "0700"; }
+    { directory = ".gnupg"; mode = "0700"; }
+    { directory = ".password-store"; mode = "0700"; }
+  ];
+
+  # Nix/home-manager profile state — without this, HM activation breaks on reboot
+  userNixStateDirs = [
     ".local/state/nix"
     ".local/state/home-manager"
   ];
 
-  # Additional app state that's nice to persist
-  appStateDirs = [
+  # ============================================================================
+  # RECOMMENDED: Should persist — significant usability/convenience loss otherwise
+  # ============================================================================
+
+  # Shell state and history
+  userShellStateDirs = [
+    ".local/state/nushell"
+  ];
+
+  userShellFiles = [
+    ".bash_history"
+  ];
+
+  # Secret/keyring stores
+  userKeyringDirs = [
     ".local/share/keyrings"
-    ".steam"
+  ];
+
+  # Flatpak — full installations (not just partial config)
+  # Without this, all Flatpak apps must be re-installed after every reboot
+  userFlatpakDirs = [
     ".var"
+    ".local/share/flatpak"
+  ];
+
+  # Gaming — Steam, game configs, saves
+  userGamingDirs = [
+    ".steam"
+  ];
+
+  # VPN & privacy services
+  userVpnDirs = [
+    ".local/share/mullvad-vpn"
+  ];
+
+  # ============================================================================
+  # OPTIONAL: Nice to have — improves UX but not critical
+  # ============================================================================
+
+  # Application configs that are NOT managed by home-manager
+  # Managed by HM: niri, nushell, alacritty, ghostty, noctalia-shell, git
+  # Unmanaged (persisted here): mpv, btop, kitty, vscodium, etc.
+  userAppConfigDirs = [
+    ".config/htop"
+    ".config/mpv"
+    ".config/btop"
+    ".config/VSCodium"
+  ];
+
+  # User-installed fonts
+  userFontDirs = [
+    ".local/share/fonts"
+  ];
+
+  # Caches that improve performance/UX
+  userCacheDirs = [
+    ".cache/awww"
+  ];
+
+  # Development state
+  userDevDirs = [
+    ".direnv"
+    ".local/share/nvim"
   ];
 in
 {
-  # Impermanent / + /home: only explicitly listed paths survive reboot.
-  # System paths are persisted via bind-mounts from /persistent/...
-  # User home paths are persisted via bind-mounts from /persistent${userHome}/...
-
   preservation = {
     enable = true;
 
     preserveAt."/persistent" = {
-      directories = [
-        # SSH host keys — regenerating on every reboot causes MITM warnings
-        "/etc/ssh"
-        # NixOS configuration (symlinked from flake)
-        "/etc/nixos"
-      ];
+      # ── System paths ──────────────────────────────────────────────
+      directories = systemIdentityDirs ++ rootCredDirs;
 
-      files = [
-        {
-          file = "/etc/machine-id";
-          inInitrd = true;
-        }
-      ];
+      files = systemIdentityFiles;
 
-      # User home directories — persisted from /persistent${userHome}/<name>
-      # to ${userHome}/<name> via bind mount
+      # ── User home paths ───────────────────────────────────────────
       users = {
         "${userName}" = {
-          # Directory listing must be explicit since /home is tmpfs:
-          # only paths listed here survive reboot.
-          directories = folderStructureDirs ++ criticalDirs ++ appStateDirs;
+          directories =
+            # Folder structure (data directories)
+            folderStructureDirs
+            # Critical
+            ++ userCredDirs
+            ++ userNixStateDirs
+            # Recommended
+            ++ userShellStateDirs
+            ++ userKeyringDirs
+            ++ userFlatpakDirs
+            ++ userGamingDirs
+            ++ userVpnDirs
+            # Optional
+            ++ userAppConfigDirs
+            ++ userFontDirs
+            ++ userCacheDirs
+            ++ userDevDirs;
 
-          files = [
-            # Shell history
-            ".bash_history"
-            # Flatpak installations reference .local/share/flatpak
-            ".local/share/flatpak/repo/config"
-            ".local/share/flatpak/repo/refs/heads/mega"
-          ];
+          files = userShellFiles;
         };
       };
     };
   };
 
-  # Home directory + intermediate parents need explicit ownership.
+  # ============================================================================
+  # systemd-tmpfiles: Ensure intermediate parent directories exist on tmpfs
+  # ============================================================================
   # With /home on tmpfs, these dirs don't survive reboot and must be recreated.
-  #
-  # 1. Create ${userHome} with mode 0755 (not writable by user —
-  #    only bind-mounted persisted dirs can be written to)
-  # 2. Create subdirs owned by ${userName} so home-manager + apps can write into them
   systemd.tmpfiles.settings."home-dir" = {
-    "${userHome}".d = { user = "${userName}"; group = "users"; mode = "0755"; };
-    "${userHome}/.config".d = { user = "${userName}"; group = "users"; mode = "0755"; };
-    "${userHome}/.local".d = { user = "${userName}"; group = "users"; mode = "0755"; };
-    "${userHome}/.local/share".d = { user = "${userName}"; group = "users"; mode = "0755"; };
-    "${userHome}/.local/state".d = { user = "${userName}"; group = "users"; mode = "0755"; };
-    "${userHome}/.cache".d = { user = "${userName}"; group = "users"; mode = "0755"; };
+    "${userHome}".d = {
+      user = "${userName}";
+      group = "users";
+      mode = "0755";
+    };
+    "${userHome}/.config".d = {
+      user = "${userName}";
+      group = "users";
+      mode = "0755";
+    };
+    "${userHome}/.local".d = {
+      user = "${userName}";
+      group = "users";
+      mode = "0755";
+    };
+    "${userHome}/.local/share".d = {
+      user = "${userName}";
+      group = "users";
+      mode = "0755";
+    };
+    "${userHome}/.local/state".d = {
+      user = "${userName}";
+      group = "users";
+      mode = "0755";
+    };
+    "${userHome}/.cache".d = {
+      user = "${userName}";
+      group = "users";
+      mode = "0755";
+    };
   };
+
+  # ============================================================================
+  # /var/lib persistence notes (already persistent — on btrfs subvol)
+  # ============================================================================
+  # The following live on /var (persistent btrfs subvol), NOT on tmpfs,
+  # so they naturally survive reboots without preservation bind-mounts:
+  #
+  #   /var/log/                    — All system logs (audit, snort, snout, clamav, aide)
+  #   /var/lib/clamav/             — ClamAV virus database (huge download avoided)
+  #   /var/lib/aide/               — AIDE integrity database
+  #   /var/lib/NetworkManager/     — NetworkManager connection profiles
+  #   /var/lib/systemd/            — timesync state, random seed, etc.
+  #   /var/lib/usbguard/           — USBGuard rules
+  #   /var/lib/rsyslog/            — Rsyslog buffer state
+  #   /var/account/                — Process accounting data
+  #   /var/db/sudo/                — Sudo lecture state
+  #
+  # These services already declare systemd.tmpfiles rules for their
+  # directories. No changes needed here.
+  #
+  # ============================================================================
+  # Explicitly ephemeral paths (intentionally NOT persisted)
+  # ============================================================================
+  #   /tmp/*                       — Temporary files (tmpfs, cleaned on boot)
+  #   /var/tmp/*                   — Persistent temp (on /var, cleaned by systemd)
+  #   /run/*                       — Runtime state (tmpfs, cleaned on boot)
+  #   ~/.cache/*                   — General caches (safe to lose, see exceptions above)
+  #   ~/.local/share/Trash/        — Desktop trash (temporary by nature)
+  #   ~/.npm/ ~/.cargo/ ~/.go/    — Build caches (can be re-downloaded)
+  #   ~/.local/share/recently-used.xbel — File open history (privacy)
+  #   ~/.thumbnails/               — Thumbnail caches (regenerated on demand)
+  #   /etc/quarantine/             — Quarantined malware (wiped at shutdown)
 }

@@ -48,6 +48,7 @@ declare -a TEST_MODULES=(
   "test_snort.sh:Snort Network IDS"
   "test_systemd.sh:Systemd Integration"
   "test_scripts.sh:CLI Scripts"
+  "test_module_manager.sh:Module Manager"
 )
 
 for entry in "${TEST_MODULES[@]}"; do

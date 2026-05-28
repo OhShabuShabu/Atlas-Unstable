@@ -35,6 +35,20 @@ alias nix-check = nix flake check --show-trace
 alias nix-show = nix flake show
 alias test-config = bash /home/yusa/Atlas/test_config.sh
 
+# Module manager shortcuts
+alias mod = atlas-module
+alias mod-list = atlas-module list
+alias mod-enable = atlas-module enable
+alias mod-disable = atlas-module disable
+alias mod-install = atlas-module install
+alias mod-remove = atlas-module remove
+alias mod-update = atlas-module update
+alias mod-info = atlas-module info
+alias mod-status = atlas-module status
+alias mod-validate = atlas-module validate
+alias mod-apply = atlas-module-apply
+alias mod-manager = atlas-module-manager
+
 # System health
 alias health = atlas-health
 alias health-quick = atlas-health quick
