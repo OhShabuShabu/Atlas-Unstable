@@ -53,17 +53,8 @@
     #      tpm-monitoring (runtime PCR/UEFI monitoring), firmware-check (BIOS version check)
     # ../modules/security/tpm-sealing.nix
 
-    # INFO: LUKS keyfile with TPM sealing (2FA unlock: passphrase + keyfile)
-    ../modules/security/luks-keyfile.nix
-
     # DISABLED: Secure Boot kernel signing (part of firmware integrity)
     # ../modules/security/secureboot.nix
-
-    # INFO: Memory wipe & anti-forensics (DRAM wipe, log shredding)
-    ../modules/security/memory-wipe.nix
-
-    # INFO: IMA/EVM kernel-level file integrity
-    ../modules/security/ima-evm.nix
 
     # DISABLED: TPM/UEFI monitoring & tamper detection
     # ../modules/security/tpm-monitoring.nix
@@ -71,13 +62,13 @@
     # DISABLED: Firmware version attestation (detects unauthorized BIOS/UEFI updates)
     # ../modules/security/firmware-check.nix
 
-    # INFO: LUKS unlock method test suite (test-luks-methods command)
-    ../modules/security/luks-test.nix
-
     # INFO: Feature modules (from external atlas-modules repo)
     ../modules/optional/nixos
   ];
 
+
+  # Force Intel GPU vendor (detection via /proc/bus/pci/devices can fail during eval)
+  hardware.gpu.vendor = lib.mkForce "intel";
 
   # ============================================================================
   # SECTION 1: BOOT CONFIGURATION
@@ -112,18 +103,11 @@
 
     kernelModules =
       let tpmPresent = builtins.tryEval (builtins.pathExists "/sys/class/tpm/tpm0");
-      in lib.mkIf (tpmPresent.success && tpmPresent.value) [ "tpm_tis" "tpm_crb" "tpm" ];
+      in [ "i2c-dev" ] ++ lib.optionals (tpmPresent.success && tpmPresent.value) [ "tpm_tis" "tpm_crb" "tpm" ];
 
     # GPU initrd kernel modules moved to hardware/gpu/<vendor>.nix for per-machine selection.
     # Only include the driver for the actual hardware — all three bundles add ~200MB+ firmware
     # to every initrd, overwhelming small EFI partitions on non-Atlas machines.
-
-    # Ensure Plymouth waits for udev to settle before showing the splash
-    # This gives the GPU driver time to load firmware and set up KMS
-    initrd.systemd.services."plymouth-start" = {
-      after = [ "systemd-udev-settle.service" ];
-      wants = [ "systemd-udev-settle.service" ];
-    };
 
     # LUKS devices and fileSystems are provided by either:
     #   - current-system.nix (for `nixos-rebuild switch --flake .#atlas`)
@@ -252,9 +236,7 @@
   users.users.yusa = {
     isNormalUser = true;
     description = "yusa";
-    # Password is injected by install.sh (via initialPassword) during fresh install.
-    # On existing systems, password in /etc/shadow persists across rebuilds.
-    # No default password here — avoids committing a weak credential.
+    initialPassword = "changeme";
     extraGroups = [
       "networkmanager"
       "wheel"
@@ -276,20 +258,10 @@
     LimitMEMLOCK = "infinity";
   };
 
-  # Polkit GNOME authentication agent
-  systemd.user.services.polkit-gnome-authentication-agent-1 = {
-    description = "polkit-gnome-authentication-agent-1";
-    wantedBy = [ "graphical-session.target" ];
-    wants = [ "graphical-session.target" ];
-    after = [ "graphical-session.target" ];
-    serviceConfig = {
-        Type = "simple";
-        ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
-        Restart = "on-failure";
-        RestartSec = 1;
-        TimeoutStopSec = 10;
-      };
-  };
+  # Polkit GNOME authentication agent — spawned from Niri startup.kdl instead of
+  # systemd user service because systemd user instances on Niri/Wayland can't
+  # determine the logind session, causing "Unable to determine the session we are in"
+  #fatal errors. Niri spawns it with the correct session context.
 
   # ─── Desktop User Services ────────────────────────────────────────────────
   # These services run as the logged-in user and auto-start with the desktop
@@ -353,6 +325,8 @@
   };
 
   # OpenRGB — delayed RGB lighting config, runs after desktop is settled
+  services.udev.packages = [ pkgs.openrgb ];
+
   systemd.user.services.atlas-openrgb = {
     description = "OpenRGB Lighting Configuration";
     wantedBy = [ "graphical-session.target" ];
@@ -554,7 +528,7 @@
     rules = "allow";
     implicitPolicyTarget = "allow";
     presentDevicePolicy = "apply-policy";
-    IPCAllowedUsers = [ "yusa" ];
+    IPCAllowedUsers = [ "root" "yusa" ];
     IPCAllowedGroups = [ "wheel" ];
     dbus.enable = true;
   };
@@ -703,6 +677,7 @@
     # Hardware control
     wtype
     wlrctl
+    inotify-tools       # File system event monitoring (snout-watcher, metadata-stripper)
     tpm2-tools          # TPM 2.0 command suite for key sealing, PCR operations, attestation
 
     # Hardware detection and compatibility report
@@ -710,8 +685,9 @@
       exec ${../bin/shell/detect-hardware.sh} "$@"
     '')
 
-    # Media
+        # Media
     pavucontrol
+    pulseaudio          # Provides pactl for audio control (needed by vicinae)
 
     # Utilities
     jq
@@ -720,6 +696,9 @@
     nautilus
     yazi
     exiftool
+
+    # LLM inference (ROCm GPU acceleration)
+    ollama-rocm
 
     # Fallback terminal
     alacritty
@@ -822,7 +801,7 @@
 
       # ── Desktop user services ────────────────────────────────────
       echo -e "\n''${BOLD}Desktop:''${NC}"
-      for svc in atlas-awww atlas-vicinae atlas-xwayland-satellite polkit-gnome-authentication-agent-1; do
+      for svc in atlas-awww atlas-vicinae atlas-xwayland-satellite; do
         if systemctl --user is-active --quiet "$svc" 2>/dev/null; then
           ok "$svc"
         else

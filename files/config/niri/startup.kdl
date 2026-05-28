@@ -1,5 +1,7 @@
-# Desktop services (awww, vicinae, xwayland-satellite, polkit) are auto-started
-# as systemd user services via graphical-session.target.
-# Only launch what systemd doesn't handle.
+// Desktop services (awww, vicinae, xwayland-satellite) are auto-started
+// as systemd user services via graphical-session.target.
+// polkit-gnome-agent is spawned here instead of systemd because systemd user
+// instances on Niri/Wayland can't determine the logind session.
 
 spawn-at-startup "noctalia-shell"
+spawn-at-startup "polkit-gnome-authentication-agent-1"

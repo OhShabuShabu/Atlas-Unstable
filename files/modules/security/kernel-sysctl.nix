@@ -16,7 +16,6 @@ let
     "vm.mmap_rnd_bits" = 32;               # INFO: ASLR - randomize memory addresses
     "vm.mmap_rnd_compat_bits" = 16;       # INFO: ASLR for 32-bit compatibility
     "kernel.randomize_va_space" = 2;       # INFO: Enable full address space randomization
-    "vm.stack_depot_trust" = 1;            # INFO: Stack depth tracking for security
   };
 
   # INFO: Kernel pointer/log protection
@@ -131,9 +130,7 @@ let
 
   # INFO: User namespace settings (required for containers)
   # NOTE: Can be disabled for higher security if no containers are used
-  userNamespaceSettings = {
-    "kernel.unprivileged_userns_clone" = 1;
-  };
+  userNamespaceSettings = { };
 in
 
 {

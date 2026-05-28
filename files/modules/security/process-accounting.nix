@@ -22,7 +22,7 @@
       Type = "oneshot";
       RemainAfterExit = true;
       ExecStart = "${pkgs.acct}/bin/accton /var/account/pacct";
-      ExecStop = "${pkgs.acct}/bin/accton";
+      ExecStop = "${pkgs.acct}/bin/accton off";
     };
   };
 

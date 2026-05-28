@@ -4,10 +4,8 @@ lib.mkIf (config.hardware.gpu.vendor == "amd") {
   # RADV open-source Vulkan driver is enabled by default on AMD GPUs
   hardware.graphics.enable = true;
 
-  # GPU initrd kernel modules moved to atlas-modules (gpu-amd.nix / gpu-intel.nix / gpu-nvidia.nix).
-  # The installer auto-detects GPU hardware and downloads only the matching module to
-  # files/modules/optional/nixos/, keeping initrd small by bundling only one GPU's firmware.
-  # See: ~/atlas-modules/gpu-*.nix
-
-  # ollama-rocm moved to optional extras.nix module (atlas-modules)
+  # Load amdgpu in initrd for early KMS (Plymouth at native resolution)
+  # mkBefore ensures amdgpu is the very first module loaded in initrd
+  boot.initrd.kernelModules = lib.mkBefore [ "amdgpu" ];
+  boot.initrd.availableKernelModules = lib.mkBefore [ "amdgpu" ];
 }

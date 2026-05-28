@@ -54,9 +54,9 @@ let
     dd if=/dev/urandom of="$TEMP_KEY" bs=512 count=1 2>/dev/null
     chmod 0600 "$TEMP_KEY"
 
-    echo "Sealing keyfile to TPM PCRs $PCR..."
-    $TPM_TOOLS/tpm2_createprimary -C e -c /tmp/primary.ctx 2>/dev/null || true
-    $TPM_TOOLS/tpm2_policypcr -l "$PCR" -L /tmp/pcr.policy 2>/dev/null
+    echo "Sealing keyfile to TPM PCRs $PCR (owner hierarchy)..."
+    $TPM_TOOLS/tpm2_createprimary -C o -c /tmp/primary.ctx || true
+    $TPM_TOOLS/tpm2_policypcr -l "$PCR" -L /tmp/pcr.policy || true
     $TPM_TOOLS/tpm2_create -C /tmp/primary.ctx \
       -L /tmp/pcr.policy \
       -i "$TEMP_KEY" \
@@ -92,6 +92,7 @@ let
     SEALED_PRIV="${sealedPriv}"
     SEALED_PUB="${sealedPub}"
     PCR="${pcrSelection}"
+    LOGGER="${pkgs.util-linux}/bin/logger"
     TPM_TOOLS="${pkgs.tpm2-tools}/bin"
 
     # Skip if keyfile already exists
@@ -99,42 +100,67 @@ let
 
     # Check TPM availability
     if [ ! -e /dev/tpm0 ]; then
-      echo "LUKS: TPM unavailable — passphrase fallback" >&2
-      exit 1
+      echo "LUKS: TPM unavailable (/dev/tpm0 not found) — passphrase fallback" >&2
+      $LOGGER -p auth.warning -t luks-keyfile "TPM device /dev/tpm0 not found" 2>/dev/null || true
+      exit 0
+    fi
+
+    # Wait for TPM resource manager to be ready (up to 15s)
+    for i in $(seq 1 15); do
+      if [ -e /dev/tpmrm0 ]; then
+        echo "LUKS: TPM RM ready after ''${i}s"
+        break
+      fi
+      sleep 1
+    done
+    if [ ! -e /dev/tpmrm0 ]; then
+      echo "LUKS: TPM resource manager not available — using direct device access" >&2
     fi
 
     # Check sealed blobs exist
     if [ ! -f "$SEALED_PRIV" ] || [ ! -f "$SEALED_PUB" ]; then
       echo "LUKS: Sealed key not found — passphrase fallback" >&2
-      exit 1
+      $LOGGER -p auth.warning -t luks-keyfile "Sealed key blobs not found in /boot" 2>/dev/null || true
+      exit 0
     fi
 
-    # Create TPM primary key
-    $TPM_TOOLS/tpm2_createprimary -C e -c /tmp/primary.ctx 2>/dev/null || {
-      echo "LUKS: TPM createprimary failed — fallback" >&2; exit 1; }
+    # Force device TCTI in initrd (no tpm2-abrmd daemon available).
+    # The system-wide TPM2TCTI=tabrmd is set by security.tpm2.tctiEnvironment,
+    # but in initrd there's no abrmd daemon, so we must use direct device access.
+    export TPM2TCTI="device"
+
+    # Create primary key in storage/owner hierarchy (more compatible than endorsement)
+    $TPM_TOOLS/tpm2_createprimary -C o -c /tmp/primary.ctx || {
+      rc=$?; echo "LUKS: TPM createprimary failed (rc=$rc) — fallback" >&2
+      $LOGGER -p auth.err -t luks-keyfile "TPM createprimary failed (rc=$rc)" 2>/dev/null || true
+      exit 1; }
 
     # Create PCR policy (must match sealing PCRs)
-    $TPM_TOOLS/tpm2_policypcr -l "$PCR" -L /tmp/pcr.policy 2>/dev/null || {
-      echo "LUKS: PCR policy failed — fallback" >&2; exit 1; }
+    $TPM_TOOLS/tpm2_policypcr -l "$PCR" -L /tmp/pcr.policy || {
+      rc=$?; echo "LUKS: PCR policy failed (rc=$rc) — fallback" >&2
+      $LOGGER -p auth.err -t luks-keyfile "TPM policypcr failed (rc=$rc)" 2>/dev/null || true
+      exit 1; }
 
     # Load the sealed key
     $TPM_TOOLS/tpm2_load -C /tmp/primary.ctx \
       -u "$SEALED_PUB" -r "$SEALED_PRIV" \
-      -c /tmp/sealed.ctx 2>/dev/null || {
-      echo "LUKS: TPM load FAILED (PCR mismatch) — passphrase fallback" >&2
-      ${pkgs.util-linux}/bin/logger -p auth.crit -t luks-keyfile "TPM unseal FAILED — PCR mismatch"
+      -c /tmp/sealed.ctx || {
+      rc=$?; echo "LUKS: TPM load FAILED (rc=$rc — PCR mismatch?) — passphrase fallback" >&2
+      $LOGGER -p auth.crit -t luks-keyfile "TPM load failed (rc=$rc) — PCR mismatch" 2>/dev/null || true
       exit 1
     }
 
     # Unseal to initrd tmpfs
-    $TPM_TOOLS/tpm2_unseal -c /tmp/sealed.ctx -o "$OUTPUT" 2>/dev/null || {
-      echo "LUKS: TPM unseal command failed — passphrase fallback" >&2
+    $TPM_TOOLS/tpm2_unseal -c /tmp/sealed.ctx -o "$OUTPUT" || {
+      rc=$?; echo "LUKS: TPM unseal command failed (rc=$rc) — passphrase fallback" >&2
+      $LOGGER -p auth.err -t luks-keyfile "TPM unseal failed (rc=$rc)" 2>/dev/null || true
       exit 1
     }
 
     chmod 0600 "$OUTPUT"
     rm -f /tmp/primary.ctx /tmp/pcr.policy /tmp/sealed.ctx
     echo "LUKS: TPM keyfile unsealed successfully"
+    $LOGGER -p auth.info -t luks-keyfile "TPM keyfile unsealed successfully" 2>/dev/null || true
   '';
 
   # INFO: Post-boot script — auto-enrolls keyfile into LUKS if no keyfile slot exists
@@ -204,8 +230,9 @@ in
   # INFO: Initrd service — unseals TPM key BEFORE cryptsetup runs
   boot.initrd.systemd.services."luks-keyfile-unseal" = {
     description = "Unseal TPM LUKS keyfile";
-    after = [ "systemd-modules-load.service" ];
+    after = [ "systemd-modules-load.service" "dev-tpm0.device" ];
     before = [ "systemd-cryptsetup@crypt.service" ];
+    wants = [ "dev-tpm0.device" ];
     wantedBy = [ "systemd-cryptsetup@crypt.service" ];
     unitConfig.DefaultDependencies = false;
     serviceConfig = {
@@ -213,18 +240,25 @@ in
       RemainAfterExit = true;
       ExecStart = "${unsealScript}";
       SuccessExitStatus = [ 0 1 ];
-      CapabilityBoundingSet = [ "CAP_SYS_ADMIN" ];
+      # CAP_DAC_OVERRIDE: read sealed blobs from /boot
+      # CAP_SYS_ADMIN: access /dev/tpm* device files
+      CapabilityBoundingSet = [ "CAP_DAC_OVERRIDE" "CAP_SYS_ADMIN" ];
     };
   };
 
   # INFO: Point LUKS to initrd tmpfs keyfile (fallback to passphrase if not present)
   boot.initrd.luks.devices."crypt".keyFile = unsealedKeyfile;
 
-  # INFO: Required TPM tools in initrd
-  boot.initrd.systemd.packages = [ pkgs.tpm2-tools ];
+  # INFO: Required TPM tools and unseal script in initrd
+  # NOTE: boot.initrd.systemd.packages only handles systemd unit files, NOT binaries.
+  #       Must use storePaths to actually include binaries and scripts in initrd.
+  boot.initrd.systemd.storePaths = [ pkgs.tpm2-tools unsealScript ];
 
   # INFO: Pre-load TPM kernel modules in initrd
-  boot.initrd.kernelModules = [ "tpm_tis" "tpm_crb" ];
+  # tpm = core TPM driver; tpm_tis = TIS interface (LPC/SPI); tpm_crb = CRB interface (ACPI)
+  # tpmrm = in-kernel resource manager (provides /dev/tpmrm0)
+  # Listing tpm explicitly ensures it's loaded first so /dev/tpm0 appears early
+  boot.initrd.kernelModules = [ "tpm" "tpm_tis" "tpm_crb" ];
 
   # INFO: Post-boot auto-enrollment service
   # NOTE: If the keyfile is already enrolled, this does nothing (idempotent)

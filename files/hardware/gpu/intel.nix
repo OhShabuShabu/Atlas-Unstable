@@ -13,8 +13,8 @@ lib.mkIf (config.hardware.gpu.vendor == "intel") {
     enable = true;
     extraPackages = with pkgs; [
       intel-media-driver       # VA-API driver for HD Graphics 5000+ / UHD / Iris / Arc
-      vaapiIntel               # Legacy VA-API driver for older GPUs
-      vaapiVdpau               # VDPAU wrapper for VA-API
+      intel-vaapi-driver       # Legacy VA-API driver for older GPUs
+      libva-vdpau-driver       # VDPAU wrapper for VA-API
       libvdpau-va-gl           # VDPAU-to-VA-API bridge
     ];
   };
@@ -22,6 +22,12 @@ lib.mkIf (config.hardware.gpu.vendor == "intel") {
   # Load i915 in initrd for early KMS (Plymouth at native resolution)
   boot.initrd.kernelModules = [ "i915" ];
   boot.initrd.availableKernelModules = [ "i915" ];
+
+  # Explicit i915 modeset + early KMS kernel parameters
+  boot.kernelParams = [
+    "i915.modeset=1"
+    "video=1920x1080@60"
+  ];
 
   environment.systemPackages = with pkgs; [
     intel-gpu-tools            # intel_gpu_top, intel_gpu_time

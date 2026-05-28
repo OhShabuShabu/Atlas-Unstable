@@ -324,6 +324,7 @@ grep -q 'XWAYLAND_SATELLITE' "$BASE/files/config/niri/env.kdl" && pass "XWAYLAND
 grep -q 'oreo_black_cursors' "$BASE/files/config/niri/config.kdl" && pass "oreo_black_cursors cursor theme" || fail "Cursor theme not set"
 grep -q 'noctalia-shell' "$BASE/files/config/niri/startup.kdl" && pass "startup.kdl spawns noctalia-shell" || fail "startup.kdl missing noctalia-shell"
 grep -q 'systemd user services' "$BASE/files/config/niri/startup.kdl" && pass "startup.kdl references systemd services" || warn "startup.kdl missing systemd services comment"
+grep -q 'polkit-gnome' "$BASE/files/config/niri/startup.kdl" && pass "startup.kdl spawns polkit-gnome-agent" || fail "startup.kdl missing polkit-gnome-agent spawn"
 
 # ============================================================================
 # 9. STARTUP SCRIPT
@@ -509,7 +510,6 @@ header "20. SYSTEMD SERVICES"
 declare -a SERVICES=(
   "snout-watcher.path" "snout-watcher.service" "snort-daemon" "snort-monitor" "clamav-daily-scan" "clamav-daemon"
   "aide-init" "aide-check" "quarantine-setup" "quarantine-sanitizer"
-  "polkit-gnome-authentication-agent-1"
   "metadata-stripper"
   "atlas-awww" "atlas-vicinae" "atlas-xwayland-satellite" "atlas-startup-sound" "atlas-openrgb"
 )

@@ -12,7 +12,10 @@ let
 in {
   # VM disk drivers (bare metal uses NVMe/AHCI from hardware-configuration.nix)
   boot.initrd.availableKernelModules = [ "virtio_blk" "virtio_pci" "virtio_scsi" "ata_piix" ];
-  boot.initrd.luks.devices."crypt".device = lib.mkForce lukDevice;
+  boot.initrd.luks.devices."crypt" = {
+    device = lib.mkForce lukDevice;
+    crypttabExtraOpts = [ "tpm2-device=auto" ];
+  };
 
   fileSystems = {
     "/nix".neededForBoot = true;

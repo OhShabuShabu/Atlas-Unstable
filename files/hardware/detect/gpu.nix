@@ -32,11 +32,13 @@ let
     builtins.match ".*10de.*" pciDevices != null
     else false;
 
-  # Priority: If multiple GPUs detected, prefer AMD > NVIDIA > Intel
+  # Priority: If multiple GPUs detected, prefer AMD > Intel > NVIDIA
   # (AMD has best open-source driver support on modern kernels)
+  # Intel preferred over NVIDIA because i915 has reliable KMS in initrd for Plymouth,
+  # while NVIDIA proprietary driver often crashes (SEGV) in the initrd environment.
   detected = if hasAmd then "amd"
-    else if hasNvidia then "nvidia"
     else if hasIntel then "intel"
+    else if hasNvidia then "nvidia"
     else "generic";
 in {
   options.hardware.gpu = {

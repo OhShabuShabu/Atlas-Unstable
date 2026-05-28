@@ -1,32 +1,32 @@
-# ─── Display Outputs ────────────────────────────────────────────────────
-# Niri auto-detects all connected displays and uses their preferred mode
-# when no output block is specified. This provides maximum hardware
-# compatibility across different monitors, laptops, and resolutions.
-#
-# If you need custom positioning, scaling, or mode overrides, uncomment
-# and adjust the blocks below:
-#
-# output "eDP-1" {        # Laptop internal display
-#     mode "1920x1080"
-#     scale 1
-#     position x=0 y=0
-# }
-# output "DP-1" {          # External monitor (DisplayPort)
-#     mode "2560x1440"
-#     scale 1
-#     position x=1920 y=0
-# }
-# output "HDMI-A-1" {      # External monitor (HDMI)
-#     mode "1920x1080"
-#     scale 1
-#     position x=0 y=0
-# }
-#
-# Common output names:
-#   eDP-1, eDP-2        — Laptop internal displays
-#   DP-1, DP-2, DP-3    — DisplayPort / USB-C / Thunderbolt
-#   HDMI-A-1, HDMI-A-2  — HDMI ports
-#   DP-1-1, DP-1-2      — MST hub downstream ports
-#   Virtual-1            — Virtual/remote displays (VRDP, etc.)
-#
-# Run `niri msg outputs` to list connected outputs and their names.
+// ─── Display Outputs ───────────────────────────────────────────────────
+// Niri auto-detects all connected displays and uses their preferred mode
+// when no output block is specified. This provides maximum hardware
+// compatibility across different monitors, laptops, and resolutions.
+//
+// If you need custom positioning, scaling, or mode overrides, uncomment
+// and adjust the blocks below:
+//
+// output "eDP-1" {        // Laptop internal display
+//     mode "1920x1080"
+//     scale 1
+//     position x=0 y=0
+// }
+// output "DP-1" {          // External monitor (DisplayPort)
+//     mode "2560x1440"
+//     scale 1
+//     position x=1920 y=0
+// }
+// output "HDMI-A-1" {      // External monitor (HDMI)
+//     mode "1920x1080"
+//     scale 1
+//     position x=0 y=0
+// }
+//
+// Common output names:
+//   eDP-1, eDP-2        — Laptop internal displays
+//   DP-1, DP-2, DP-3    — DisplayPort / USB-C / Thunderbolt
+//   HDMI-A-1, HDMI-A-2  — HDMI ports
+//   DP-1-1, DP-1-2      — MST hub downstream ports
+//   Virtual-1            — Virtual/remote displays (VRDP, etc.)
+//
+// Run `niri msg outputs` to list connected outputs and their names.

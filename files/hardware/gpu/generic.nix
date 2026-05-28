@@ -21,8 +21,9 @@ lib.mkIf (config.hardware.gpu.vendor == "generic") {
     extraPackages32 = [ ];
   };
 
-  # No vendor-specific initrd kernel modules for KMS
-  # Kernel modesetting works out-of-the-box with simplefb/efifb
+  # Load efifb or simplefb for framebuffer — the kernel's built-in
+  # modesetting handles unknown GPUs. The video= kernel parameter
+  # (set in kernel-boot.nix) will be respected by efifb/simplefb.
   boot.initrd.kernelModules = lib.mkDefault [ ];
   boot.initrd.availableKernelModules = lib.mkDefault [ ];
 }

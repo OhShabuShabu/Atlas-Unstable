@@ -18,9 +18,14 @@ let
     "quiet"
     "splash"
     "loglevel=3"
+    "video=1920x1080"               # Native resolution for Plymouth/KMS
 
     # Systemd early boot config
-    "rd.systemd.show_status=false"
+    # NOTE: rd.systemd.show_status intentionally NOT set to false.
+    #       With systemd-stage-1 initrd (boot.initrd.systemd.enable = true),
+    #       the LUKS password prompt is displayed by systemd-cryptsetup.
+    #       Setting show_status=false would suppress the prompt, causing
+    #       a black screen when Plymouth fails or has GPU issues.
     "rd.udev.log_level=3"
     "udev.log_priority=3"
 
@@ -43,13 +48,16 @@ let
     # FIX: Additional boot hardening
     # WARN: Can crash systems without IOMMU support
     # "iommu=force"                       # INFO: Force IOMMU for DMA protection
-    "elevator=none"                     # INFO: Use none scheduler (simplest, least attack surface)
     # WARN: module.sig_enforce will BOOT FAIL if any kernel module is unsigned
     # "module.sig_enforce=1"              # INFO: Only load signed modules
     # WARN: Entropy starvation causes minutes-long boot delays on some hardware
     # "random.trust_cpu=off"              # INFO: Don't trust CPU RNG entropy
     # "random.trust_bootloader=off"       # INFO: Don't trust bootloader RNG entropy
     "console=tty0"                      # INFO: Restrict console to main display
+
+    # FIX: Increase kernel audit backlog to prevent audit_log_subj_ctx errors
+    #      Default 8192 overflows on busy systems causing audit context logging failures
+    "audit_backlog_limit=16384"
   ];
 
   # INFO: Modules to block via modprobe (returns /bin/false)
