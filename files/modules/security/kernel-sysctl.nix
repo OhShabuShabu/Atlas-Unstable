@@ -33,10 +33,14 @@ let
     # WARN: Breaks Wine/proton/VMs that rely on userfaultfd
     # "vm.unprivileged_userfaultfd" = 0;         # INFO: Disable userfaultfd
     "kernel.kexec_load_disabled" = 1;          # INFO: Disable kexec
-    # WARN: SysRq useful for debugging hard freezes
-    # "kernel.sysrq" = 0;                         # INFO: Disable SysRq completely
-    # WARN: perf_event_paranoid=3 breaks profiling, some GPU tools
-    # "kernel.perf_event_paranoid" = 3;           # INFO: Restrict perf_event usage
+      # FIX: Disable SysRq completely (Lynis KRNL-6000)
+      # SysRq gives physical console users the ability to perform emergency
+      # operations (sync, reboot, kill) even when the system is frozen.
+      # Disabling removes this attack vector at the cost of harder hard-freeze
+      # recovery. Tradeoff acceptable for this system.
+      "kernel.sysrq" = 0;
+    # FIX: Restrict perf_event usage (Lynis KRNL-6000)
+    "kernel.perf_event_paranoid" = 2;              # INFO: Restrict perf_event usage
     # WARN: Disabling BPF JIT degrades eBPF performance significantly
     # net.core.bpf_jit_enable = 0;
   };
@@ -97,6 +101,8 @@ let
     "net.ipv4.tcp_max_syn_backlog" = 2048;
     # FIX: Disable TCP timestamps (info leak reduction)
     "net.ipv4.tcp_timestamps" = 0;
+    # FIX: Disable Ctrl-Alt-Del (Lynis KRNL-6000)
+    "kernel.ctrl-alt-del" = 0;
     # FIX: Kernel panic behaviour
     "kernel.panic" = 10;
     # WARN: GPU drivers can trigger non-fatal oops during boot - panic_on_oops causes boot-loop

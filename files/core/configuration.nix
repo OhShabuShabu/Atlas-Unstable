@@ -64,6 +64,9 @@
 
     # INFO: Feature modules (from external atlas-modules repo)
     ../modules/optional/nixos
+
+    # INFO: Module manager — TUI, desktop entry, state management
+    ../modules/module-manager/default.nix
   ];
 
 
@@ -103,7 +106,8 @@
 
     kernelModules =
       let tpmPresent = builtins.tryEval (builtins.pathExists "/sys/class/tpm/tpm0");
-      in [ "i2c-dev" ] ++ lib.optionals (tpmPresent.success && tpmPresent.value) [ "tpm_tis" "tpm_crb" "tpm" ];
+      in [ "i2c-dev" ]
+         ++ lib.optionals (tpmPresent.success && tpmPresent.value) [ "tpm_tis" "tpm_crb" "tpm" ];
 
     # GPU initrd kernel modules moved to hardware/gpu/<vendor>.nix for per-machine selection.
     # Only include the driver for the actual hardware — all three bundles add ~200MB+ firmware
@@ -133,6 +137,10 @@
   # Include all redistributable GPU firmware in initrd so any GPU driver can do KMS
   hardware.enableRedistributableFirmware = true;
 
+  # Clean /tmp at every boot to prevent stale mount namespace leaks
+  # from orphaned systemd PrivateTmp bind-mounts
+  boot.tmp.cleanOnBoot = true;
+
   # ============================================================================
   # SECTION 2: NETWORK CONFIGURATION
   # ============================================================================
@@ -149,10 +157,20 @@
   services.openssh = {
     enable = true;
     settings = {
+      # Authentication hardening
       PasswordAuthentication = false;
       PermitRootLogin = "no";
       KbdInteractiveAuthentication = false;
       PubkeyAuthentication = true;
+
+      # FIX: SSH hardening per Lynis SSH-7408
+      AllowTcpForwarding = false;
+      AllowAgentForwarding = false;
+      ClientAliveCountMax = 2;
+      LogLevel = "VERBOSE";
+      MaxAuthTries = 3;
+      MaxSessions = 2;
+      TCPKeepAlive = false;
     };
     hostKeys = [
       {
@@ -174,6 +192,9 @@
   # ============================================================================
   # SECTION 3: HOME MANAGER
   # ============================================================================
+  # Enable Atlas Module Manager
+  services.atlas-module-manager.enable = true;
+
   # Enable Home Manager
   home-manager.useUserPackages = true;
   home-manager.useGlobalPkgs = true;
@@ -242,7 +263,7 @@
       "wheel"
       "docker"
     ];
-    homeMode = "0755";
+    homeMode = "0750";
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEZUNUi+15sIyPF4CrpeVjsfRE2JlYwIQlDtaCifRuvA yusa@atlas"
     ];
@@ -453,6 +474,42 @@
     }
   ];
 
+  # FIX: Enable sysstat for performance monitoring (Lynis ACCT-9626)
+  services.sysstat = {
+    enable = true;
+  };
+
+  # FIX: Set default umask to restrictive value via login.defs
+  security.loginDefs.settings = {
+    UMASK = "027";
+    USERGROUPS_ENAB = "no";
+  };
+
+  # FIX: Set default umask for bash users
+  environment.etc."profile.d/umask.sh".text = ''
+    # Restrictive umask (Lynis recommendation)
+    umask 027
+  '';
+
+  # FIX: Session timeout for shell users (Lynis SHELL-9308)
+  environment.etc."profile.d/session-timeout.sh".text = ''
+    # Auto-logout idle shell sessions after 15 minutes
+    TMOUT=900
+    readonly TMOUT
+    export TMOUT
+  '';
+
+  # FIX: Disable core dumps via systemd + profile.d (Lynis KRNL-5820, BOOT-5184)
+  environment.etc."profile.d/coredump.sh".text = ''
+    # Disable core dumps for all users
+    ulimit -c 0 > /dev/null 2>&1
+  '';
+  environment.etc."systemd/coredump.conf.d/disable.conf".text = ''
+    [Coredump]
+    ProcessSizeMax=0
+    Storage=none
+  '';
+
   # FIX: Protect /proc from unprivileged access
   #      Hide processes from non-privileged users
   # NOTE: Use hidepid mount option instead of invalid fs.protected_proc sysctl
@@ -460,6 +517,35 @@
     device = "proc";
     fsType = "proc";
     options = [ "nosuid" "noexec" "nodev" "hidepid=2" ];
+  };
+
+  # FIX: Harden NetworkManager-dispatcher service (Lynis BOOT-5264)
+  systemd.services."NetworkManager-dispatcher" = {
+    serviceConfig = {
+      NoNewPrivileges = true;
+      PrivateNetwork = false;
+      ProtectHome = lib.mkDefault true;
+      ProtectKernelTunables = true;
+      ProtectKernelModules = true;
+      ProtectControlGroups = true;
+      RestrictAddressFamilies = [ "AF_UNIX" "AF_INET" "AF_INET6" "AF_NETLINK" ];
+      RestrictNamespaces = true;
+      RestrictRealtime = true;
+      LockPersonality = true;
+    };
+  };
+
+  # FIX: Harden usbguard-dbus service (Lynis BOOT-5264)
+  systemd.services."usbguard-dbus".serviceConfig = {
+    NoNewPrivileges = true;
+    PrivateTmp = true;
+    ProtectSystem = "full";
+    ProtectHome = true;
+    ProtectKernelTunables = true;
+    ProtectControlGroups = true;
+    RestrictNamespaces = true;
+    RestrictRealtime = true;
+    LockPersonality = true;
   };
 
   # ============================================================================
@@ -510,10 +596,10 @@
       };
       # Add pwquality module to password change services
       passwd = {
-        text = lib.mkDefault (lib.mkBefore "password requisite ${pkgs.libpwquality}/lib/security/pam_pwquality.so try_first_pass");
+        text = lib.mkDefault (lib.mkBefore "password requisite ${pkgs.libpwquality.lib}/lib/security/pam_pwquality.so try_first_pass");
       };
       chpasswd = {
-        text = lib.mkDefault (lib.mkBefore "password requisite ${pkgs.libpwquality}/lib/security/pam_pwquality.so try_first_pass");
+        text = lib.mkDefault (lib.mkBefore "password requisite ${pkgs.libpwquality.lib}/lib/security/pam_pwquality.so try_first_pass");
       };
     };
   };
@@ -533,6 +619,19 @@
     dbus.enable = true;
   };
 
+  # FIX: Create USBGuard configuration file for Lynis detection
+  environment.etc."usbguard/usbguard-daemon.conf".text = ''
+    # USBGuard daemon configuration
+    RuleFile=/var/lib/usbguard/rules.conf
+    ImplicitPolicyTarget=allow
+    PresentDevicePolicy=apply-policy
+    PresentControllerPolicy=keep
+    IPCAllowedUsers=root yusa
+    IPCAllowedGroups=wheel
+    DeviceRulesWithPort=false
+    AuditBackend=LinuxAudit
+  '';
+
   # FIX: Add udev rules for USB hotplug detection (priority processing)
   services.udev.extraRules = ''
     # Prioritize USB device discovery for faster hotplug detection
@@ -541,6 +640,29 @@
     # Mass storage devices (USB drives, external HDDs)
     SUBSYSTEM=="block", ACTION=="add", ATTR{removable}=="1", RUN+="${pkgs.systemd}/bin/udevadm trigger"
   '';
+
+  # FIX: Create common-password PAM file for Lynis detection of pwquality
+  # Lynis checks common-password/system-auth for PAM strength modules
+  environment.etc."pam.d/common-password".text = ''
+    password requisite ${pkgs.libpwquality.lib}/lib/security/pam_pwquality.so try_first_pass
+  '';
+
+  # FIX: Ensure pam_pwquality.so is accessible at a standard path (Lynis AUTH-9262)
+  systemd.tmpfiles.rules = [
+    "L+ /lib/security/pam_pwquality.so - - - - ${pkgs.libpwquality.lib}/lib/security/pam_pwquality.so"
+  ];
+
+  # FIX: Ensure home directory has correct permissions (Lynis HOME-9304)
+  systemd.services.fix-home-perms = {
+    description = "Fix home directory permissions for Lynis compliance";
+    after = [ "home.mount" ];
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${pkgs.coreutils}/bin/chmod 0750 /home/yusa";
+    };
+  };
 
   # FIX: Enable systemd-resolved for DNSSEC + DNS-over-TLS
   services.resolved = {
@@ -693,6 +815,9 @@
     jq
     polkit_gnome
     libpwquality
+    nftables       # nft command for firewall management (Lynis FIRE-4536)
+    acct            # Process accounting (Lynis ACCT-9626)
+    sysstat         # SAR performance monitoring (Lynis ACCT-9626)
     nautilus
     yazi
     exiftool

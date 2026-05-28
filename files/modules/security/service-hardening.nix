@@ -98,14 +98,13 @@
     ProtectHome = true;
   };
 
-  # FIX: Harden OpenSSH if enabled
-  # NOTE: NoNewPrivileges and ProtectHome intentionally omitted — they propagate
-  #       to user sessions, breaking sudo and home directory access respectively.
-  # NOTE: PrivateNetwork intentionally omitted — sshd needs host network access
-  #       to accept incoming SSH connections from remote clients
-  systemd.services.sshd.serviceConfig = lib.mkIf (config.services.openssh.enable or false) {
-    PrivateTmp = true;
-  };
+  # NOTE: OpenSSH hardening intentionally minimal:
+  #   - NoNewPrivileges propagates to user sessions, breaking sudo
+  #   - ProtectHome propagates, breaking home directory access
+  #   - PrivateNetwork would prevent accepting SSH connections
+  #   - PrivateTmp intentionally OMITTED: it creates systemd private mount
+  #     namespaces that leak when sessions end, corrupting /tmp with
+  #     orphan bind-mounts pointing to deleted directories (st_nlink=0).
 
   # FIX: Harden nginx if enabled
   systemd.services.nginx.serviceConfig = lib.mkIf (config.services.nginx.enable or false) {
@@ -115,6 +114,26 @@
     ProtectSystem = "strict";
     ProtectHome = true;
   };
+
+  # FIX: Harden syslog/rsyslogd (Lynis BOOT-5264, exposure score 9.6)
+  # ProtectSystem=full omitted — rsyslog needs RW access to /var/log.
+  # /var/lib/rsyslog must exist or systemd mount namespacing fails.
+  systemd.services.syslog = lib.mkIf (config.services.rsyslogd.enable or false) {
+    serviceConfig = {
+      NoNewPrivileges = true;
+      PrivateTmp = true;
+      ProtectHome = true;
+      ProtectKernelTunables = true;
+      ProtectKernelModules = true;
+      ProtectControlGroups = true;
+      RestrictAddressFamilies = [ "AF_UNIX" "AF_INET" "AF_INET6" "AF_NETLINK" ];
+      ReadWritePaths = [ "/var/log" ];
+    };
+  };
+
+  systemd.tmpfiles.rules = [
+    "d /var/lib/rsyslog 0755 root root -"
+  ];
 
   # FIX: Document service hardening best practices
   environment.etc."security/service-hardening-notes.txt".text = ''

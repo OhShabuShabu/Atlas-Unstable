@@ -154,51 +154,13 @@ done
 
 # ─── Constants ──────────────────────────────────────────────────────────────
 SCRIPT_START=$(date +%s)
-readonly RAW_URL="https://raw.githubusercontent.com/OhShabuShabu/Atlas-Modules/main"
+readonly RAW_URL="$ATLAS_MODULES_RAW_URL"
 
 # ═════════════════════════════════════════════════════════════════════════════
 # MODULE DEFINITIONS (Step 8)
 # ═════════════════════════════════════════════════════════════════════════════
-# Centralized data for optional module selection / download.
-# Keep these arrays in sync — index N is the same conceptual module across all three.
-
-readonly MODULE_IDS=(1 2 3 4 5 6 7 8 9)
-
-readonly MODULE_DESC=(
-  [1]="performance   — CPU governor, TCP BBR, Nix GC tuning"
-  [2]="privacy       — Mullvad VPN, metadata cleaner"
-  [3]="gaming        — Steam, MangoHUD overlay"
-  [4]="virtualisation — Docker, Podman, libvirt"
-  [5]="minecraft     — PrismLauncher, Blockbench"
-  [6]="flatpak       — Flathub repository"
-  [7]="dev           — Neovim, VSCodium, bun, opencode"
-  [8]="tools         — yt-dlp, mpv"
-  [9]="extras        — AI/ML (Ollama ROCm), animated wallpapers"
-)
-
-readonly MODULE_FILE=(
-  [1]="performance.nix"
-  [2]="privacy/privacy.nix"
-  [3]="gaming/gaming.nix"
-  [4]="virtualisation.nix"
-  [5]="minecraft.nix"
-  [6]="flatpak.nix"
-  [7]="dev/dev.nix"
-  [8]="tools.nix"
-  [9]="extras.nix"
-)
-
-readonly MODULE_SUBDIR=(
-  [1]="nixos"
-  [2]="nixos"
-  [3]="nixos"
-  [4]="nixos"
-  [5]="nixos"
-  [6]="nixos"
-  [7]="home"
-  [8]="home"
-  [9]="nixos"
-)
+# Shared module registry — same data used by post-install module manager.
+source "$ROOTDIR/files/lib/module-registry.sh"
 
 # ═════════════════════════════════════════════════════════════════════════════
 # STEP 1: Environment Checks
@@ -764,6 +726,42 @@ else
   warn "Manually download from atlas-modules: gpu-amd.nix, gpu-intel.nix, gpu-nvidia.nix"
   warn "Place in files/modules/optional/nixos/"
 fi
+
+# ─── Initialize Module State File ──────────────────────────────────────────
+# Persist the selected module state so the post-install module manager
+# picks up the correct enable/disable state on first boot.
+info "Initializing module state..."
+STATE_DIR="$TARGET/persistent/etc/atlas-modules"
+mkdir -p "$STATE_DIR"
+STATE_FILE="$STATE_DIR/state.json"
+
+# Build the state JSON from selected modules
+STATE_JSON='{"modules": {}, "metadata": {"created": "'$(date -Iseconds)'", "updated": "'$(date -Iseconds)'", "version": "1"}}'
+for id in "${MODULE_IDS[@]}"; do
+  local file="${MODULE_FILE[$id]}"
+  local filename
+  filename=$(basename "$file")
+  local subdir="${MODULE_SUBDIR[$id]}"
+  local dest_dir="$OPT_DIR/$subdir"
+  local installed=false
+  [[ -f "$dest_dir/$filename" ]] && installed=true
+
+  local enabled=false
+  for s in "${SELECTED_MODULES[@]:-}"; do
+    [[ "$s" == "$id" ]] && enabled=true && break
+  done
+
+  STATE_JSON=$(echo "$STATE_JSON" | jq \
+    --arg id "$id" \
+    --argjson enabled "$enabled" \
+    --argjson installed "$installed" \
+    --arg version "${MODULE_VERSION[$id]}" \
+    --arg source "$ATLAS_MODULES_RAW_URL" \
+    '.modules[$id] = {enabled: $enabled, installed: $installed, version: $version, source: $source}')
+done
+echo "$STATE_JSON" > "$STATE_FILE"
+chown -R 1000:100 "$STATE_DIR" 2>/dev/null || true
+ok "Module state initialized"
 
 # ═════════════════════════════════════════════════════════════════════════════
 # STEP 9: Apply Full Configuration (includes optional modules)

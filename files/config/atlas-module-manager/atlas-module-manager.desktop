@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Atlas Module Manager
+Comment=Manage optional system and user modules for Atlas NixOS
+Exec=alacritty -e atlas-module-manager
+Icon=system-software-install
+Terminal=true
+Categories=System;Settings;
+Keywords=atlas;modules;nixos;configuration;package;
