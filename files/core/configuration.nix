@@ -153,6 +153,10 @@
   networking.useDHCP = false;
   networking.dhcpcd.enable = false;
 
+  # Mullvad VPN daemon — auto-loads WireGuard kernel module,
+  # persists tunnel state across reboots, enables CLI management
+  services.mullvad-vpn.enable = true;
+
   # Enable OpenSSH with secure defaults (key-only authentication)
   services.openssh = {
     enable = true;
@@ -262,6 +266,7 @@
       "networkmanager"
       "wheel"
       "docker"
+      "mullvad"       # Non-root CLI access to Mullvad VPN
     ];
     homeMode = "0750";
     openssh.authorizedKeys.keys = [
@@ -810,6 +815,9 @@
         # Media
     pavucontrol
     pulseaudio          # Provides pactl for audio control (needed by vicinae)
+
+    # VPN client
+    mullvad-vpn
 
     # Utilities
     jq
