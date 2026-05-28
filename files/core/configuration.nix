@@ -107,7 +107,9 @@
     kernelModules =
       let tpmPresent = builtins.tryEval (builtins.pathExists "/sys/class/tpm/tpm0");
       in [ "i2c-dev" ]
-         ++ lib.optionals (tpmPresent.success && tpmPresent.value) [ "tpm_tis" "tpm_crb" "tpm" ];
+         ++ lib.optionals (tpmPresent.success && tpmPresent.value) [ "tpm_tis" "tpm_crb" "tpm" ]
+         # nftables modules required by Mullvad VPN daemon for firewall rules
+         ++ [ "nft_ct" "nft_fib" "nft_fib_inet" "nft_nat" "nft_reject" "nft_reject_inet" ];
 
     # GPU initrd kernel modules moved to hardware/gpu/<vendor>.nix for per-machine selection.
     # Only include the driver for the actual hardware — all three bundles add ~200MB+ firmware
