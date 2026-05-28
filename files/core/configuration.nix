@@ -886,7 +886,7 @@
       FLAKE="''${FLAKE:-.#atlas}"
 
       echo "=== Detection services stopped, running nixos-rebuild ==="
-      if nixos-rebuild switch --flake "$FLAKE" "$@"; then
+      if sudo nixos-rebuild switch --flake "$FLAKE" "$@"; then
         echo "=== Build succeeded — running health check ==="
         atlas-health quick 2>/dev/null || echo "⚠  Health check found issues — run 'atlas-health' for details."
       fi
