@@ -153,9 +153,7 @@
   networking.useDHCP = false;
   networking.dhcpcd.enable = false;
 
-  # Mullvad VPN daemon — auto-loads WireGuard kernel module,
-  # persists tunnel state across reboots, enables CLI management
-  services.mullvad-vpn.enable = true;
+  # Mullvad VPN daemon — handled by privacy module (files/modules/optional/nixos/privacy.nix)
 
   # Enable OpenSSH with secure defaults (key-only authentication)
   services.openssh = {
@@ -816,8 +814,7 @@
     pavucontrol
     pulseaudio          # Provides pactl for audio control (needed by vicinae)
 
-    # VPN client
-    mullvad-vpn
+    # VPN client — mullvad-vpn handled by privacy module (files/modules/optional/nixos/privacy.nix)
 
     # Utilities
     jq
