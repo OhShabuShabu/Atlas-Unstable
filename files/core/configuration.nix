@@ -108,8 +108,20 @@
       let tpmPresent = builtins.tryEval (builtins.pathExists "/sys/class/tpm/tpm0");
       in [ "i2c-dev" ]
          ++ lib.optionals (tpmPresent.success && tpmPresent.value) [ "tpm_tis" "tpm_crb" "tpm" ]
-         # nftables modules required by Mullvad VPN daemon for firewall rules
-         ++ [ "nft_ct" "nft_fib" "nft_fib_inet" "nft_nat" "nft_reject" "nft_reject_inet" ];
+          # nftables modules required by Mullvad VPN daemon for firewall rules.
+          # With security.lockKernelModules = true, modules_disabled=1 blocks
+          # auto-loading via request_module(), so every nftables expression type
+          # the daemon might request must be pre-loaded at boot.
+          ++ [
+            "nft_ct" "nft_fib" "nft_fib_inet" "nft_nat" "nft_reject" "nft_reject_inet"
+            "nft_chain_nat" "nft_connlimit" "nft_dup_ipv4" "nft_dup_ipv6"
+            "nft_dup_netdev" "nft_fib_ipv4" "nft_fib_ipv6" "nft_flow_offload"
+            "nft_fwd_netdev" "nft_hash" "nft_limit" "nft_log" "nft_masq"
+            "nft_meta_bridge" "nft_numgen" "nft_osf" "nft_queue" "nft_quota"
+            "nft_redir" "nft_reject_bridge" "nft_reject_ipv4" "nft_reject_ipv6"
+            "nft_reject_netdev" "nft_socket" "nft_synproxy" "nft_tproxy"
+            "nft_tunnel" "nft_xfrm"
+          ];
 
     # GPU initrd kernel modules moved to hardware/gpu/<vendor>.nix for per-machine selection.
     # Only include the driver for the actual hardware — all three bundles add ~200MB+ firmware
