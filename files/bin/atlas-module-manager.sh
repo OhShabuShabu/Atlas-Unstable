@@ -812,19 +812,19 @@ browse_modules() {
     --header "Module Browser | Esc: back" \
     --prompt "Search modules > " \
     --delimiter="\t" \
-    --with-nth=1,2,7,3 \
+    --with-nth=1,2,3 \
     --preview "
       echo -e '\033[1;36mModule Information\033[0m'
       echo -e '\033[2m─────────────────────────────\033[0m'
       echo ''
-      echo -e '  {7} \033[1m{2}\033[0m'
+      echo -e '  \033[1m{2}\033[0m'
       echo -e '  \033[1mID:\033[0m          {1}'
       echo -e '  \033[1mDescription:\033[0m  {3}'
       echo -e '  \033[1mCategory:\033[0m     {4}'
       echo -e '  \033[1mDependencies:\033[0m {6}'
       echo -e '  \033[1mRequirements:\033[0m {8}'
       echo ''
-      echo -e '  {5}' | fold -w 50 | sed 's/^/  /'
+      printf '  %s\n' {5} | fold -w 50 | sed 's/^/  /'
       echo ''
       echo -e '\033[2mPress ? for keybindings\033[0m'
     " \
@@ -904,7 +904,7 @@ install_modules() {
           echo -e '  \033[1mDependencies:\033[0m  {5}'
           echo -e '  \033[1mRequirements:\033[0m  {7}'
           echo ''
-          echo -e '  {6}' | fold -w 55 | sed 's/^/  /'
+          printf '  %s\n' '{6}' | fold -w 55 | sed 's/^/  /'
         " \
         --bind "enter:accept" \
         --bind "esc:cancel" \
@@ -1253,7 +1253,7 @@ module_info() {
           echo -e '  Reqs:       {10}'
           echo ''
           echo -e '  \033[1mDescription:\033[0m'
-          echo -e '  {8}' | fold -w 55 | sed 's/^/  /'
+          printf '  %s\n' '{8}' | fold -w 55 | sed 's/^/  /'
           echo ''
           echo -e '  Source:     ${ATLAS_MODULES_RAW_URL}/{9}'
         " \
