@@ -571,7 +571,8 @@ fetch_remote_registry() {
   if timeout 10 curl -sSf "$REMOTE_REGISTRY_URL" -o "$tmp_file" 2>/dev/null; then
     # Strip readonly so arrays can be re-declared over local ones
     sed -i 's/^readonly //' "$tmp_file"
-    source "$tmp_file"
+    # Prevent recursive fetch when sourced file also runs this code
+    REMOTE_REGISTRY_SKIP=1 source "$tmp_file"
     rm -f "$tmp_file"
     return 0
   fi
