@@ -278,7 +278,7 @@ _add_dynamic_module() {
   MODULE_REQUIREMENTS[$id]="RAM: varies | Disk: varies"
 
   local desc="Auto-discovered module"
-  local info="Auto-discovered module '$name' from the Atlas-Modules repository. Install via 'atlas-module install $id'."
+  local info="Auto-discovered module $name from the Atlas-Modules repository. Install using: atlas-module install $id"
   local icon="🧩"
   local reqs="RAM: varies | Disk: varies"
 
