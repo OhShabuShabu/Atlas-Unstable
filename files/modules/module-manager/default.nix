@@ -119,8 +119,7 @@ in {
       curl
       gum         # Enhanced TUI (fallback to fzf)
       dialog      # Minimal TTY TUI (fallback)
-      whiptail    # TTY dialog (fallback, part of newt)
-      newt    # Minimal TTY TUI (fallback, part of newt)
+      newt    # TTY dialog (fallback, provides whiptail)
     ] ++ lib.optional cfg.enableDesktopEntry desktopEntry;
 
     systemd.tmpfiles.rules = [

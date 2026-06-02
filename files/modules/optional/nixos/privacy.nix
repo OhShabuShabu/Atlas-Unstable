@@ -29,9 +29,6 @@ in {
       allowedUDPPorts = [ 53 853 51820 ];
     };
 
-    # Mullvad Browser
-    programs.mullvad-browser.enable = true;
-
     # Metadata stripping
     systemd.user.services.mat2-service = {
       enable = true;
@@ -46,6 +43,6 @@ in {
       '';
     };
 
-    environment.systemPackages = with pkgs; [ libnotify mat2 ];
+    environment.systemPackages = with pkgs; [ libnotify mat2 mullvad-browser ];
   };
 }

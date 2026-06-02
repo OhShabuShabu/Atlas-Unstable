@@ -22,6 +22,18 @@
     };
   };
 
+  # dconf — required by Nautilus to persist settings
+  dconf.enable = true;
+  dconf.settings = {
+    "org/gnome/desktop/media-handling" = {
+      automount = true;
+      automount-open = true;
+    };
+    "org/gnome/nautilus/preferences" = {
+      show-mounts-for-internal-drives = false;
+    };
+  };
+
 
   # Force dark mode for X11/XWayland apps via xsettings
   xdg.configFile."xsettingsd/Xwayland.conf".text = ''

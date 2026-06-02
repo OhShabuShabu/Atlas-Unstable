@@ -22,6 +22,15 @@ readonly ATLAS_MODULES_RAW_URL="https://raw.githubusercontent.com/OhShabuShabu/A
 # Module IDs
 MODULE_IDS=(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19)
 
+# Module icons (Unicode symbols for TUI display)
+MODULE_ICON=(
+  [1]="⚡"   [2]="🛡️"  [3]="🎮"   [4]="🖥️"
+  [5]="⛏️"  [6]="📦"   [7]="💻"   [8]="🔧"
+  [9]="🧠"   [10]="📡"  [11]="📄"  [12]="🎨"
+  [13]="🟥"  [14]="🟦"  [15]="🟩"  [16]="🔒"
+  [17]="⌨️"  [18]="🔤"  [19]="🎬"  [20]="🤖"
+)
+
 # Module descriptions (one-line summary for UI display)
 MODULE_DESC=(
   [1]="performance       CPU governor, TCP BBR, Nix GC tuning, ZRAM"
@@ -206,6 +215,30 @@ MODULE_VERSION=(
   [19]="1.0.0"
 )
 
+# Module system requirements (RAM, storage, hardware, etc.)
+MODULE_REQUIREMENTS=(
+  [1]="RAM: 512MB | Disk: 100MB"
+  [2]="RAM: 256MB | Disk: 2GB | Network: Mullvad subscription"
+  [3]="RAM: 4GB | Disk: 20GB | GPU: 3D-capable"
+  [4]="RAM: 2GB | Disk: 5GB | CPU: KVM-capable (EPT/SVM)"
+  [5]="RAM: 2GB | Disk: 5GB | Depends: gaming module"
+  [6]="RAM: 128MB | Disk: 500MB"
+  [7]="RAM: 1GB | Disk: 3GB"
+  [8]="RAM: 256MB | Disk: 500MB"
+  [9]="RAM: 8GB | Disk: 10GB | GPU: ROCm-compatible AMD"
+  [10]="RAM: 64MB | Disk: 50MB | Hardware: Bluetooth adapter"
+  [11]="RAM: 256MB | Disk: 1GB"
+  [12]="RAM: 2GB | Disk: 5GB | GPU: OpenGL 3.3+"
+  [13]="RAM: 64MB | Disk: 100MB | GPU: AMD Radeon"
+  [14]="RAM: 64MB | Disk: 100MB | GPU: Intel integrated"
+  [15]="RAM: 64MB | Disk: 200MB | GPU: NVIDIA"
+  [16]="RAM: 128MB | Disk: 100MB"
+  [17]="RAM: 256MB | Disk: 200MB"
+  [18]="RAM: 64MB | Disk: 2GB"
+  [19]="RAM: 512MB | Disk: 500MB | GPU: VA-API capable"
+  [20]="RAM: 4GB | Disk: 2GB | Runtime: Docker"
+)
+
 # ============================================================================
 # SECTION 2: Dynamic Module Discovery
 # ============================================================================
@@ -241,25 +274,51 @@ _add_dynamic_module() {
   MODULE_TAGS[$id]="$name"
   MODULE_DEPS[$id]=""
   MODULE_VERSION[$id]="0.1.0"
+  MODULE_ICON[$id]="🧩"
+  MODULE_REQUIREMENTS[$id]="RAM: varies | Disk: varies"
 
   local desc="Auto-discovered module"
   local info="Auto-discovered module '$name' from the Atlas-Modules repository. Install via 'atlas-module install $id'."
+  local icon="🧩"
+  local reqs="RAM: varies | Disk: varies"
 
   case "$name" in
-    syncthing)  desc="syncthing        Syncthing continuous file synchronization";;
-    tailscale)  desc="tailscale        Tailscale zero-config VPN mesh network";;
-    firefox)    desc="firefox          Firefox web browser with hardening";;
-    chrome|chromium|brave|vivaldi|edge) desc="$name   $name web browser";;
-    docker)     desc="docker           Docker container runtime";;
-    podman)     desc="podman           Podman rootless container manager";;
-    sway|hyprland|river|wayfire) desc="$name   $name Wayland compositor";;
-    zellij)     desc="zellij           Zellij terminal multiplexer";;
-    tmux)       desc="tmux             Tmux terminal multiplexer";;
-    kitty|alacritty|foot|wezterm) desc="$name   $name terminal emulator";;
+    syncthing)
+      desc="syncthing        Syncthing continuous file synchronization"
+      icon="🔄"; reqs="RAM: 256MB | Disk: 500MB";;
+    tailscale)
+      desc="tailscale        Tailscale zero-config VPN mesh network"
+      icon="🔗"; reqs="RAM: 128MB | Disk: 100MB | Network: internet";;
+    firefox)
+      desc="firefox          Firefox web browser with hardening"
+      icon="🦊"; reqs="RAM: 512MB | Disk: 500MB";;
+    chrome|chromium|brave|vivaldi|edge)
+      desc="$name   $name web browser"
+      icon="🌐"; reqs="RAM: 1GB | Disk: 500MB";;
+    docker)
+      desc="docker           Docker container runtime"
+      icon="🐳"; reqs="RAM: 512MB | Disk: 2GB | CPU: KVM-capable";;
+    podman)
+      desc="podman           Podman rootless container manager"
+      icon="🐋"; reqs="RAM: 256MB | Disk: 1GB";;
+    sway|hyprland|river|wayfire)
+      desc="$name   $name Wayland compositor"
+      icon="🪟"; reqs="RAM: 1GB | Disk: 500MB | GPU: KMS-capable";;
+    zellij)
+      desc="zellij           Zellij terminal multiplexer"
+      icon="📺"; reqs="RAM: 64MB | Disk: 50MB";;
+    tmux)
+      desc="tmux             Tmux terminal multiplexer"
+      icon="💻"; reqs="RAM: 32MB | Disk: 20MB";;
+    kitty|alacritty|foot|wezterm)
+      desc="$name   $name terminal emulator"
+      icon="🖥️"; reqs="RAM: 128MB | Disk: 100MB | GPU: OpenGL 3.3+";;
   esac
 
   MODULE_DESC[$id]="$desc"
   MODULE_INFO[$id]="$info"
+  MODULE_ICON[$id]="$icon"
+  MODULE_REQUIREMENTS[$id]="$reqs"
 }
 
 # Discover modules from the GitHub repo that aren't in the hardcoded list

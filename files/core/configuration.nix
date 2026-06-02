@@ -104,9 +104,11 @@
       let tpmPresent = builtins.tryEval (builtins.pathExists "/sys/class/tpm/tpm0");
       in lib.mkIf (tpmPresent.success && tpmPresent.value) [ "tpm_tis" "tpm_crb" "tpm" ];
 
+    initrd.kernelModules = [ "overlay" "xt_addrtype" ];
+
     kernelModules =
       let tpmPresent = builtins.tryEval (builtins.pathExists "/sys/class/tpm/tpm0");
-      in [ "i2c-dev" ]
+      in [ "xt_addrtype" "i2c-dev" ]
          ++ lib.optionals (tpmPresent.success && tpmPresent.value) [ "tpm_tis" "tpm_crb" "tpm" ]
           # nftables modules required by Mullvad VPN daemon for firewall rules.
           # With security.lockKernelModules = true, modules_disabled=1 blocks
@@ -121,6 +123,8 @@
             "nft_redir" "nft_reject_bridge" "nft_reject_ipv4" "nft_reject_ipv6"
             "nft_reject_netdev" "nft_socket" "nft_synproxy" "nft_tproxy"
             "nft_tunnel" "nft_xfrm"
+            # iptables module required by Docker bridge networking
+            "xt_addrtype"
           ];
 
     # GPU initrd kernel modules moved to hardware/gpu/<vendor>.nix for per-machine selection.
@@ -225,7 +229,7 @@
 
   # Build optimization: disable store dedup after every build (saves ~30-60s per rebuild)
   # Dedup runs separately via GC instead
-  nix.settings.auto-optimise-store = false;
+  nix.settings.auto-optimise-store = lib.mkForce false;
 
   # Parallelism: use all available cores for builds
   nix.settings.max-jobs = "auto";
@@ -332,6 +336,7 @@
       Restart = "on-failure";
       RestartSec = 3;
       TimeoutStopSec = 10;
+      Environment = "PATH=/etc/profiles/per-user/yusa/bin:/run/current-system/sw/bin:/run/wrappers/bin";
     };
   };
 
@@ -382,6 +387,15 @@
   # ============================================================================
   # Enable polkit system-wide for graphical auth popup
   security.polkit.enable = true;
+
+  # INFO: Allow members of wheel to mount/ manage udisks2 drives (USB, external)
+  security.polkit.extraConfig = ''
+    polkit.addRule(function(action, subject) {
+      if (action.id.indexOf("org.freedesktop.udisks2.") === 0 && subject.isInGroup("wheel")) {
+        return polkit.Result.YES;
+      }
+    });
+  '';
 
   # RealtimeKit — gives PipeWire/WirePlumber realtime scheduling priority
   # Without this, audio may glitch, crackle, or break under load
@@ -656,6 +670,12 @@
     
     # Mass storage devices (USB drives, external HDDs)
     SUBSYSTEM=="block", ACTION=="add", ATTR{removable}=="1", RUN+="${pkgs.systemd}/bin/udevadm trigger"
+
+    # Hide system partitions from file manager sidebar (disko-generated during install)
+    # Only non-system disks (external, secondary, USB) should appear in Nautilus
+    SUBSYSTEM=="block", ENV{ID_PART_ENTRY_NAME}=="disk-main-esp", ENV{UDISKS_PRESENTATION_HIDE}="1"
+    SUBSYSTEM=="block", ENV{ID_PART_ENTRY_NAME}=="disk-main-root", ENV{UDISKS_PRESENTATION_HIDE}="1"
+    ENV{DM_NAME}=="crypt", ENV{UDISKS_PRESENTATION_HIDE}="1"
   '';
 
   # FIX: Create common-password PAM file for Lynis detection of pwquality
@@ -877,6 +897,25 @@
     trashy
 
     # INFO: vulnix defined in security/default.nix
+    docker-compose
+
+    # Odysseus image rebuild helper
+    (pkgs.writeShellScriptBin "odysseus-build" ''
+      set -euo pipefail
+      echo "=== Odysseus image rebuild via docker exec+tar+import ==="
+      echo "This rebuilds the image from a running container."
+      echo ""
+      echo "  docker exec odysseus-build tar cf - / > /tmp/odysseus-fs.tar"
+      echo "  docker import --change 'ENTRYPOINT ...' /tmp/odysseus-fs.tar odysseus-odysseus:latest"
+      echo ""
+      echo "See configuration.nix for full import command."
+    '')
+    (pkgs.writeShellScriptBin "odysseus-down" ''
+      systemctl stop odysseus
+    '')
+    (pkgs.writeShellScriptBin "odysseus-logs" ''
+      journalctl -fu odysseus
+    '')
 
     # INFO: Rebuild wrapper — stops tamper-detection services before rebuild to
     #       prevent them from triggering a shutdown mid-operation. Runs a quick
@@ -996,6 +1035,9 @@
   # GVFS — provides trash:// URI, MTP device mounting, and other virtual filesystem features
   services.gvfs.enable = true;
 
+  # dconf — required by Nautilus (and other GTK apps) for settings persistence
+  programs.dconf.enable = true;
+
 
   # ============================================================================
   # SECTION 22: FONTS
@@ -1023,7 +1065,13 @@
 
 
   # ============================================================================
-  # SECTION 23: SYSTEM VERSION
+  # SECTION 23: VIRTUALISATION
+  # ============================================================================
+  # Docker — required by Odysseus and general container workloads
+  virtualisation.docker.enable = true;
+
+  # ============================================================================
+  # SECTION 25: SYSTEM VERSION
   # ============================================================================
   # NixOS state version
   system.stateVersion = "25.11";

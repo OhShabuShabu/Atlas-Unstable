@@ -218,18 +218,19 @@ tty_check_status() {
   local state; state=$(read_state)
   for id in "${MODULE_IDS[@]}"; do
     local name="${MODULE_DESC[$id]%% *}"
+    local icon="${MODULE_ICON[$id]:-}"
     local desc="${MODULE_DESC[$id]#* }"; desc="${desc# }"
     local installed=false; is_module_installed "$id" && installed=true
     local enabled_str; enabled_str=$(echo "$state" | jq -r ".\"$id\".enabled // false")
 
     if $installed; then
       if [[ "$enabled_str" == "true" ]]; then
-        echo -e "  ${GREEN}[●]${NC} ${CYAN}$id${NC}) ${BOLD}$name${NC} — ${DIM}$desc${NC}"
+        echo -e "  ${GREEN}[●]${NC} ${CYAN}$id${NC}) $icon ${BOLD}$name${NC} — ${DIM}$desc${NC}"
       else
-        echo -e "  ${YELLOW}[○]${NC} ${CYAN}$id${NC}) ${BOLD}$name${NC} — ${DIM}$desc  ${YELLOW}(disabled)${NC}"
+        echo -e "  ${YELLOW}[○]${NC} ${CYAN}$id${NC}) $icon ${BOLD}$name${NC} — ${DIM}$desc  ${YELLOW}(disabled)${NC}"
       fi
     else
-      echo -e "  ${DIM}[ ]${NC} ${CYAN}$id${NC}) ${BOLD}$name${NC} — ${DIM}$desc  (not installed)${NC}"
+      echo -e "  ${DIM}[ ]${NC} ${CYAN}$id${NC}) $icon ${BOLD}$name${NC} — ${DIM}$desc  (not installed)${NC}"
     fi
   done
   spacer
@@ -249,10 +250,11 @@ tty_install_modules() {
   local state; state=$(read_state)
   for id in "${MODULE_IDS[@]}"; do
     local name="${MODULE_DESC[$id]%% *}"
+    local icon="${MODULE_ICON[$id]:-}"
     local desc="${MODULE_DESC[$id]#* }"; desc="${desc# }"
     local installed=false; is_module_installed "$id" && installed=true
     local status; $installed && status="INSTALLED" || status="available"
-    echo -e "  ${CYAN}$id${NC}) ${BOLD}$name${NC} — ${DIM}$desc${NC}  [${status}]"
+    echo -e "  ${CYAN}$id${NC}) $icon ${BOLD}$name${NC} — ${DIM}$desc${NC}  [${status}]"
   done
   spacer
   read -rp "$(echo -e "${CYAN}Module IDs to install: ${NC}")" ids
@@ -309,8 +311,9 @@ tty_remove_modules() {
 
   for id in "${installed_ids[@]}"; do
     local name="${MODULE_DESC[$id]%% *}"
+    local icon="${MODULE_ICON[$id]:-}"
     local desc="${MODULE_DESC[$id]#* }"; desc="${desc# }"
-    echo -e "  ${CYAN}$id${NC}) ${BOLD}$name${NC} — ${DIM}$desc${NC}"
+    echo -e "  ${CYAN}$id${NC}) $icon ${BOLD}$name${NC} — ${DIM}$desc${NC}"
   done
   spacer
   read -rp "$(echo -e "${CYAN}Module IDs to remove: ${NC}")" ids
@@ -416,6 +419,7 @@ tty_module_info() {
   [[ -z "$sel" || ! "$sel" =~ ^[0-9]+$ ]] && return
 
   local name; name=$(get_module_name "$sel")
+  local icon="${MODULE_ICON[$sel]:-}"
   local desc="${MODULE_DESC[$sel]#* }"; desc="${desc# }"
   local info_text="${MODULE_INFO[$sel]}"
   local cat="${MODULE_CATEGORY[$sel]}"
@@ -424,13 +428,15 @@ tty_module_info() {
   local version="${MODULE_VERSION[$sel]}"
   local deps="${MODULE_DEPS[$sel]}"
   local tags="${MODULE_TAGS[$sel]}"
+  local reqs="${MODULE_REQUIREMENTS[$sel]:-}"
 
   spacer
-  echo -e "  ${BOLD}$name${NC} (id: $sel)"
+  echo -e "  $icon ${BOLD}$name${NC} (id: $sel)"
   echo -e "  ${DIM}$desc${NC}"
   echo -e "  Category: $cat  |  Type: $subdir  |  Version: $version"
   echo -e "  File: $file  |  Tags: $tags"
   [[ -n "$deps" ]] && echo -e "  Dependencies: $deps" || echo -e "  Dependencies: none"
+  [[ -n "$reqs" ]] && echo -e "  Requirements: ${DIM}$reqs${NC}"
   echo -e "  ${DIM}$info_text${NC}"
   spacer
   echo -e "  Source: ${DIM}$ATLAS_MODULES_RAW_URL/$file${NC}"
@@ -465,15 +471,16 @@ tty_browse_by_category() {
   for id in "${MODULE_IDS[@]}"; do
     if [[ "${MODULE_CATEGORY[$id]}" == "$selected_cat" ]]; then
       local name="${MODULE_DESC[$id]%% *}"
+      local icon="${MODULE_ICON[$id]:-}"
       local desc="${MODULE_DESC[$id]#* }"; desc="${desc# }"
       local installed=false; is_module_installed "$id" && installed=true
       local enabled_str; enabled_str=$(echo "$state" | jq -r ".\"$id\".enabled // false")
       if $installed && [[ "$enabled_str" == "true" ]]; then
-        echo -e "  ${GREEN}[●]${NC} ${CYAN}$id${NC}) ${BOLD}$name${NC} — ${DIM}$desc${NC}"
+        echo -e "  ${GREEN}[●]${NC} ${CYAN}$id${NC}) $icon ${BOLD}$name${NC} — ${DIM}$desc${NC}"
       elif $installed; then
-        echo -e "  ${YELLOW}[○]${NC} ${CYAN}$id${NC}) ${BOLD}$name${NC} — ${DIM}$desc  ${YELLOW}(disabled)${NC}"
+        echo -e "  ${YELLOW}[○]${NC} ${CYAN}$id${NC}) $icon ${BOLD}$name${NC} — ${DIM}$desc  ${YELLOW}(disabled)${NC}"
       else
-        echo -e "  ${DIM}[ ]${NC} ${CYAN}$id${NC}) ${BOLD}$name${NC} — ${DIM}$desc  (not installed)${NC}"
+        echo -e "  ${DIM}[ ]${NC} ${CYAN}$id${NC}) $icon ${BOLD}$name${NC} — ${DIM}$desc  (not installed)${NC}"
       fi
     fi
   done
@@ -499,13 +506,14 @@ tty_search_modules() {
     if echo "$name $desc $tags $cat" | grep -iq "$query"; then
       found=1
       local installed=false; is_module_installed "$id" && installed=true
+      local icon="${MODULE_ICON[$id]:-}"
       local enabled_str; enabled_str=$(echo "$state" | jq -r ".\"$id\".enabled // false")
       if $installed && [[ "$enabled_str" == "true" ]]; then
-        echo -e "  ${GREEN}[●]${NC} ${CYAN}$id${NC}) ${BOLD}$name${NC} — ${DIM}$desc${NC}"
+        echo -e "  ${GREEN}[●]${NC} ${CYAN}$id${NC}) $icon ${BOLD}$name${NC} — ${DIM}$desc${NC}"
       elif $installed; then
-        echo -e "  ${YELLOW}[○]${NC} ${CYAN}$id${NC}) ${BOLD}$name${NC} — ${DIM}$desc  ${YELLOW}(disabled)${NC}"
+        echo -e "  ${YELLOW}[○]${NC} ${CYAN}$id${NC}) $icon ${BOLD}$name${NC} — ${DIM}$desc  ${YELLOW}(disabled)${NC}"
       else
-        echo -e "  ${DIM}[ ]${NC} ${CYAN}$id${NC}) ${BOLD}$name${NC} — ${DIM}$desc  (not installed)${NC}"
+        echo -e "  ${DIM}[ ]${NC} ${CYAN}$id${NC}) $icon ${BOLD}$name${NC} — ${DIM}$desc  (not installed)${NC}"
       fi
     fi
   done
@@ -602,6 +610,7 @@ browse_by_category() {
       if [[ "${MODULE_CATEGORY[$id]}" == "$selected_cat" ]]; then
         found=1
         local name="${MODULE_DESC[$id]%% *}"
+        local icon="${MODULE_ICON[$id]:-}"
         local desc="${MODULE_DESC[$id]#* }"; desc="${desc# }"
         local file="${MODULE_FILE[$id]}"
         local fn; fn=$(basename "$file")
@@ -613,11 +622,11 @@ browse_by_category() {
         [[ "$enabled_str" == "true" ]] && enabled=true
 
         if $installed && $enabled; then
-          echo -e "  ${GREEN}[●]${NC} ${CYAN}$id${NC}) ${BOLD}$name${NC} — ${DIM}$desc${NC}"
+          echo -e "  ${GREEN}[●]${NC} ${CYAN}$id${NC}) $icon ${BOLD}$name${NC} — ${DIM}$desc${NC}"
         elif $installed && ! $enabled; then
-          echo -e "  ${YELLOW}[○]${NC} ${CYAN}$id${NC}) ${BOLD}$name${NC} — ${DIM}$desc  ${YELLOW}(disabled)${NC}"
+          echo -e "  ${YELLOW}[○]${NC} ${CYAN}$id${NC}) $icon ${BOLD}$name${NC} — ${DIM}$desc  ${YELLOW}(disabled)${NC}"
         else
-          echo -e "  ${DIM}[ ]${NC} ${CYAN}$id${NC}) ${BOLD}$name${NC} — ${DIM}$desc  (not installed)${NC}"
+          echo -e "  ${DIM}[ ]${NC} ${CYAN}$id${NC}) $icon ${BOLD}$name${NC} — ${DIM}$desc  (not installed)${NC}"
         fi
       fi
     done
@@ -639,6 +648,7 @@ search_modules() {
   local found=0
   for id in "${MODULE_IDS[@]}"; do
     local name="${MODULE_DESC[$id]%% *}"
+    local icon="${MODULE_ICON[$id]:-}"
     local desc="${MODULE_DESC[$id]#* }"; desc="${desc# }"
     local tags="${MODULE_TAGS[$id]}"
     local cat="${MODULE_CATEGORY[$id]}"
@@ -646,7 +656,7 @@ search_modules() {
       found=1
       local status_text
       status_text=$(get_module_status "$id" | sed 's/\x1b\[[0-9;]*m//g' | xargs)
-      echo -e "  ${CYAN}$id${NC}) ${BOLD}$name${NC} — ${DIM}$desc${NC}"
+      echo -e "  ${CYAN}$id${NC}) $icon ${BOLD}$name${NC} — ${DIM}$desc${NC}"
       echo -e "       ${DIM}Status: $status_text | Category: $cat | Tags: $tags${NC}"
     fi
   done
@@ -729,6 +739,7 @@ check_status() {
     name="${MODULE_DESC[$id]%% *}"
     desc="${MODULE_DESC[$id]#* }"
     desc="${desc# }"
+    local icon="${MODULE_ICON[$id]:-}"
     local file="${MODULE_FILE[$id]}"
     local filename; filename=$(basename "$file")
     local subdir="${MODULE_SUBDIR[$id]}"
@@ -745,16 +756,18 @@ check_status() {
     if $installed; then
       any_installed=true
       if $enabled; then
-        echo -e "  ${GREEN}[●]${NC} ${CYAN}$id${NC}) ${BOLD}$name${NC} — ${DIM}$desc${NC}"
+        echo -e "  ${GREEN}[●]${NC} ${CYAN}$id${NC}) $icon ${BOLD}$name${NC} — ${DIM}$desc${NC}"
       else
-        echo -e "  ${YELLOW}[○]${NC} ${CYAN}$id${NC}) ${BOLD}$name${NC} — ${DIM}$desc${NC}  ${YELLOW}(disabled)${NC}"
+        echo -e "  ${YELLOW}[○]${NC} ${CYAN}$id${NC}) $icon ${BOLD}$name${NC} — ${DIM}$desc${NC}  ${YELLOW}(disabled)${NC}"
       fi
       if [[ $has_detail -eq 1 ]]; then
         local version="${MODULE_VERSION[$id]}"
         local deps="${MODULE_DEPS[$id]}"
         local cat="${MODULE_CATEGORY[$id]}"
         local tags="${MODULE_TAGS[$id]}"
+        local reqs="${MODULE_REQUIREMENTS[$id]:-}"
         echo -e "       ${DIM}v$version | $cat | tags: $tags${NC}"
+        [[ -n "$reqs" ]] && echo -e "       ${DIM}requirements: $reqs${NC}"
         if [[ -n "$deps" ]]; then
           local dep_names=""
           for d in $deps; do dep_names+="$(get_module_name $d) "; done
@@ -762,7 +775,7 @@ check_status() {
         fi
       fi
     else
-      echo -e "  ${DIM}[ ]${NC} ${CYAN}$id${NC}) ${BOLD}$name${NC} — ${DIM}$desc  (not installed)${NC}"
+      echo -e "  ${DIM}[ ]${NC} ${CYAN}$id${NC}) $icon ${BOLD}$name${NC} — ${DIM}$desc  (not installed)${NC}"
     fi
   done
 
@@ -783,30 +796,33 @@ browse_modules() {
   state=$(read_state)
 
   for id in "${MODULE_IDS[@]}"; do
-    local name desc cat info_text status_text deps
+    local name desc cat info_text status_text deps icon reqs
     name=$(get_module_name "$id")
     desc="${MODULE_DESC[$id]#* }"
     desc="${desc# }"
     cat="${MODULE_CATEGORY[$id]}"
     info_text="${MODULE_INFO[$id]}"
     deps="${MODULE_DEPS[$id]:-}"
+    icon="${MODULE_ICON[$id]:-}"
+    reqs="${MODULE_REQUIREMENTS[$id]:-}"
     status_text=$(get_module_status "$id" | sed 's/\x1b\[[0-9;]*m//g' | xargs)
 
-    printf "%s\t%s\t%s\t%s\t%s\t%s\n" "$id" "$name" "$desc" "$cat" "$info_text" "$deps"
+    printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$id" "$icon $name" "$desc" "$cat" "$info_text" "$deps" "$icon" "$reqs"
   done | fzf \
     --header "Module Browser | Esc: back" \
     --prompt "Search modules > " \
     --delimiter="\t" \
-    --with-nth=1,2,3,4 \
+    --with-nth=1,2,7,3 \
     --preview "
       echo -e '\033[1;36mModule Information\033[0m'
       echo -e '\033[2m─────────────────────────────\033[0m'
       echo ''
+      echo -e '  {7} \033[1m{2}\033[0m'
       echo -e '  \033[1mID:\033[0m          {1}'
-      echo -e '  \033[1mName:\033[0m        {2}'
       echo -e '  \033[1mDescription:\033[0m  {3}'
       echo -e '  \033[1mCategory:\033[0m     {4}'
       echo -e '  \033[1mDependencies:\033[0m {6}'
+      echo -e '  \033[1mRequirements:\033[0m {8}'
       echo ''
       echo -e '  {5}' | fold -w 50 | sed 's/^/  /'
       echo ''
@@ -838,12 +854,14 @@ install_modules() {
 
   local fzf_input=""
   for id in "${MODULE_IDS[@]}"; do
-    local name desc cat info_text
+    local name desc cat info_text icon reqs
     name=$(get_module_name "$id")
     desc="${MODULE_DESC[$id]#* }"
     desc="${desc# }"
     cat="${MODULE_CATEGORY[$id]}"
     info_text="${MODULE_INFO[$id]}"
+    icon="${MODULE_ICON[$id]:-}"
+    reqs="${MODULE_REQUIREMENTS[$id]:-}"
 
     local file="${MODULE_FILE[$id]}"
     local filename; filename=$(basename "$file")
@@ -866,7 +884,7 @@ install_modules() {
 
     local deps="${MODULE_DEPS[$id]:-}"
 
-    fzf_input+="$id | $name | $status | $cat | $deps | $info_text"$'\n'
+    fzf_input+="$id | $icon $name | $status | $cat | $deps | $info_text | $reqs"$'\n'
   done
 
   local selected
@@ -884,6 +902,7 @@ install_modules() {
           echo -e '  \033[1mName:\033[0m         {2}'
           echo -e '  \033[1mCategory:\033[0m      {4}'
           echo -e '  \033[1mDependencies:\033[0m  {5}'
+          echo -e '  \033[1mRequirements:\033[0m  {7}'
           echo ''
           echo -e '  {6}' | fold -w 55 | sed 's/^/  /'
         " \
@@ -1052,12 +1071,13 @@ remove_modules() {
 
     if [[ -f "$dest_dir/$filename" ]]; then
       local name="${MODULE_DESC[$id]%% *}"
+      local icon="${MODULE_ICON[$id]:-}"
       local desc="${MODULE_DESC[$id]#* }"
       local enabled_str
       enabled_str=$(echo "$state" | jq -r ".\"$id\".enabled // false")
       local status="ENABLED"
       [[ "$enabled_str" != "true" ]] && status="DISABLED"
-      fzf_input+="$id | $name | $status | $desc"$'\n'
+      fzf_input+="$id | $icon $name | $status | $desc"$'\n'
     fi
   done
 
@@ -1074,7 +1094,7 @@ remove_modules() {
         --header "TAB: toggle | Enter: confirm removal | Esc: cancel" \
         --prompt "Select modules to remove > " \
         --delimiter="|" \
-        --with-nth=1,2,3,4 \
+        --with-nth=1,2,3 \
         --bind "enter:accept" \
         --bind "esc:cancel" \
         --cycle \
@@ -1195,7 +1215,7 @@ module_info() {
 
   local fzf_input=""
   for id in "${MODULE_IDS[@]}"; do
-    local name desc cat file subdir version deps info_text
+    local name desc cat file subdir version deps info_text icon reqs
     name=$(get_module_name "$id")
     desc="${MODULE_DESC[$id]#* }"
     desc="${desc# }"
@@ -1205,7 +1225,9 @@ module_info() {
     version="${MODULE_VERSION[$id]}"
     deps="${MODULE_DEPS[$id]:--}"
     info_text="${MODULE_INFO[$id]}"
-    fzf_input+="$id | $name | $desc | $cat | $subdir | $version | $deps | $info_text | $file"$'\n'
+    icon="${MODULE_ICON[$id]:-}"
+    reqs="${MODULE_REQUIREMENTS[$id]:-}"
+    fzf_input+="$id | $icon $name | $desc | $cat | $subdir | $version | $deps | $info_text | $file | $reqs"$'\n'
   done
 
   local selected
@@ -1220,13 +1242,15 @@ module_info() {
           echo -e ' \033[1mModule Details\033[0m'
           echo -e '\033[1;36m═══════════════════════════════════════\033[0m'
           echo ''
+          echo -e '  \033[1m{2}\033[0m'
+          echo ''
           echo -e '  ID:         \033[1m{1}\033[0m'
-          echo -e '  Name:       {2}'
           echo -e '  Category:   {4}'
           echo -e '  Type:       {5}'
           echo -e '  Version:    {6}'
           echo -e '  Deps:       {7}'
           echo -e '  File:       {9}'
+          echo -e '  Reqs:       {10}'
           echo ''
           echo -e '  \033[1mDescription:\033[0m'
           echo -e '  {8}' | fold -w 55 | sed 's/^/  /'

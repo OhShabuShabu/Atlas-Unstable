@@ -28,6 +28,8 @@ let
       deps = [ ];
       version = "1.0.0";
       url = "${baseUrl}/${moduleDir "nixos"}performance.nix";
+      icon = "⚡";
+      requirements = "RAM: 512MB | Disk: 100MB";
     };
 
     "2" = {
@@ -41,6 +43,8 @@ let
       deps = [ ];
       version = "1.1.0";
       url = "${baseUrl}/${moduleDir "nixos"}privacy.nix";
+      icon = "🛡️";
+      requirements = "RAM: 256MB | Disk: 2GB | Network: Mullvad subscription";
     };
 
     "3" = {
@@ -54,6 +58,8 @@ let
       deps = [ "8" ];
       version = "2.0.0";
       url = "${baseUrl}/${moduleDir "nixos"}gaming.nix";
+      icon = "🎮";
+      requirements = "RAM: 4GB | Disk: 20GB | GPU: 3D-capable";
     };
 
     "4" = {
@@ -67,6 +73,8 @@ let
       deps = [ ];
       version = "1.1.0";
       url = "${baseUrl}/${moduleDir "nixos"}virtualisation.nix";
+      icon = "🖥️";
+      requirements = "RAM: 2GB | Disk: 5GB | CPU: KVM-capable (EPT/SVM)";
     };
 
     "5" = {
@@ -80,6 +88,8 @@ let
       deps = [ "3" ];
       version = "1.0.0";
       url = "${baseUrl}/${moduleDir "nixos"}minecraft.nix";
+      icon = "⛏️";
+      requirements = "RAM: 2GB | Disk: 5GB | Depends: gaming module";
     };
 
     "6" = {
@@ -93,6 +103,8 @@ let
       deps = [ ];
       version = "1.0.0";
       url = "${baseUrl}/${moduleDir "nixos"}flatpak.nix";
+      icon = "📦";
+      requirements = "RAM: 128MB | Disk: 500MB";
     };
 
     "7" = {
@@ -106,6 +118,8 @@ let
       deps = [ ];
       version = "2.0.0";
       url = "${baseUrl}/${moduleDir "home"}dev.nix";
+      icon = "💻";
+      requirements = "RAM: 1GB | Disk: 3GB";
     };
 
     "8" = {
@@ -119,6 +133,8 @@ let
       deps = [ ];
       version = "1.1.0";
       url = "${baseUrl}/${moduleDir "home"}tools.nix";
+      icon = "🔧";
+      requirements = "RAM: 256MB | Disk: 500MB";
     };
 
     "9" = {
@@ -132,6 +148,8 @@ let
       deps = [ ];
       version = "1.0.0";
       url = "${baseUrl}/${moduleDir "nixos"}extras.nix";
+      icon = "🧠";
+      requirements = "RAM: 8GB | Disk: 10GB | GPU: ROCm-compatible AMD";
     };
 
     "10" = {
@@ -145,6 +163,8 @@ let
       deps = [ ];
       version = "1.0.0";
       url = "${baseUrl}/${moduleDir "nixos"}bluetooth.nix";
+      icon = "📡";
+      requirements = "RAM: 64MB | Disk: 50MB | Hardware: Bluetooth adapter";
     };
 
     "11" = {
@@ -158,6 +178,8 @@ let
       deps = [ ];
       version = "1.0.0";
       url = "${baseUrl}/${moduleDir "nixos"}pdf.nix";
+      icon = "📄";
+      requirements = "RAM: 256MB | Disk: 1GB";
     };
 
     "12" = {
@@ -171,6 +193,8 @@ let
       deps = [ ];
       version = "1.0.0";
       url = "${baseUrl}/${moduleDir "nixos"}art.nix";
+      icon = "🎨";
+      requirements = "RAM: 2GB | Disk: 5GB | GPU: OpenGL 3.3+";
     };
 
     "13" = {
@@ -184,6 +208,8 @@ let
       deps = [ ];
       version = "1.0.0";
       url = "${baseUrl}/${moduleDir "nixos"}gpu-amd.nix";
+      icon = "🟥";
+      requirements = "RAM: 64MB | Disk: 100MB | GPU: AMD Radeon";
     };
 
     "14" = {
@@ -197,6 +223,8 @@ let
       deps = [ ];
       version = "1.0.0";
       url = "${baseUrl}/${moduleDir "nixos"}gpu-intel.nix";
+      icon = "🟦";
+      requirements = "RAM: 64MB | Disk: 100MB | GPU: Intel integrated";
     };
 
     "15" = {
@@ -210,6 +238,8 @@ let
       deps = [ ];
       version = "1.0.0";
       url = "${baseUrl}/${moduleDir "nixos"}gpu-nvidia.nix";
+      icon = "🟩";
+      requirements = "RAM: 64MB | Disk: 200MB | GPU: NVIDIA";
     };
 
     "16" = {
@@ -223,6 +253,8 @@ let
       deps = [ ];
       version = "1.0.0";
       url = "${baseUrl}/${moduleDir "nixos"}security.nix";
+      icon = "🔒";
+      requirements = "RAM: 128MB | Disk: 100MB";
     };
 
     "17" = {
@@ -236,6 +268,8 @@ let
       deps = [ ];
       version = "1.0.0";
       url = "${baseUrl}/${moduleDir "nixos"}shell.nix";
+      icon = "⌨️";
+      requirements = "RAM: 256MB | Disk: 200MB";
     };
 
     "18" = {
@@ -249,6 +283,8 @@ let
       deps = [ ];
       version = "1.0.0";
       url = "${baseUrl}/${moduleDir "nixos"}fonts.nix";
+      icon = "🔤";
+      requirements = "RAM: 64MB | Disk: 2GB";
     };
 
     "19" = {
@@ -262,6 +298,23 @@ let
       deps = [ ];
       version = "1.0.0";
       url = "${baseUrl}/${moduleDir "nixos"}media.nix";
+      icon = "🎬";
+      requirements = "RAM: 512MB | Disk: 500MB | GPU: VA-API capable";
+    };
+
+    "20" = {
+      name = "odysseus";
+      description = "Odysseus self-hosted AI workspace";
+      info = "Odysseus: Docker-based AI workspace with chat, agents, deep research, email, memory, and RAG. Runs with chromadb, searxng, and ntfy support services.";
+      file = "odysseus.nix";
+      subdir = "nixos";
+      category = "services";
+      tags = [ "ai" "workspace" "docker" "chat" "agents" ];
+      deps = [ ];
+      version = "1.0.0";
+      url = "${baseUrl}/${moduleDir "nixos"}odysseus.nix";
+      icon = "🤖";
+      requirements = "RAM: 4GB | Disk: 2GB | Runtime: Docker";
     };
   };
 
@@ -342,6 +395,8 @@ let
         subdir = mod.subdir;
         inherit enabled;
         deps = mod.deps;
+        icon = mod.icon or "";
+        requirements = mod.requirements or "";
       }
     ) (builtins.attrNames modules);
 

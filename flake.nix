@@ -27,8 +27,12 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    odysseus = {
+      url = "github:pewdiepie-archdaemon/odysseus";
+      flake = false;
+    };
   };
-  outputs = inputs @ { self, nixpkgs, home-manager, noctalia, disko, preservation, ... }:
+  outputs = inputs @ { self, nixpkgs, home-manager, noctalia, disko, preservation, odysseus, ... }:
   let
     # Supported systems — extend this list for multi-architecture support
     # NOTE: aarch64-linux requires matching packages (some may be unavailable)
