@@ -239,6 +239,198 @@
   
   programs.noctalia-shell = {
     enable = true;
+
+    settings = {
+      settingsVersion = 59;
+
+      bar = {
+        barType = "floating";
+        position = "top";
+        monitors = [ ];
+        density = "default";
+        showOutline = false;
+        showCapsule = true;
+        capsuleOpacity = 1;
+        capsuleColorKey = "none";
+        widgetSpacing = 5;
+        contentPadding = 8;
+        fontScale = 1;
+        enableExclusionZoneInset = true;
+        backgroundOpacity = 0.93;
+        useSeparateOpacity = false;
+        marginVertical = 4;
+        marginHorizontal = 308;
+        frameThickness = 8;
+        frameRadius = 12;
+        outerCorners = true;
+        hideOnOverview = false;
+        displayMode = "always_visible";
+        autoHideDelay = 500;
+        autoShowDelay = 150;
+        showOnWorkspaceSwitch = true;
+
+        widgets = {
+          left = [
+            {
+              id = "Clock";
+              clockColor = "none";
+              customFont = "";
+              formatHorizontal = "HH:mm ddd, MMM dd";
+              formatVertical = "HH mm - dd MM";
+              tooltipFormat = "HH:mm ddd, MMM dd";
+              useCustomFont = false;
+            }
+          ];
+          center = [
+            {
+              id = "Workspace";
+              characterCount = 2;
+              colorizeIcons = false;
+              emptyColor = "primary";
+              enableScrollWheel = true;
+              focusedColor = "primary";
+              followFocusedScreen = false;
+              fontWeight = "bold";
+              groupedBorderOpacity = 1;
+              hideUnoccupied = false;
+              iconScale = 0.8;
+              labelMode = "index";
+              occupiedColor = "primary";
+              pillSize = 0.6;
+              showApplications = false;
+              showApplicationsHover = false;
+              showBadge = true;
+              showLabelsOnlyWhenOccupied = true;
+              unfocusedIconsOpacity = 1;
+            }
+          ];
+          right = [
+            {
+              id = "Tray";
+              blacklist = [ ];
+              chevronColor = "none";
+              colorizeIcons = false;
+              drawerEnabled = true;
+              hidePassive = false;
+              pinned = [ ];
+            }
+            {
+              id = "Volume";
+              displayMode = "onhover";
+              iconColor = "none";
+              middleClickCommand = "pwvucontrol || pavucontrol";
+              textColor = "none";
+            }
+            {
+              id = "ControlCenter";
+              colorizeDistroLogo = false;
+              colorizeSystemIcon = "tertiary";
+              colorizeSystemText = "none";
+              customIconPath = "";
+              enableColorization = true;
+              icon = "noctalia";
+              useDistroLogo = true;
+            }
+            {
+              id = "Battery";
+              deviceNativePath = "__default__";
+              displayMode = "graphic";
+              hideIfIdle = true;
+              hideIfNotDetected = true;
+              showNoctaliaPerformance = true;
+              showPowerProfiles = true;
+            }
+          ];
+        };
+
+        mouseWheelAction = "none";
+        reverseScroll = false;
+        mouseWheelWrap = true;
+        middleClickAction = "none";
+        middleClickFollowMouse = false;
+        middleClickCommand = "";
+        rightClickAction = "controlCenter";
+        rightClickFollowMouse = true;
+        rightClickCommand = "";
+        screenOverrides = [ ];
+      };
+
+      general = {
+        avatarImage = "";
+        dimmerOpacity = 0.2;
+        showScreenCorners = false;
+        forceBlackScreenCorners = false;
+        scaleRatio = 1;
+        radiusRatio = 1;
+        iRadiusRatio = 1;
+        boxRadiusRatio = 1;
+        screenRadiusRatio = 1;
+        animationSpeed = 1;
+        animationDisabled = false;
+        compactLockScreen = false;
+        lockScreenAnimations = false;
+        lockOnSuspend = true;
+        showSessionButtonsOnLockScreen = true;
+        showHibernateOnLockScreen = false;
+        enableLockScreenMediaControls = false;
+        enableShadows = true;
+        enableBlurBehind = true;
+        shadowDirection = "bottom_right";
+        shadowOffsetX = 2;
+        shadowOffsetY = 3;
+        language = "";
+        allowPanelsOnScreenWithoutBar = true;
+        showChangelogOnStartup = true;
+        telemetryEnabled = false;
+        enableLockScreenCountdown = true;
+        lockScreenCountdownDuration = 10000;
+        autoStartAuth = false;
+        allowPasswordWithFprintd = false;
+        clockStyle = "custom";
+        clockFormat = "hh\nmm";
+        passwordChars = true;
+        lockScreenMonitors = [ ];
+        lockScreenBlur = 0;
+        lockScreenTint = 0;
+        keybinds = {
+          keyUp = [ "K" ];
+          keyDown = [ "J" ];
+          keyLeft = [ "H" ];
+          keyRight = [ "L" ];
+          keyEnter = [ "Return" "Enter" ];
+          keyEscape = [ "Esc" ];
+          keyRemove = [ "Del" ];
+        };
+        reverseScroll = false;
+        smoothScrollEnabled = true;
+      };
+
+      location = {
+        name = "Berlin";
+        weatherEnabled = true;
+        weatherShowEffects = true;
+        weatherTaliaMascotAlways = false;
+        useFahrenheit = false;
+        use12hourFormat = false;
+        showWeekNumberInCalendar = false;
+        showCalendarEvents = true;
+        showCalendarWeather = true;
+        analogClockInCalendar = false;
+        firstDayOfWeek = -1;
+        hideWeatherTimezone = false;
+        hideWeatherCityName = false;
+        autoLocate = false;
+      };
+
+      noctaliaPerformance = {
+        disableWallpaper = false;
+        disableDesktopWidgets = true;
+      };
+
+      dock = {
+        enabled = false;
+      };
+    };
   };
 
   programs.opencode.enable = true;
