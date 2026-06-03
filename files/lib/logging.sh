@@ -2,7 +2,7 @@
 # ============================================================================
 # ATLAS SHARED LOGGING LIBRARY
 # ============================================================================
-# Standardized logging and output formatting for all Atlas scripts.
+# Standardized logging and output formatting for all YoRHa scripts.
 # Provides consistent colors, status indicators, and output formatting.
 #
 # Usage: source files/lib/logging.sh
@@ -69,7 +69,7 @@ status_symbol() {
 # ─── Log to Journald ──────────────────────────────────────────────────────
 log_to_journal() {
   local priority="${1:-info}"
-  local tag="${2:-atlas}"
+  local tag="${2:-yorha}"
   local message="$3"
   echo "$message" | systemd-cat -t "$tag" -p "$priority" 2>/dev/null || true
 }

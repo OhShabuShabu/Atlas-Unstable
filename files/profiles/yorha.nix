@@ -3,7 +3,7 @@
 {
   imports = [ ];
 
-  networking.hostName = "atlas";
+  networking.hostName = "yorha";
 
   networking.domain = "local";
 

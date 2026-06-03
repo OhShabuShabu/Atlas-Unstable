@@ -12,7 +12,7 @@
 #   - AIDE file integrity (config, init, check)
 #   - Snort NIDS (config, rules, monitor)
 #   - Systemd integration (services, timers, paths)
-#   - CLI scripts (atlas-health, detect-hardware, etc.)
+#   - CLI scripts (yorha-health, detect-hardware, etc.)
 #
 # All tests use isolated temp directories — safe to run without root.
 # ============================================================================
@@ -30,7 +30,7 @@ TEST_DIR="$BASE/tests"
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
 echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║        ATLAS DAEMON BEHAVIORAL TEST SUITE                   ║${NC}"
+echo -e "${CYAN}║        YORHA DAEMON BEHAVIORAL TEST SUITE                   ║${NC}"
 echo -e "${CYAN}║        $TIMESTAMP${NC}"
 echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo ""
@@ -67,7 +67,7 @@ for entry in "${TEST_MODULES[@]}"; do
 
   # Run in a subshell with its own PASS/FAIL/SKIP tracking
   set +e
-  output=$(ATLAS_BASE="$BASE" bash "$script" 2>&1)
+  output=$(YORHA_BASE="$BASE" bash "$script" 2>&1)
   rc=$?
   set -e
 

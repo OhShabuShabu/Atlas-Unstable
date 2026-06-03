@@ -5,14 +5,14 @@
 # fzf-based TUI for browsing, enabling/disabling, downloading, and removing
 # optional modules. Works entirely from a TTY.
 #
-# Usage: atlas-module-manager
+# Usage: yorha-module-manager
 # ============================================================================
 set -euo pipefail
 export PATH="/run/wrappers/bin:/run/current-system/sw/bin:$PATH"
 
 # ─── Paths ──────────────────────────────────────────────────────────────────
 BASE="${ATLAS_MODULES_BASE:-$(cd "$(dirname "$0")/../.." && pwd)}"
-source "$BASE/files/lib/logging.sh"
+source "$BASE/files/lib/tui.sh"
 source "$BASE/files/lib/module-registry.sh"
 ATLAS_MODULES_BASE="$BASE"
 
@@ -22,9 +22,7 @@ OPT_HOME_DIR="$(get_module_dir home)"
 # ─── UI Helpers ────────────────────────────────────────────────────────────
 header() {
   clear
-  echo -e "${CYAN}┌─ Atlas Module Manager ──────────────────────────────────────┐${NC}"
-  echo -e "${CYAN}└─────────────────────────────────────────────────────────────┘${NC}"
-  echo ""
+  tui_box_header "YoRHa Module Manager"
 }
 
 # ─── Module Status ──────────────────────────────────────────────────────────
@@ -92,7 +90,7 @@ tty_echo() {
 main_menu() {
   while true; do
     header
-    echo -e "  ${BOLD}Welcome to the Atlas Module Manager${NC}"
+    echo -e "  ${BOLD}Welcome to the YoRHa Module Manager${NC}"
     echo -e "  ${DIM}Manage optional NixOS modules for your system${NC}"
     spacer
     echo -e "  ${CYAN}1${NC}) Browse & Manage Modules"
@@ -133,7 +131,7 @@ main_menu() {
 # ─── TTY Menu (whiptail/dialog/basic fallback) ─────────────────────────────
 tty_main_menu() {
   while true; do
-    local title="Atlas Module Manager"
+    local title="YoRHa Module Manager"
     local menu_choices
 
     if [[ "$UI_BACKEND" == "whiptail" ]] || [[ "$UI_BACKEND" == "dialog" ]]; then
@@ -172,7 +170,7 @@ tty_main_menu() {
     else
       # Pure TTY fallback (no whiptail/dialog)
       header
-      echo -e "  ${BOLD}Welcome to the Atlas Module Manager${NC}"
+      echo -e "  ${BOLD}Welcome to the YoRHa Module Manager${NC}"
       echo -e "  ${DIM}Manage optional NixOS modules for your system${NC}"
       spacer
       echo -e "  ${CYAN}1${NC}) Browse & Manage Modules"
@@ -381,7 +379,7 @@ tty_apply_changes() {
   local enabled_count; enabled_count=$(echo "$state" | jq '[to_entries[] | select(.value.enabled == true)] | length')
   echo -e "  ${BOLD}Summary:${NC}"
   echo -e "    Enabled modules:    ${CYAN}$enabled_count${NC}"
-  echo -e "    Flake target:       ${DIM}#atlas${NC}"
+  echo -e "    Flake target:       ${DIM}#yorha${NC}"
   spacer
   read -rp "$(echo -e "${YELLOW}  Run nixos-rebuild switch now? (y/N): ${NC}")" confirm
   shopt -s nocasematch
@@ -393,7 +391,7 @@ tty_apply_changes() {
   spacer
   # Stop tamper-detection services before rebuild
   sudo systemctl stop snort-daemon snort-monitor snout-watcher.service snout-watcher.path aide-check.service aide-check.timer firmware-version-check tpm-attestation-check secureboot-verify 2>/dev/null || true
-  sudo nixos-rebuild switch --flake "$BASE#atlas" 2>&1 | tee /tmp/atlas-module-rebuild.log
+  sudo nixos-rebuild switch --flake "$BASE#yorha" 2>&1 | tee /tmp/yorha-module-rebuild.log
   local rebuild_exit=${PIPESTATUS[0]}
   if [[ $rebuild_exit -eq 0 ]]; then
     ok "Rebuild successful!"
@@ -401,7 +399,7 @@ tty_apply_changes() {
     s=$(echo "$s" | jq --arg now "$(date -Iseconds)" '.metadata.last_rebuild = $now')
     write_state "$s"
   else
-    fail "Rebuild failed (exit $rebuild_exit). Check /tmp/atlas-module-rebuild.log"
+    fail "Rebuild failed (exit $rebuild_exit). Check /tmp/yorha-module-rebuild.log"
   fi
   read -rp "$(echo -e "${DIM}Press Enter to continue...${NC}")"
 }
@@ -578,7 +576,7 @@ tty_verify_modules() {
   [[ "$confirm" == "n" ]] && { shopt -u nocasematch; return; }
   shopt -u nocasematch
   spacer
-  bash "$BASE/files/bin/atlas-module-verify.sh" || true
+  bash "$BASE/files/bin/yorha-module-verify.sh" || true
   spacer
   read -rp "$(echo -e "${DIM}Press Enter to continue...${NC}")"
 }
@@ -707,7 +705,7 @@ validate_and_report() {
   if [[ $issues -eq 0 ]]; then
     ok "Module state is valid — all dependencies satisfied."
   else
-    warn "Found $issues issue(s). Run 'atlas-module fix' to resolve."
+    warn "Found $issues issue(s). Run 'yorha-module fix' to resolve."
   fi
 
   # Show summary
@@ -824,7 +822,7 @@ browse_modules() {
       echo -e '  \033[1mDependencies:\033[0m {6}'
       echo -e '  \033[1mRequirements:\033[0m {8}'
       echo ''
-      printf '  %s\n' {5} | fold -w 50 | sed 's/^/  /'
+      printf '  %s\n' '{5}' | fold -w 50 | sed 's/^/  /'
       echo ''
       echo -e '\033[2mPress ? for keybindings\033[0m'
     " \
@@ -1161,7 +1159,7 @@ apply_changes() {
   echo -e "  ${BOLD}Summary:${NC}"
   echo -e "    Enabled modules:    ${CYAN}$enabled_count${NC}"
   echo -e "    Configuration:      ${DIM}$BASE${NC}"
-  echo -e "    Flake target:       ${DIM}#atlas${NC}"
+  echo -e "    Flake target:       ${DIM}#yorha${NC}"
   spacer
 
   read -rp "$(echo -e "${YELLOW}  Run nixos-rebuild switch now? (y/N): ${NC}")" confirm
@@ -1169,7 +1167,7 @@ apply_changes() {
   if [[ "$confirm" != "y" ]]; then
     shopt -u nocasematch
     info "Cancelled. You can rebuild manually:"
-    echo -e "       ${DIM}sudo nixos-rebuild switch --flake $BASE#atlas${NC}"
+    echo -e "       ${DIM}sudo nixos-rebuild switch --flake $BASE#yorha${NC}"
     sleep 1
     return
   fi
@@ -1180,7 +1178,7 @@ apply_changes() {
   echo -e "  ${DIM}(This may take several minutes)${NC}"
   spacer
 
-  # Stop tamper-detection services before rebuild (following atlas-rebuild pattern)
+  # Stop tamper-detection services before rebuild (following yorha-rebuild pattern)
   sudo systemctl stop \
     snort-daemon snort-monitor \
     snout-watcher.service snout-watcher.path \
@@ -1189,7 +1187,7 @@ apply_changes() {
     tpm-attestation-check \
     secureboot-verify 2>/dev/null || true
 
-  sudo nixos-rebuild switch --flake "$BASE#atlas" 2>&1 | tee /tmp/atlas-module-rebuild.log
+  sudo nixos-rebuild switch --flake "$BASE#yorha" 2>&1 | tee /tmp/yorha-module-rebuild.log
   local rebuild_exit=${PIPESTATUS[0]}
   if [[ $rebuild_exit -eq 0 ]]; then
     ok "Rebuild successful!"
@@ -1198,7 +1196,7 @@ apply_changes() {
     updated_state=$(echo "$updated_state" | jq --arg now "$(date -Iseconds)" '.metadata.last_rebuild = $now')
     write_state "$updated_state"
   else
-    fail "Rebuild failed (exit $rebuild_exit). Check /tmp/atlas-module-rebuild.log"
+    fail "Rebuild failed (exit $rebuild_exit). Check /tmp/yorha-module-rebuild.log"
   fi
 
   spacer

@@ -5,7 +5,7 @@ let
 
   snortRules = pkgs.writeTextDir "local.rules" ''
     # ============================================================================
-    # SNORT LOCAL RULES — Atlas Security Configuration
+    # SNORT LOCAL RULES — YoRHa Security Configuration
     # ============================================================================
     # These rules detect malicious/dangerous traffic and trigger alerts.
     # Priority 1 = critical, 2 = high, 3 = medium
@@ -313,7 +313,7 @@ let
 
   snortConfig = pkgs.writeTextDir "snort.lua" ''
     -- ============================================================================
-    -- Snort++ configuration — Atlas NixOS Security Hardening
+    -- Snort++ configuration — YoRHa NixOS Security Hardening
     -- ============================================================================
 
     HOME_NET = '192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12'

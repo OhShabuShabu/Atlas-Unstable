@@ -11,15 +11,15 @@
 #   - Expected files/services exist
 #
 # Usage:
-#   atlas-module-verify                    # Verify all enabled modules
-#   atlas-module-verify <id>               # Verify specific module
-#   atlas-module-verify --list             # List verification checks per module
-#   atlas-module-verify --quick            # Quick check (systemd only)
+#   yorha-module-verify                    # Verify all enabled modules
+#   yorha-module-verify <id>               # Verify specific module
+#   yorha-module-verify --list             # List verification checks per module
+#   yorha-module-verify --quick            # Quick check (systemd only)
 # ============================================================================
 set -euo pipefail
 
 BASE="${ATLAS_MODULES_BASE:-$(cd "$(dirname "$0")/../.." && pwd)}"
-source "$BASE/files/lib/logging.sh"
+source "$BASE/files/lib/tui.sh"
 source "$BASE/files/lib/module-registry.sh"
 ATLAS_MODULES_BASE="$BASE"
 
@@ -467,7 +467,7 @@ case "${1:-}" in
     fi
     ;;
   --help|-h)
-    echo "Usage: atlas-module-verify [--quick|--list|<id>]"
+    echo "Usage: yorha-module-verify [--quick|--list|<id>]"
     echo ""
     echo "Commands:"
     echo "  (no args)       Verify all enabled modules (full checks)"

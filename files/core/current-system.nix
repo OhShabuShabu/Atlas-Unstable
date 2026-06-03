@@ -4,7 +4,7 @@
 # CURRENT SYSTEM FILESYSTEM LAYOUT (impermanent)
 # ============================================================================
 # Btrfs + tmpfs layout — matches what disko creates during install.
-# This is imported by the `atlas` output; NOT by `atlas-installer` (which uses disko).
+# This is imported by the `yorha` output; NOT by `yorha-installer` (which uses disko).
 #
 # HARDWARE ADAPTATION:
 #   - tmpfs sizes scale with detected RAM (percentage of total)
@@ -36,14 +36,14 @@ in {
   fileSystems."/nix" = {
     device = "/dev/mapper/crypt";
     fsType = "btrfs";
-    options = [ "subvol=nix" "noatime" ];
+    options = [ "subvol=nix" "noatime" "x-gvfs-hide" ];
     neededForBoot = true;
   };
 
   fileSystems."/persistent" = {
     device = "/dev/mapper/crypt";
     fsType = "btrfs";
-    options = [ "subvol=persistent" "noatime" ];
+    options = [ "subvol=persistent" "noatime" "x-gvfs-hide" ];
     neededForBoot = true;
   };
 
@@ -64,14 +64,14 @@ in {
   fileSystems."/var" = {
     device = "/dev/mapper/crypt";
     fsType = "btrfs";
-    options = [ "subvol=var" "noatime" ];
+    options = [ "subvol=var" "noatime" "x-gvfs-hide" ];
     neededForBoot = true;
   };
 
   fileSystems."/boot" = {
     device = "/dev/disk/by-partlabel/disk-main-esp";
     fsType = "vfat";
-    options = [ "fmask=0077" "dmask=0077" ];
+    options = [ "fmask=0077" "dmask=0077" "x-gvfs-hide" ];
   };
 
   # Swap file on the LUKS-encrypted /persistent subvol — no bare swap partition
@@ -107,7 +107,7 @@ in {
     };
   };
 
-  systemd.services."atlas-tpm-enroll" = {
+  systemd.services."tpm-enroll" = {
     description = "Enroll TPM2 key into LUKS (one-time first-boot)";
     after = [ "local-fs.target" ];
     wantedBy = [ "multi-user.target" ];
@@ -115,7 +115,7 @@ in {
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
-      ExecStart = pkgs.writeShellScript "atlas-tpm-enroll" ''
+      ExecStart = pkgs.writeShellScript "tpm-enroll" ''
         set -euo pipefail
 
         LUKS_DEVICE="/dev/disk/by-partlabel/disk-main-root"
@@ -127,23 +127,23 @@ in {
         fi
 
         if [ ! -f "$PASSWORD_FILE" ]; then
-          echo "atlas-tpm-enroll: no $PASSWORD_FILE — skipping"
+          echo "tpm-enroll: no $PASSWORD_FILE — skipping"
           exit 0
         fi
 
         if [ ! -e /dev/tpm0 ] && [ ! -e /dev/tpmrm0 ]; then
-          echo "atlas-tpm-enroll: no TPM device found — skipping"
+          echo "tpm-enroll: no TPM device found — skipping"
           exit 0
         fi
 
         if ${pkgs.cryptsetup}/bin/cryptsetup luksDump "$LUKS_DEVICE" | grep -q "systemd-tpm2"; then
-          echo "atlas-tpm-enroll: TPM2 token already present"
+          echo "tpm-enroll: TPM2 token already present"
           rm -f "$PASSWORD_FILE"
           touch "$DONE_FILE"
           exit 0
         fi
 
-        echo "atlas-tpm-enroll: enrolling TPM2 for $LUKS_DEVICE ..."
+        echo "tpm-enroll: enrolling TPM2 for $LUKS_DEVICE ..."
         ${pkgs.systemd}/bin/systemd-cryptenroll \
           --tpm2-device=auto \
           --tpm2-pcrs=0+7 \
@@ -152,7 +152,7 @@ in {
 
         rm -f "$PASSWORD_FILE"
         touch "$DONE_FILE"
-        echo "atlas-tpm-enroll: TPM2 enrollment complete"
+        echo "tpm-enroll: TPM2 enrollment complete"
       '';
       TimeoutStartSec = "120s";
     };

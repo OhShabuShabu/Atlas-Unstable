@@ -18,11 +18,11 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/helpers.sh"
 
-BASE="${ATLAS_BASE:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+BASE="${YORHA_BASE:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 source "$BASE/files/lib/module-registry.sh"
 
 # ─── Setup: Isolated test environment ───────────────────────────────────────
-TEST_DIR=$(_mktemp /tmp/atlas-module-test.XXXXXX)
+TEST_DIR=$(_mktemp /tmp/yorha-module-test.XXXXXX)
 STATE_DIR="$TEST_DIR/state"
 STATE_FILE="$STATE_DIR/state.json"
 OPT_DIR="$TEST_DIR/optional"
@@ -30,8 +30,8 @@ OPT_DIR="$TEST_DIR/optional"
 mkdir -p "$STATE_DIR" "$OPT_DIR/nixos" "$OPT_DIR/home"
 
 # Override state file path for testing
-ATLAS_MODULE_STATE_DIR="$STATE_DIR"
-ATLAS_MODULE_STATE_FILE="$STATE_FILE"
+YORHA_MODULE_STATE_DIR="$STATE_DIR"
+YORHA_MODULE_STATE_FILE="$STATE_FILE"
 
 # Using a minimal state for tests
 setup_state() {
@@ -200,57 +200,57 @@ assert_file_exists "Home module file created" "$home_file"
 rm -f "$home_file"
 
 # ────────────────────────────────────────────────────────────────────────────
-header "CLI Tool — atlas-module"
+header "CLI Tool — yorha-module"
 
-# Test 17: atlas-module.sh help
-if [[ -f "$BASE/files/bin/atlas-module.sh" ]]; then
-  pass "atlas-module.sh exists"
-  help_output=$(ATLAS_MODULE_STATE_FILE="$STATE_FILE" ATLAS_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/atlas-module.sh" help 2>&1 || true)
-  assert_contains "atlas-module help shows list command" "$help_output" "list"
-  assert_contains "atlas-module help shows enable command" "$help_output" "enable"
-  assert_contains "atlas-module help shows disable command" "$help_output" "disable"
-  assert_contains "atlas-module help shows install command" "$help_output" "install"
-  assert_contains "atlas-module help shows remove command" "$help_output" "remove"
-  assert_contains "atlas-module help shows update command" "$help_output" "update"
-  assert_contains "atlas-module help shows info command" "$help_output" "info"
-  assert_contains "atlas-module help shows status command" "$help_output" "status"
-  assert_contains "atlas-module help shows validate command" "$help_output" "validate"
-  assert_contains "atlas-module help shows search command" "$help_output" "search"
-  assert_contains "atlas-module help shows category command" "$help_output" "category"
+# Test 17: yorha-module.sh help
+if [[ -f "$BASE/files/bin/yorha-module.sh" ]]; then
+  pass "yorha-module.sh exists"
+  help_output=$(YORHA_MODULE_STATE_FILE="$STATE_FILE" YORHA_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/yorha-module.sh" help 2>&1 || true)
+  assert_contains "yorha-module help shows list command" "$help_output" "list"
+  assert_contains "yorha-module help shows enable command" "$help_output" "enable"
+  assert_contains "yorha-module help shows disable command" "$help_output" "disable"
+  assert_contains "yorha-module help shows install command" "$help_output" "install"
+  assert_contains "yorha-module help shows remove command" "$help_output" "remove"
+  assert_contains "yorha-module help shows update command" "$help_output" "update"
+  assert_contains "yorha-module help shows info command" "$help_output" "info"
+  assert_contains "yorha-module help shows status command" "$help_output" "status"
+  assert_contains "yorha-module help shows validate command" "$help_output" "validate"
+  assert_contains "yorha-module help shows search command" "$help_output" "search"
+  assert_contains "yorha-module help shows category command" "$help_output" "category"
 else
-  fail "atlas-module.sh does not exist"
+  fail "yorha-module.sh does not exist"
 fi
 
-# Test 18: atlas-module list command
-list_output=$(ATLAS_MODULE_STATE_FILE="$STATE_FILE" ATLAS_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/atlas-module.sh" list 2>&1 || true)
-assert_contains "atlas-module list shows modules" "$list_output" "performance"
-assert_contains "atlas-module list shows module IDs" "$list_output" "1"
+# Test 18: yorha-module list command
+list_output=$(YORHA_MODULE_STATE_FILE="$STATE_FILE" YORHA_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/yorha-module.sh" list 2>&1 || true)
+assert_contains "yorha-module list shows modules" "$list_output" "performance"
+assert_contains "yorha-module list shows module IDs" "$list_output" "1"
 
-# Test 19: atlas-module status command
-status_output=$(ATLAS_MODULE_STATE_FILE="$STATE_FILE" ATLAS_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/atlas-module.sh" status 2>&1 || true)
-assert_contains "atlas-module status shows registry" "$status_output" "Registry"
-assert_contains "atlas-module status shows state file" "$status_output" "state"
+# Test 19: yorha-module status command
+status_output=$(YORHA_MODULE_STATE_FILE="$STATE_FILE" YORHA_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/yorha-module.sh" status 2>&1 || true)
+assert_contains "yorha-module status shows registry" "$status_output" "Registry"
+assert_contains "yorha-module status shows state file" "$status_output" "state"
 
-# Test 20: atlas-module info command for module 1
-info_output=$(ATLAS_MODULE_STATE_FILE="$STATE_FILE" ATLAS_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/atlas-module.sh" info 1 2>&1 || true)
-assert_contains "atlas-module info shows name" "$info_output" "performance"
-assert_contains "atlas-module info shows category" "$info_output" "system"
+# Test 20: yorha-module info command for module 1
+info_output=$(YORHA_MODULE_STATE_FILE="$STATE_FILE" YORHA_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/yorha-module.sh" info 1 2>&1 || true)
+assert_contains "yorha-module info shows name" "$info_output" "performance"
+assert_contains "yorha-module info shows category" "$info_output" "system"
 
 # ────────────────────────────────────────────────────────────────────────────
-header "CLI Tool — atlas-module-apply"
+header "CLI Tool — yorha-module-apply"
 
-# Test 21: atlas-module-apply.sh status
-if [[ -f "$BASE/files/bin/atlas-module-apply.sh" ]]; then
-  pass "atlas-module-apply.sh exists"
-  apply_help=$(ATLAS_MODULE_STATE_FILE="$STATE_FILE" ATLAS_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/atlas-module-apply.sh" --status 2>&1 || true)
-  assert_contains "atlas-module-apply shows status" "$apply_help" "Module"
+# Test 21: yorha-module-apply.sh status
+if [[ -f "$BASE/files/bin/yorha-module-apply.sh" ]]; then
+  pass "yorha-module-apply.sh exists"
+  apply_help=$(YORHA_MODULE_STATE_FILE="$STATE_FILE" YORHA_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/yorha-module-apply.sh" --status 2>&1 || true)
+  assert_contains "yorha-module-apply shows status" "$apply_help" "Module"
 else
-  fail "atlas-module-apply.sh does not exist"
+  fail "yorha-module-apply.sh does not exist"
 fi
 
-# Test 22: atlas-module-apply.sh validate (should pass with clean state)
-apply_validate=$(ATLAS_MODULE_STATE_FILE="$STATE_FILE" ATLAS_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/atlas-module-apply.sh" --validate 2>&1 || true)
-assert_contains "atlas-module-apply validate" "$apply_validate" "valid"
+# Test 22: yorha-module-apply.sh validate (should pass with clean state)
+apply_validate=$(YORHA_MODULE_STATE_FILE="$STATE_FILE" YORHA_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/yorha-module-apply.sh" --validate 2>&1 || true)
+assert_contains "yorha-module-apply validate" "$apply_validate" "valid"
 
 # ────────────────────────────────────────────────────────────────────────────
 header "Nix Module Registry Integration"
@@ -340,8 +340,8 @@ grep -q "makeDesktopItem" "$BASE/files/modules/module-manager/default.nix" && \
   pass "Desktop entry defined in module-manager" || \
   fail "Desktop entry not found in module-manager"
 
-grep -q "atlas-module-manager" "$BASE/files/modules/module-manager/default.nix" && \
-  pass "Desktop entry for atlas-module-manager" || \
+grep -q "yorha-module-manager" "$BASE/files/modules/module-manager/default.nix" && \
+  pass "Desktop entry for yorha-module-manager" || \
   fail "Desktop entry name not found"
 
 # Test 34: Desktop entry has terminal=true
@@ -384,47 +384,47 @@ assert_eq "Module 2 final state enabled" "true" "$final_state"
 # ────────────────────────────────────────────────────────────────────────────
 header "Module Load Verification"
 
-# Test 39: atlas-module-verify.sh exists
-if [[ -f "$BASE/files/bin/atlas-module-verify.sh" ]]; then
-  pass "atlas-module-verify.sh exists"
+# Test 39: yorha-module-verify.sh exists
+if [[ -f "$BASE/files/bin/yorha-module-verify.sh" ]]; then
+  pass "yorha-module-verify.sh exists"
 else
-  fail "atlas-module-verify.sh does not exist"
+  fail "yorha-module-verify.sh does not exist"
 fi
 
-# Test 40: atlas-module-verify.sh --list shows all modules
-verify_list=$(ATLAS_MODULE_STATE_FILE="$STATE_FILE" ATLAS_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/atlas-module-verify.sh" --list 2>&1 || true)
+# Test 40: yorha-module-verify.sh --list shows all modules
+verify_list=$(YORHA_MODULE_STATE_FILE="$STATE_FILE" YORHA_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/yorha-module-verify.sh" --list 2>&1 || true)
 for id in "${MODULE_IDS[@]}"; do
   name="${MODULE_DESC[$id]%% *}"
-  assert_contains "atlas-module-verify --list shows module $id" "$verify_list" "$id"
-  assert_contains "atlas-module-verify --list shows name $name" "$verify_list" "$name"
+  assert_contains "yorha-module-verify --list shows module $id" "$verify_list" "$id"
+  assert_contains "yorha-module-verify --list shows name $name" "$verify_list" "$name"
 done
 
-# Test 41: atlas-module-verify.sh for a specific module
-ATLAS_MODULE_STATE_FILE="$STATE_FILE" ATLAS_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/atlas-module-verify.sh" 1 &>/dev/null || true
-pass "atlas-module-verify.sh handles module 1 (performance) without crashing"
+# Test 41: yorha-module-verify.sh for a specific module
+YORHA_MODULE_STATE_FILE="$STATE_FILE" YORHA_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/yorha-module-verify.sh" 1 &>/dev/null || true
+pass "yorha-module-verify.sh handles module 1 (performance) without crashing"
 
-ATLAS_MODULE_STATE_FILE="$STATE_FILE" ATLAS_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/atlas-module-verify.sh" 3 &>/dev/null || true
-pass "atlas-module-verify.sh handles module 3 (gaming) without crashing"
+YORHA_MODULE_STATE_FILE="$STATE_FILE" YORHA_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/yorha-module-verify.sh" 3 &>/dev/null || true
+pass "yorha-module-verify.sh handles module 3 (gaming) without crashing"
 
-# Test 42: atlas-module-verify.sh --quick runs without crashing
-ATLAS_MODULE_STATE_FILE="$STATE_FILE" ATLAS_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/atlas-module-verify.sh" --quick &>/dev/null || true
-pass "atlas-module-verify.sh --quick runs without crashing"
+# Test 42: yorha-module-verify.sh --quick runs without crashing
+YORHA_MODULE_STATE_FILE="$STATE_FILE" YORHA_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/yorha-module-verify.sh" --quick &>/dev/null || true
+pass "yorha-module-verify.sh --quick runs without crashing"
 
-# Test 43: atlas-module-verify.sh with non-existent module
-verify_bad=$(ATLAS_MODULE_STATE_FILE="$STATE_FILE" ATLAS_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/atlas-module-verify.sh" 99 2>&1 || true)
-assert_contains "atlas-module-verify handles unknown module" "$verify_bad" "Unknown"
+# Test 43: yorha-module-verify.sh with non-existent module
+verify_bad=$(YORHA_MODULE_STATE_FILE="$STATE_FILE" YORHA_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/yorha-module-verify.sh" 99 2>&1 || true)
+assert_contains "yorha-module-verify handles unknown module" "$verify_bad" "Unknown"
 
 # ────────────────────────────────────────────────────────────────────────────
 header "TTY Fallback UI"
 
 # Test 44: TTY backend selection when fzf is missing
-backend_test=$(ATLAS_MODULE_UI=tty bash -c '
+backend_test=$(YORHA_MODULE_UI=tty bash -c '
   BASE="$BASE"
   source "$BASE/files/lib/module-registry.sh"
   HAS_FZF=false; HAS_GUM=false; HAS_DIALOG=false; HAS_WHIPTAIL=false
   command -v fzf &>/dev/null && HAS_FZF=true
   select_backend() {
-    forced="${ATLAS_MODULE_UI:-}"
+    forced="${YORHA_MODULE_UI:-}"
     if [[ -n "$forced" ]]; then echo "$forced"; return; fi
     if $HAS_FZF; then echo "fzf"; return; fi
     if $HAS_GUM; then echo "gum"; return; fi
@@ -434,12 +434,12 @@ backend_test=$(ATLAS_MODULE_UI=tty bash -c '
   }
   select_backend
 ' 2>&1 || true)
-assert_contains "ATLAS_MODULE_UI=tty forces tty backend" "$backend_test" "tty"
+assert_contains "YORHA_MODULE_UI=tty forces tty backend" "$backend_test" "tty"
 
 # Test 45: TTY fallback backend selection (no fzf, using tty)
-backend_tty=$(ATLAS_MODULE_UI=tty bash -c '
+backend_tty=$(YORHA_MODULE_UI=tty bash -c '
   select_backend() {
-    forced="${ATLAS_MODULE_UI:-}"
+    forced="${YORHA_MODULE_UI:-}"
     if [[ -n "$forced" ]]; then echo "$forced"; return; fi
     echo "tty"
   }
@@ -448,9 +448,9 @@ backend_tty=$(ATLAS_MODULE_UI=tty bash -c '
 assert_contains "TTY fallback selection works" "$backend_tty" "tty"
 
 # Test 46: TTY mode tty_validate works
-ATLAS_MODULE_STATE_FILE="$STATE_FILE" ATLAS_MODULE_STATE_DIR="$STATE_DIR" bash -c '
+YORHA_MODULE_STATE_FILE="$STATE_FILE" YORHA_MODULE_STATE_DIR="$STATE_DIR" bash -c '
   source "$BASE/files/lib/module-registry.sh"
-  ATLAS_MODULES_BASE="$TEST_DIR"
+  YORHA_MODULES_BASE="$TEST_DIR"
   ensure_state
 ' 2>&1 || true
 pass "TTY mode sourcing works without errors"
@@ -463,7 +463,7 @@ grep -q "whiptail" "$BASE/files/modules/module-manager/default.nix" && \
   pass "Module-manager has whiptail dependency" || \
   fail "Module-manager missing whiptail dependency"
 
-# Test 48: Module manager default.nix has atlas-module-verify
+# Test 48: Module manager default.nix has yorha-module-verify
 grep -q "moduleVerifyScript" "$BASE/files/modules/module-manager/default.nix" && \
   pass "Module-manager has moduleVerifyScript" || \
   fail "Module-manager missing moduleVerifyScript"
@@ -473,20 +473,20 @@ grep -q "enableVerifyTimer" "$BASE/files/modules/module-manager/default.nix" && 
   pass "Module-manager has enableVerifyTimer option" || \
   fail "Module-manager missing enableVerifyTimer option"
 
-# Test 50: Module manager has atlas-module-verify systemd service
-grep -q "atlas-module-verify" "$BASE/files/modules/module-manager/default.nix" && \
-  pass "Module-manager has atlas-module-verify service" || \
-  fail "Module-manager missing atlas-module-verify service"
+# Test 50: Module manager has yorha-module-verify systemd service
+grep -q "yorha-module-verify" "$BASE/files/modules/module-manager/default.nix" && \
+  pass "Module-manager has yorha-module-verify service" || \
+  fail "Module-manager missing yorha-module-verify service"
 
-# Test 51: atlas-module.sh has verify subcommand
-grep -q "atlas-module-verify" "$BASE/files/bin/atlas-module.sh" && \
-  pass "atlas-module.sh has verify subcommand" || \
-  fail "atlas-module.sh missing verify subcommand"
+# Test 51: yorha-module.sh has verify subcommand
+grep -q "yorha-module-verify" "$BASE/files/bin/yorha-module.sh" && \
+  pass "yorha-module.sh has verify subcommand" || \
+  fail "yorha-module.sh missing verify subcommand"
 
-# Test 52: atlas-module.sh has tui subcommand
-grep -q '\btui\b' "$BASE/files/bin/atlas-module.sh" && \
-  pass "atlas-module.sh has tui subcommand" || \
-  fail "atlas-module.sh missing tui subcommand"
+# Test 52: yorha-module.sh has tui subcommand
+grep -q '\btui\b' "$BASE/files/bin/yorha-module.sh" && \
+  pass "yorha-module.sh has tui subcommand" || \
+  fail "yorha-module.sh missing tui subcommand"
 
 # ────────────────────────────────────────────────────────────────────────────
 header "Module State File Operations (Integration)"
@@ -531,13 +531,13 @@ header "Error Handling"
 
 # Test 54: Empty state file is handled gracefully
 rm -f "$STATE_FILE"
-empty_result=$(ATLAS_MODULE_STATE_FILE="$STATE_FILE" ATLAS_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/atlas-module.sh" status 2>&1 || true)
-pass "atlas-module status handles missing state file gracefully"
+empty_result=$(YORHA_MODULE_STATE_FILE="$STATE_FILE" YORHA_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/yorha-module.sh" status 2>&1 || true)
+pass "yorha-module status handles missing state file gracefully"
 
 # Test 55: Invalid state file is handled
 echo "invalid json" > "$STATE_FILE"
-invalid_result=$(ATLAS_MODULE_STATE_FILE="$STATE_FILE" ATLAS_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/atlas-module.sh" list 2>&1 || true)
-pass "atlas-module list handles invalid state file gracefully"
+invalid_result=$(YORHA_MODULE_STATE_FILE="$STATE_FILE" YORHA_MODULE_STATE_DIR="$STATE_DIR" bash "$BASE/files/bin/yorha-module.sh" list 2>&1 || true)
+pass "yorha-module list handles invalid state file gracefully"
 
 # Test 56: Re-create valid state
 setup_state

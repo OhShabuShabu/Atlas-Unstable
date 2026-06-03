@@ -126,24 +126,11 @@ let
     "fs.protected_regular" = 2;
   };
 
-  # INFO: TCP optimization (performance-friendly)
-  # WARN: Disabled for maximum security - uncomment if needed
-  tcpOptimization = {
-    # "net.ipv4.tcp_fastopen" = 3;
-    # "net.ipv4.tcp_congestion_control" = "bbr";
-    # "net.core.default_qdisc" = "cake";
-  };
-
-  # INFO: User namespace settings (required for containers)
-  # NOTE: Can be disabled for higher security if no containers are used
-  userNamespaceSettings = { };
 in
 
 {
-  # INFO: Merge all kernel sysctl settings
   boot.kernel.sysctl = memorySettings // kernelProtection // exploitMitigation 
-    // networkSettings // lynisSettings // extendedHardening // filesystemSettings
-    // tcpOptimization // userNamespaceSettings;
+    // networkSettings // lynisSettings // extendedHardening // filesystemSettings;
 
   # INFO: LSM (Linux Security Modules) - now defaults to landlock,yama,bpf in NixOS 25.05+
   # NOTE: We explicitly configure this to ensure it's set correctly

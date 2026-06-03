@@ -3,7 +3,7 @@
 # ATLAS NIXOS CONFIGURATION TEST SUITE
 # ============================================================================
 # Run: bash test_config.sh
-# Tests all aspects of the Atlas NixOS configuration for errors.
+# Tests all aspects of the YoRHa NixOS configuration for errors.
 # All checks are offline static analysis -- no network or root needed.
 # ============================================================================
 
@@ -12,10 +12,10 @@ set -uo pipefail
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 BASE="${ATLAS_BASE:-$(cd "$(dirname "$0")" && pwd)}"
 # External modules repo — override with ATLAS_MODULES_PATH env var
-ATLAS_MODULES="${ATLAS_MODULES_PATH:-/home/yusa/atlas-modules}"
-ATLAS_MODULES_AVAILABLE=false
-[ -d "$ATLAS_MODULES" ] && ATLAS_MODULES_AVAILABLE=true
-[ "$ATLAS_MODULES_AVAILABLE" = false ] && echo -e "  ${YELLOW}⚠ External modules not found at $ATLAS_MODULES — skipping those tests${NC}"
+YORHA_MODULES="${YORHA_MODULES_PATH:-/home/yusa/atlas-modules}"
+YORHA_MODULES_AVAILABLE=false
+[ -d "$YORHA_MODULES" ] && YORHA_MODULES_AVAILABLE=true
+[ "$YORHA_MODULES_AVAILABLE" = false ] && echo -e "  ${YELLOW}⚠ External modules not found at $YORHA_MODULES — skipping those tests${NC}"
 PASS=0; FAIL=0; WARN=0
 
 header() { echo -e "\n${CYAN}════════════════════════════════════════${NC}"; echo -e "${CYAN}  $1${NC}"; echo -e "${CYAN}════════════════════════════════════════${NC}"; }
@@ -31,7 +31,7 @@ mlgrep() { local f="$1" pat="$2"; python3 -c "import re; c=open('$f').read(); ex
 header "0. INSTALL SCRIPT"
 grep -q 'Step 1/9' "$BASE/install.sh" && pass "install.sh has step progress (9 steps)" || warn "install.sh step progress check (may vary)"
 grep -q 'ERASE ALL DATA' "$BASE/install.sh" && pass "install.sh warns about destructive action" || warn "install.sh missing destructive action warning"
-grep -q 'nixos-install.*atlas-installer' "$BASE/install.sh" && pass "install.sh calls nixos-install with atlas-installer" || fail "install.sh missing nixos-install call"
+grep -q 'nixos-install.*yorha-installer' "$BASE/install.sh" && pass "install.sh calls nixos-install with yorha-installer" || fail "install.sh missing nixos-install call"
 
 header "1. FLAKE STRUCTURE"
 [ -f "$BASE/flake.nix" ] && pass "flake.nix exists" || fail "flake.nix missing"
@@ -50,10 +50,10 @@ header "1b. MODULE MANAGER"
 # Core files
 [ -f "$BASE/files/lib/module-registry.nix" ] && pass "module-registry.nix exists" || fail "module-registry.nix missing"
 [ -f "$BASE/files/lib/module-registry.sh" ] && pass "module-registry.sh exists" || fail "module-registry.sh missing"
-[ -f "$BASE/files/bin/atlas-module-manager.sh" ] && pass "atlas-module-manager.sh exists" || fail "atlas-module-manager.sh missing"
-[ -f "$BASE/files/bin/atlas-module-apply.sh" ] && pass "atlas-module-apply.sh exists" || fail "atlas-module-apply.sh missing"
-[ -f "$BASE/files/bin/atlas-module.sh" ] && pass "atlas-module.sh exists (unified CLI)" || fail "atlas-module.sh missing"
-[ -f "$BASE/files/bin/atlas-module-verify.sh" ] && pass "atlas-module-verify.sh exists (load verification)" || fail "atlas-module-verify.sh missing"
+[ -f "$BASE/files/bin/yorha-module-manager.sh" ] && pass "yorha-module-manager.sh exists" || fail "yorha-module-manager.sh missing"
+[ -f "$BASE/files/bin/yorha-module-apply.sh" ] && pass "yorha-module-apply.sh exists" || fail "yorha-module-apply.sh missing"
+[ -f "$BASE/files/bin/yorha-module.sh" ] && pass "yorha-module.sh exists (unified CLI)" || fail "yorha-module.sh missing"
+[ -f "$BASE/files/bin/yorha-module-verify.sh" ] && pass "yorha-module-verify.sh exists (load verification)" || fail "yorha-module-verify.sh missing"
 [ -f "$BASE/files/modules/module-manager/default.nix" ] && pass "module-manager/default.nix exists" || fail "module-manager/default.nix missing"
 
 # Module files
@@ -61,7 +61,7 @@ header "1b. MODULE MANAGER"
 [ -f "$BASE/files/modules/optional/home/default.nix" ] && pass "optional/home/default.nix exists" || fail "optional/home/default.nix missing"
 
 # Module manager imports in configuration.nix
-mlgrep "$BASE/files/core/configuration.nix" 'atlas-module-manager\.enable' && pass "Module manager enabled in configuration.nix" || fail "Module manager not enabled in configuration.nix"
+mlgrep "$BASE/files/core/configuration.nix" 'yorha-module-manager\.enable' && pass "Module manager enabled in configuration.nix" || fail "Module manager not enabled in configuration.nix"
 mlgrep "$BASE/files/core/configuration.nix" 'modules/module-manager/default\.nix' && pass "Module manager imported in configuration.nix" || fail "Module manager not imported in configuration.nix"
 
 # Registry-based filtering enabled
@@ -95,46 +95,46 @@ mlgrep "$BASE/files/lib/logging.sh" 'status_symbol' && pass "lib/logging.sh has 
 mlgrep "$BASE/files/lib/logging.sh" 'log_to_journal' && pass "lib/logging.sh has log_to_journal" || fail "lib/logging.sh missing log_to_journal"
 
 # Module load verification script
-mlgrep "$BASE/files/bin/atlas-module-verify.sh" 'verify_module' && pass "atlas-module-verify.sh has verify_module function" || fail "atlas-module-verify.sh missing verify_module"
-mlgrep "$BASE/files/bin/atlas-module-verify.sh" 'quick_verify' && pass "atlas-module-verify.sh has quick_verify function" || fail "atlas-module-verify.sh missing quick_verify"
-mlgrep "$BASE/files/bin/atlas-module-verify.sh" 'list_checks' && pass "atlas-module-verify.sh has list_checks function" || fail "atlas-module-verify.sh missing list_checks"
+mlgrep "$BASE/files/bin/yorha-module-verify.sh" 'verify_module' && pass "yorha-module-verify.sh has verify_module function" || fail "yorha-module-verify.sh missing verify_module"
+mlgrep "$BASE/files/bin/yorha-module-verify.sh" 'quick_verify' && pass "yorha-module-verify.sh has quick_verify function" || fail "yorha-module-verify.sh missing quick_verify"
+mlgrep "$BASE/files/bin/yorha-module-verify.sh" 'list_checks' && pass "yorha-module-verify.sh has list_checks function" || fail "yorha-module-verify.sh missing list_checks"
 
 # UI backend selection in module manager
-mlgrep "$BASE/files/bin/atlas-module-manager.sh" 'select_backend' && pass "atlas-module-manager.sh has select_backend function" || fail "atlas-module-manager.sh missing select_backend"
-mlgrep "$BASE/files/bin/atlas-module-manager.sh" 'tty_main_menu' && pass "atlas-module-manager.sh has tty_main_menu fallback" || fail "atlas-module-manager.sh missing tty_main_menu"
-mlgrep "$BASE/files/bin/atlas-module-manager.sh" 'ATLAS_MODULE_UI' && pass "atlas-module-manager.sh supports ATLAS_MODULE_UI env" || fail "atlas-module-manager.sh missing ATLAS_MODULE_UI support"
+mlgrep "$BASE/files/bin/yorha-module-manager.sh" 'select_backend' && pass "yorha-module-manager.sh has select_backend function" || fail "yorha-module-manager.sh missing select_backend"
+mlgrep "$BASE/files/bin/yorha-module-manager.sh" 'tty_main_menu' && pass "yorha-module-manager.sh has tty_main_menu fallback" || fail "yorha-module-manager.sh missing tty_main_menu"
+mlgrep "$BASE/files/bin/yorha-module-manager.sh" 'ATLAS_MODULE_UI' && pass "yorha-module-manager.sh supports ATLAS_MODULE_UI env" || fail "yorha-module-manager.sh missing ATLAS_MODULE_UI support"
 
 # Verify subcommand in unified CLI
-mlgrep "$BASE/files/bin/atlas-module.sh" 'atlas-module-verify' && pass "atlas-module.sh has verify subcommand" || fail "atlas-module.sh missing verify subcommand"
-mlgrep "$BASE/files/bin/atlas-module.sh" '\btui\b' && pass "atlas-module.sh has tui subcommand" || fail "atlas-module.sh missing tui subcommand"
+mlgrep "$BASE/files/bin/yorha-module.sh" 'yorha-module-verify' && pass "yorha-module.sh has verify subcommand" || fail "yorha-module.sh missing verify subcommand"
+mlgrep "$BASE/files/bin/yorha-module.sh" '\btui\b' && pass "yorha-module.sh has tui subcommand" || fail "yorha-module.sh missing tui subcommand"
 
 # Shared libs sourced by CLI scripts
-mlgrep "$BASE/files/bin/atlas-module.sh" 'lib/logging.sh' && pass "atlas-module.sh sources logging.sh" || fail "atlas-module.sh missing logging.sh import"
-mlgrep "$BASE/files/bin/atlas-module-manager.sh" 'lib/logging.sh' && pass "atlas-module-manager.sh sources logging.sh" || fail "atlas-module-manager.sh missing logging.sh import"
-mlgrep "$BASE/files/bin/atlas-module-apply.sh" 'lib/logging.sh' && pass "atlas-module-apply.sh sources logging.sh" || fail "atlas-module-apply.sh missing logging.sh import"
+mlgrep "$BASE/files/bin/yorha-module.sh" 'lib/(tui|logging)\.sh' && pass "yorha-module.sh sources tui.sh/logging.sh" || fail "yorha-module.sh missing TUI lib import"
+mlgrep "$BASE/files/bin/yorha-module-manager.sh" 'lib/(tui|logging)\.sh' && pass "yorha-module-manager.sh sources tui.sh/logging.sh" || fail "yorha-module-manager.sh missing TUI lib import"
+mlgrep "$BASE/files/bin/yorha-module-apply.sh" 'lib/(tui|logging)\.sh' && pass "yorha-module-apply.sh sources tui.sh/logging.sh" || fail "yorha-module-apply.sh missing TUI lib import"
 
 # Unified CLI tool
-mlgrep "$BASE/files/bin/atlas-module.sh" 'cmd_enable' && pass "atlas-module.sh has cmd_enable" || fail "atlas-module.sh missing cmd_enable"
-mlgrep "$BASE/files/bin/atlas-module.sh" 'cmd_disable' && pass "atlas-module.sh has cmd_disable" || fail "atlas-module.sh missing cmd_disable"
-mlgrep "$BASE/files/bin/atlas-module.sh" 'cmd_install' && pass "atlas-module.sh has cmd_install" || fail "atlas-module.sh missing cmd_install"
-mlgrep "$BASE/files/bin/atlas-module.sh" 'cmd_remove' && pass "atlas-module.sh has cmd_remove" || fail "atlas-module.sh missing cmd_remove"
-mlgrep "$BASE/files/bin/atlas-module.sh" 'cmd_update' && pass "atlas-module.sh has cmd_update" || fail "atlas-module.sh missing cmd_update"
-mlgrep "$BASE/files/bin/atlas-module.sh" 'cmd_info' && pass "atlas-module.sh has cmd_info" || fail "atlas-module.sh missing cmd_info"
-mlgrep "$BASE/files/bin/atlas-module.sh" 'cmd_status' && pass "atlas-module.sh has cmd_status" || fail "atlas-module.sh missing cmd_status"
-mlgrep "$BASE/files/bin/atlas-module.sh" 'cmd_validate' && pass "atlas-module.sh has cmd_validate" || fail "atlas-module.sh missing cmd_validate"
-mlgrep "$BASE/files/bin/atlas-module.sh" 'cmd_search' && pass "atlas-module.sh has cmd_search" || fail "atlas-module.sh missing cmd_search"
-mlgrep "$BASE/files/bin/atlas-module.sh" 'cmd_category' && pass "atlas-module.sh has cmd_category" || fail "atlas-module.sh missing cmd_category"
+mlgrep "$BASE/files/bin/yorha-module.sh" 'cmd_enable' && pass "yorha-module.sh has cmd_enable" || fail "yorha-module.sh missing cmd_enable"
+mlgrep "$BASE/files/bin/yorha-module.sh" 'cmd_disable' && pass "yorha-module.sh has cmd_disable" || fail "yorha-module.sh missing cmd_disable"
+mlgrep "$BASE/files/bin/yorha-module.sh" 'cmd_install' && pass "yorha-module.sh has cmd_install" || fail "yorha-module.sh missing cmd_install"
+mlgrep "$BASE/files/bin/yorha-module.sh" 'cmd_remove' && pass "yorha-module.sh has cmd_remove" || fail "yorha-module.sh missing cmd_remove"
+mlgrep "$BASE/files/bin/yorha-module.sh" 'cmd_update' && pass "yorha-module.sh has cmd_update" || fail "yorha-module.sh missing cmd_update"
+mlgrep "$BASE/files/bin/yorha-module.sh" 'cmd_info' && pass "yorha-module.sh has cmd_info" || fail "yorha-module.sh missing cmd_info"
+mlgrep "$BASE/files/bin/yorha-module.sh" 'cmd_status' && pass "yorha-module.sh has cmd_status" || fail "yorha-module.sh missing cmd_status"
+mlgrep "$BASE/files/bin/yorha-module.sh" 'cmd_validate' && pass "yorha-module.sh has cmd_validate" || fail "yorha-module.sh missing cmd_validate"
+mlgrep "$BASE/files/bin/yorha-module.sh" 'cmd_search' && pass "yorha-module.sh has cmd_search" || fail "yorha-module.sh missing cmd_search"
+mlgrep "$BASE/files/bin/yorha-module.sh" 'cmd_category' && pass "yorha-module.sh has cmd_category" || fail "yorha-module.sh missing cmd_category"
 # Apply subcommand uses PATH-based exec (not broken Nix variable reference)
-mlgrep "$BASE/files/bin/atlas-module.sh" 'exec atlas-module-apply' && pass "atlas-module.sh apply uses PATH-based exec" || fail "atlas-module.sh apply uses stale Nix variable ref"
+mlgrep "$BASE/files/bin/yorha-module.sh" 'exec yorha-module-apply' && pass "yorha-module.sh apply uses PATH-based exec" || fail "yorha-module.sh apply uses stale Nix variable ref"
 
 # Desktop entry
 grep -q 'makeDesktopItem' "$BASE/files/modules/module-manager/default.nix" && pass "Desktop entry defined in module-manager" || fail "Desktop entry not defined"
 grep -q 'terminal = true' "$BASE/files/modules/module-manager/default.nix" && pass "Desktop entry launches in terminal" || fail "Desktop entry not set to terminal launch"
 
 # Systemd integration
-mlgrep "$BASE/files/modules/module-manager/default.nix" 'atlas-module-update-check' && pass "Systemd update-check service defined" || fail "Systemd update-check service missing"
-mlgrep "$BASE/files/modules/module-manager/default.nix" 'atlas-module-health' && pass "Systemd health-check service defined" || fail "Systemd health-check service missing"
-mlgrep "$BASE/files/modules/module-manager/default.nix" 'atlas-module-verify' && pass "Systemd module-verify service defined" || fail "Systemd module-verify service missing"
+mlgrep "$BASE/files/modules/module-manager/default.nix" 'yorha-module-update-check' && pass "Systemd update-check service defined" || fail "Systemd update-check service missing"
+mlgrep "$BASE/files/modules/module-manager/default.nix" 'yorha-module-health' && pass "Systemd health-check service defined" || fail "Systemd health-check service missing"
+mlgrep "$BASE/files/modules/module-manager/default.nix" 'yorha-module-verify' && pass "Systemd module-verify service defined" || fail "Systemd module-verify service missing"
 mlgrep "$BASE/files/modules/module-manager/default.nix" 'gum' && pass "gum dependency declared" || fail "gum dependency missing"
 mlgrep "$BASE/files/modules/module-manager/default.nix" 'dialog' && pass "dialog dependency declared" || fail "dialog dependency missing"
 mlgrep "$BASE/files/modules/module-manager/default.nix" 'whiptail' && pass "whiptail dependency declared" || fail "whiptail dependency missing"
@@ -183,10 +183,10 @@ for nf in $NIX_FILES; do
   REL="${nf#$BASE/}"
   nix-instantiate --parse "$nf" 2>/dev/null && pass "$REL parses" || fail "$REL PARSE ERROR"
 done
-if [ "$ATLAS_MODULES_AVAILABLE" = true ]; then
-  ATLAS_MODULES_NIX=$(find "$ATLAS_MODULES" -name '*.nix' -not -path '*/.git/*' -not -path '*/flake.lock' | sort)
-  for nf in $ATLAS_MODULES_NIX; do
-    REL="${nf#$ATLAS_MODULES/}"
+if [ "$YORHA_MODULES_AVAILABLE" = true ]; then
+  ATLAS_MODULES_NIX=$(find "$YORHA_MODULES" -name '*.nix' -not -path '*/.git/*' -not -path '*/flake.lock' | sort)
+  for nf in $YORHA_MODULES_NIX; do
+    REL="${nf#$YORHA_MODULES/}"
     nix-instantiate --parse "$nf" 2>/dev/null && pass "$REL parses (external)" || fail "$REL PARSE ERROR (external)"
   done
 else
@@ -198,10 +198,10 @@ fi
 # ============================================================================
 header "4. CORE CONFIG"
 CFG="$BASE/files/core/configuration.nix"
-PROFILE="$BASE/files/profiles/atlas.nix"
+PROFILE="$BASE/files/profiles/yorha.nix"
 
 mlgrep "$CFG" 'system\.stateVersion\s*=\s*"25\.11"' && pass "system.stateVersion = 25.11" || fail "system.stateVersion not 25.11"
-  mlgrep "$PROFILE" 'hostName\s*=\s*"atlas"' && pass "hostname = atlas" || fail "hostname not atlas"
+  mlgrep "$PROFILE" 'hostName\s*=\s*"yorha"' && pass "hostname = yorha" || fail "hostname not yorha"
 mlgrep "$CFG" 'experimental-features.*nix-command.*flakes' && pass "Flakes + nix-command enabled" || fail "Flakes/nix-command not enabled"
 mlgrep "$CFG" 'allowUnfree\s*=\s*true' && pass "Unfree packages allowed" || fail "Unfree not allowed"
 mlgrep "$CFG" 'systemd-boot.*enable\s*=\s*true' && pass "systemd-boot enabled" || fail "systemd-boot not enabled"
@@ -396,8 +396,8 @@ for f in clamav snout; do
   mlgrep "$BASE/files/modules/security/$f.nix" 'notifications.nix' && pass "$f: imports notifications" || fail "$f: missing notification library import"
 done
 mlgrep "$BASE/files/modules/security/snort.nix" 'notify-send' && pass "snort: has notify-send" || fail "snort: missing notify-send"
-if [ "$ATLAS_MODULES_AVAILABLE" = true ]; then
-  mlgrep "$ATLAS_MODULES/privacy/privacy.nix" 'notify-user' && pass "privacy.nix: has inline notify-user script" || fail "privacy.nix: missing notify-user script"
+if [ "$YORHA_MODULES_AVAILABLE" = true ]; then
+  mlgrep "$YORHA_MODULES/privacy/privacy.nix" 'notify-user' && pass "privacy.nix: has inline notify-user script" || fail "privacy.nix: missing notify-user script"
 else
   warn "privacy.nix notify-user check skipped"
 fi
@@ -434,7 +434,7 @@ grep -q 'mullvad connect' "$BASE/files/bin/shell/startup.sh" && pass "Mullvad VP
 
 # Desktop services are now proper systemd user services
 CFG="$BASE/files/core/configuration.nix"
-for svc in atlas-awww atlas-vicinae atlas-xwayland-satellite atlas-startup-sound atlas-openrgb; do
+for svc in awww vicinae xwayland-satellite startup-sound openrgb; do
   mlgrep "$CFG" "systemd\.user\.services\.$svc" && pass "systemd user service: $svc" || fail "systemd user service $svc NOT FOUND"
 done
 mlgrep "$CFG" "awww" && pass "awww referenced in config (for systemd service)" || warn "awww not found in configuration.nix"
@@ -473,15 +473,15 @@ mlgrep "$HM" 'shellrc\.nu' && pass "home.nix sources shellrc.nu" || fail "shellr
 # 12. GAMING CONFIG
 # ============================================================================
 header "12. GAMING"
-if [ "$ATLAS_MODULES_AVAILABLE" = true ]; then
-  GAMING="$ATLAS_MODULES/gaming/gaming.nix"
+if [ "$YORHA_MODULES_AVAILABLE" = true ]; then
+  GAMING="$YORHA_MODULES/gaming/gaming.nix"
   mlgrep "$GAMING" 'steam.*enable\s*=\s*true' && pass "Steam enabled" || fail "Steam not enabled"
   mlgrep "$GAMING" 'mangohud' && pass "MangoHUD for Steam" || fail "MangoHUD not configured"
   mlgrep "$GAMING" 'enable32Bit\s*=\s*true' && pass "32-bit graphics enabled" || fail "32-bit graphics not enabled"
-  python3 -c "import json; json.load(open('$ATLAS_MODULES/gaming/millennium/config.json'))" 2>/dev/null && \
+  python3 -c "import json; json.load(open('$YORHA_MODULES/gaming/millennium/config.json'))" 2>/dev/null && \
     pass "Millennium config is valid JSON" || fail "Millennium config is not valid JSON"
-  mlgrep "$ATLAS_MODULES/minecraft.nix" 'prismlauncher' && pass "PrismLauncher configured" || fail "PrismLauncher not configured"
-  mlgrep "$ATLAS_MODULES/minecraft.nix" 'blockbench' && pass "Blockbench configured" || fail "Blockbench not configured"
+  mlgrep "$YORHA_MODULES/minecraft.nix" 'prismlauncher' && pass "PrismLauncher configured" || fail "PrismLauncher not configured"
+  mlgrep "$YORHA_MODULES/minecraft.nix" 'blockbench' && pass "Blockbench configured" || fail "Blockbench not configured"
 else
   for t in "Steam" "MangoHUD" "32-bit graphics" "Millennium config" "PrismLauncher" "Blockbench"; do
     warn "Gaming check ($t) skipped — modules not found"
@@ -493,14 +493,14 @@ mlgrep "$HM" 'MANGOHUD' && pass "MANGOHUD env var set" || warn "MANGOHUD env var
 # 13. PRIVACY CONFIG
 # ============================================================================
 header "13. PRIVACY"
-if [ "$ATLAS_MODULES_AVAILABLE" = true ]; then
-  PRIV="$ATLAS_MODULES/privacy/privacy.nix"
+if [ "$YORHA_MODULES_AVAILABLE" = true ]; then
+  PRIV="$YORHA_MODULES/privacy/privacy.nix"
   mlgrep "$PRIV" 'mullvad-vpn.*enable\s*=\s*true' && pass "Mullvad VPN enabled" || fail "Mullvad VPN not enabled"
   mlgrep "$PRIV" 'mullvad-browser' && pass "Mullvad Browser in packages" || fail "Mullvad Browser not in packages"
   mlgrep "$PRIV" 'metadata-cleaner' && pass "Metadata cleaner service" || fail "Metadata cleaner missing"
   mlgrep "$PRIV" 'metadata-watcher' && pass "Metadata watcher service" || fail "Metadata watcher missing"
-  [ -f "$ATLAS_MODULES/privacy/mullvadbrowser/profiles.ini" ] && pass "Mullvad profiles.ini exists" || warn "Mullvad profiles.ini missing"
-  [ -d "$ATLAS_MODULES/privacy/mullvadbrowser/ipg7sh9x.default-release-1" ] && pass "Mullvad browser profile dir exists" || warn "Mullvad browser profile dir missing"
+  [ -f "$YORHA_MODULES/privacy/mullvadbrowser/profiles.ini" ] && pass "Mullvad profiles.ini exists" || warn "Mullvad profiles.ini missing"
+  [ -d "$YORHA_MODULES/privacy/mullvadbrowser/ipg7sh9x.default-release-1" ] && pass "Mullvad browser profile dir exists" || warn "Mullvad browser profile dir missing"
 else
   warn "Privacy module checks skipped — external modules not found"
 fi
@@ -512,8 +512,8 @@ mlgrep "$BASE/files/modules/security/telemetry.nix" 'geoclue2.*false' && pass "G
 # 14. VIRTUALIZATION
 # ============================================================================
 header "14. VIRTUALIZATION"
-if [ "$ATLAS_MODULES_AVAILABLE" = true ]; then
-  VIRT="$ATLAS_MODULES/virtualisation.nix"
+if [ "$YORHA_MODULES_AVAILABLE" = true ]; then
+  VIRT="$YORHA_MODULES/virtualisation.nix"
   mlgrep "$VIRT" 'docker.*enable\s*=\s*true' && pass "Docker enabled" || fail "Docker not enabled"
   mlgrep "$VIRT" 'podman.*enable\s*=\s*true' && pass "Podman enabled" || fail "Podman not enabled"
   mlgrep "$VIRT" 'libvirtd.*enable\s*=\s*true' && pass "libvirtd enabled" || fail "libvirtd not enabled"
@@ -527,8 +527,8 @@ fi
 # 15. PERFORMANCE
 # ============================================================================
 header "15. PERFORMANCE"
-if [ "$ATLAS_MODULES_AVAILABLE" = true ]; then
-  PERF="$ATLAS_MODULES/performance.nix"
+if [ "$YORHA_MODULES_AVAILABLE" = true ]; then
+  PERF="$YORHA_MODULES/performance.nix"
   mlgrep "$PERF" 'tcp_bbr' && pass "TCP BBR module loaded" || fail "TCP BBR not loaded"
   mlgrep "$PERF" 'cpuFreqGovernor.*performance' && pass "CPU governor = performance" || fail "CPU governor not performance"
   mlgrep "$PERF" 'auto-optimise-store.*true' && pass "Nix auto-optimise store" || fail "Nix auto-optimise not enabled"
@@ -541,8 +541,8 @@ fi
 # 16. FLATPAK
 # ============================================================================
 header "16. FLATPAK"
-if [ "$ATLAS_MODULES_AVAILABLE" = true ]; then
-  FLAT="$ATLAS_MODULES/flatpak.nix"
+if [ "$YORHA_MODULES_AVAILABLE" = true ]; then
+  FLAT="$YORHA_MODULES/flatpak.nix"
   mlgrep "$FLAT" 'services\.flatpak.*enable\s*=\s*true' && pass "Flatpak enabled" || fail "Flatpak not enabled"
   mlgrep "$FLAT" 'flathub' && pass "Flathub repository configured" || fail "Flathub not configured"
   for app in Discord Telegram Vesktop bottles Steam; do
@@ -556,12 +556,12 @@ fi
 # 17. DEV MODULE
 # ============================================================================
 header "17. DEVELOPMENT"
-if [ "$ATLAS_MODULES_AVAILABLE" = true ]; then
-  DEV="$ATLAS_MODULES/dev/dev.nix"
+if [ "$YORHA_MODULES_AVAILABLE" = true ]; then
+  DEV="$YORHA_MODULES/dev/dev.nix"
   for tool in neovim opencode bun claude-code; do
     mlgrep "$DEV" "$tool" && pass "dev: $tool" || fail "dev: $tool not configured"
   done
-  mlgrep "$ATLAS_MODULES/dev/dev.nix" 'LazyVim' && pass "Neovim LazyVim configured" || fail "Neovim LazyVim not configured"
+  mlgrep "$YORHA_MODULES/dev/dev.nix" 'LazyVim' && pass "Neovim LazyVim configured" || fail "Neovim LazyVim not configured"
 else
   warn "Development checks skipped — external modules not found"
 fi
@@ -582,9 +582,17 @@ done
 for pkg in sops ssh-to-age; do
   grep -q "$pkg" "$BASE/files/modules/security/default.nix" && pass "security packages: $pkg" || warn "security packages: $pkg not found"
 done
-mlgrep "$CFG" 'atlas-rebuild' && pass "atlas-rebuild script defined" || fail "atlas-rebuild not defined in configuration.nix"
-mlgrep "$CFG" 'atlas-health' && pass "atlas-health script defined" || fail "atlas-health not defined in configuration.nix"
+mlgrep "$CFG" 'yorha-rebuild' && pass "yorha-rebuild script defined" || fail "yorha-rebuild not defined in configuration.nix"
+mlgrep "$CFG" 'yorha-health' && pass "yorha-health script defined" || fail "yorha-health not defined in configuration.nix"
 grep -q 'snort' "$BASE/files/modules/security/snort.nix" && pass "security packages: snort (snort.nix)" || warn "security packages: snort not found"
+
+# Desktop entries
+HCONF="$BASE/files/core/home.nix"
+mlgrep "$HCONF" 'xdg.desktopEntries."yorha-health"' && pass "Desktop entry: yorha-health" || warn "Desktop entry yorha-health missing"
+mlgrep "$HCONF" 'xdg.desktopEntries."encrypted-storage"' && pass "Desktop entry: encrypted-storage" || warn "Desktop entry encrypted-storage missing"
+mlgrep "$HCONF" 'xdg.desktopEntries."snout-scan"' && pass "Desktop entry: snout-scan" || warn "Desktop entry snout-scan missing"
+mlgrep "$HCONF" 'xdg.desktopEntries."yorha-hardware-detect"' && pass "Desktop entry: yorha-hardware-detect" || warn "Desktop entry yorha-hardware-detect missing"
+mlgrep "$HCONF" 'xdg.desktopEntries."odysseus-logs"' && pass "Desktop entry: odysseus-logs" || warn "Desktop entry odysseus-logs missing"
 
 # ============================================================================
 # 19. IMPORTS CONSISTENCY
@@ -609,14 +617,14 @@ declare -a SERVICES=(
   "snout-watcher.path" "snout-watcher.service" "snort-daemon" "snort-monitor" "clamav-daily-scan" "clamav-daemon"
   "aide-init" "aide-check" "quarantine-setup" "quarantine-sanitizer"
   "metadata-stripper"
-  "atlas-awww" "atlas-vicinae" "atlas-xwayland-satellite" "atlas-startup-sound" "atlas-openrgb"
+  "awww" "vicinae" "xwayland-satellite" "startup-sound" "openrgb"
 )
 for svc in "${SERVICES[@]}"; do
   grep -qr "$svc" "$BASE/files/" --include='*.nix' 2>/dev/null && pass "Service defined: $svc" || fail "Service NOT FOUND: $svc"
 done
-if [ "$ATLAS_MODULES_AVAILABLE" = true ]; then
+if [ "$YORHA_MODULES_AVAILABLE" = true ]; then
   for svc in "metadata-cleaner" "metadata-watcher" "setup-mullvad-dirs" "flatpak-repo"; do
-    grep -qr "$svc" "$ATLAS_MODULES/" --include='*.nix' 2>/dev/null && pass "Service defined: $svc" || fail "Service NOT FOUND: $svc"
+    grep -qr "$svc" "$YORHA_MODULES/" --include='*.nix' 2>/dev/null && pass "Service defined: $svc" || fail "Service NOT FOUND: $svc"
   done
 else
   warn "External service checks skipped (metadata-cleaner, metadata-watcher, setup-mullvad-dirs, flatpak-repo)"
@@ -631,8 +639,8 @@ grep -q 'aide-check' "$NUSHELL" && pass "Alias: aide-check" || fail "Alias: aide
 grep -q 'lynis-scan' "$NUSHELL" && pass "Alias: lynis-scan" || fail "Alias: lynis-scan missing"
 grep -q 'snout-scan' "$NUSHELL" && pass "Alias: snout-scan" || fail "Alias: snout-scan missing"
 grep -q 'snortctl' "$NUSHELL" && pass "Alias: snortctl" || fail "Alias: snortctl missing"
-grep -q 'alias nr' "$NUSHELL" && pass "Alias: nr (atlas-rebuild)" || fail "Alias: nr missing"
-grep -q 'alias mod ' "$NUSHELL" && pass "Alias: mod (atlas-module)" || fail "Alias: mod missing"
+grep -q 'alias nr' "$NUSHELL" && pass "Alias: nr (yorha-rebuild)" || fail "Alias: nr missing"
+grep -q 'alias mod ' "$NUSHELL" && pass "Alias: mod (yorha-module)" || fail "Alias: mod missing"
 grep -q 'alias mod-list' "$NUSHELL" && pass "Alias: mod-list" || fail "Alias: mod-list missing"
 grep -q 'alias mod-enable' "$NUSHELL" && pass "Alias: mod-enable" || fail "Alias: mod-enable missing"
 grep -q 'alias mod-disable' "$NUSHELL" && pass "Alias: mod-disable" || fail "Alias: mod-disable missing"
@@ -692,8 +700,8 @@ mlgrep "$SNOUT" 'clamscan' && pass "Snout scans with ClamAV" || fail "Snout miss
 mlgrep "$BASE/files/modules/security/snort.nix" 'after.*snort-daemon' && pass "Snort monitor depends on snort-daemon" || fail "Snort monitor dependency missing"
 mlgrep "$QUAR" 'before.*quarantine-sanitizer' && pass "Quarantine setup before sanitizer" || fail "Quarantine dependency missing"
 mlgrep "$CFG" 'docker' && pass "User in docker group" || fail "User not in docker group"
-if [ "$ATLAS_MODULES_AVAILABLE" = true ]; then
-  mlgrep "$ATLAS_MODULES/virtualisation.nix" 'libvirtd' && pass "User in libvirtd group" || fail "User not in libvirtd group"
+if [ "$YORHA_MODULES_AVAILABLE" = true ]; then
+  mlgrep "$YORHA_MODULES/virtualisation.nix" 'libvirtd' && pass "User in libvirtd group" || fail "User not in libvirtd group"
   mlgrep "$AUDIO_CFG" 'alsa.*support32Bit' && pass "ALSA 32-bit configured" || fail "ALSA 32-bit not configured"
 else
   warn "libvirtd group check skipped — external modules not found"
@@ -760,8 +768,8 @@ mlgrep "$PRESERVE" 'nvim' && pass "Persistent: ~/.local/share/nvim/ (neovim stat
 # Cache exceptions
 mlgrep "$PRESERVE" '\.cache/awww' && pass "Persistent: ~/.cache/awww/ (wallpaper cache)" || warn "awww cache not persisted"
 
-# Folder structure
-for dir in Atlas Desktop Documents Downloads "Encrypted Storage" Games Music Pictures Public Templates Videos; do
+# Folder structure (Encrypted Storage handled by gocryptfs, not bind-mount)
+for dir in Atlas Desktop Documents Downloads Games Music Pictures Public Templates Videos; do
   mlgrep "$PRESERVE" "$dir" && pass "Persistent: ~/$dir/ (folder structure)" || fail "~/$dir/ not persisted"
 done
 
@@ -775,10 +783,17 @@ grep -q 'Explicitly ephemeral' "$PRESERVE" && pass "Ephemeral paths documented" 
 mlgrep "$PRESERVE" '/var/lib/clamav' && pass "Note: /var/lib/clamav on persistent subvol" || warn "No documentation of /var persistence"
 
 # Folder structure enum is in the file (check for every entry)
+# NOTE: Encrypted Storage removed — handled by gocryptfs
 MLGREP_FILE="$PRESERVE"
-for dir in Atlas Desktop Documents Downloads "Encrypted Storage" Games Music Pictures Public Templates Videos; do
+for dir in Atlas Desktop Documents Downloads Games Music Pictures Public Templates Videos; do
   mlgrep "$MLGREP_FILE" "\"$dir\"" && pass "folderStructureDirs includes $dir" || fail "folderStructureDirs missing $dir"
 done
+
+# Encrypted Storage: gocryptfs script exists
+SCRIPT="$BASE/files/bin/encrypted-storage.sh"
+test -f "$SCRIPT" && pass "encrypted-storage.sh exists" || fail "encrypted-storage.sh missing"
+grep -q 'gocryptfs' "$SCRIPT" && pass "encrypted-storage uses gocryptfs" || fail "encrypted-storage missing gocryptfs reference"
+grep -q 'gocryptfs' "$CFG" && pass "gocryptfs in system packages" || warn "gocryptfs not found in configuration.nix"
 
 # ============================================================================
 # 26. SUMMARY

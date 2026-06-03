@@ -9,9 +9,9 @@
 { config, pkgs, lib, ... }:
 
 let
-  cfg = config.atlas.modules.privacy;
+  cfg = config.yorha.modules.privacy;
 in {
-  options.atlas.modules.privacy = {
+  options.yorha.modules.privacy = {
     username = lib.mkOption {
       type = lib.types.str;
       default = "yusa";

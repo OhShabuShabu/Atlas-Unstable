@@ -139,8 +139,8 @@ done < <(discover_user_services "$CFG")
 echo -e "  ${CYAN}Discovered ${#DISCOVERED_USER_SVCS[@]} user service definitions${NC}"
 
 declare -a REQUIRED_USER=(
-  "atlas-awww" "atlas-vicinae" "atlas-xwayland-satellite"
-  "atlas-startup-sound" "atlas-openrgb"
+  "awww" "vicinae" "xwayland-satellite"
+  "startup-sound" "openrgb"
 )
 
 for svc in "${REQUIRED_USER[@]}"; do
@@ -284,9 +284,9 @@ check_service_type "$SEC_DIR/quarantine.nix" "quarantine-cleanup" "oneshot" "qua
 check_service_type "$SEC_DIR/memory-wipe.nix" "dram-wiper" "oneshot" "dram-wiper" || true
 
 # User services should be simple (long-running) or oneshot
-check_service_type "$CFG" "atlas-awww" "simple" "atlas-awww" || true
-check_service_type "$CFG" "atlas-vicinae" "simple" "atlas-vicinae" || true
-check_service_type "$CFG" "atlas-startup-sound" "oneshot" "atlas-startup-sound" || true
+check_service_type "$CFG" "awww" "simple" "awww" || true
+check_service_type "$CFG" "vicinae" "simple" "vicinae" || true
+check_service_type "$CFG" "startup-sound" "oneshot" "startup-sound" || true
 
 # ═════════════════════════════════════════════════════════════════════════════
 # 9. SERVICE RESTART POLICY
@@ -308,7 +308,7 @@ check_restart_policy "$SEC_DIR/snort.nix" "snort-monitor" "snort-monitor" || tru
 check_restart_policy "$SEC_DIR/clamav.nix" "clamav-daemon" "clamav-daemon" || true
 
 # User services should have Restart=on-failure
-for svc in atlas-awww atlas-vicinae atlas-xwayland-satellite; do
+for svc in awww vicinae xwayland-satellite; do
   if grep -A10 "user.services.$svc" "$CFG" 2>/dev/null | grep -q "Restart.*on-failure"; then
     pass "$svc: Restart=on-failure"
   else

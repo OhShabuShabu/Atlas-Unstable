@@ -6,14 +6,14 @@
 # Can also check for module updates.
 #
 # Usage:
-#   atlas-module-apply              # Apply changes and rebuild
-#   atlas-module-apply --check-updates  # Check for module updates only
-#   atlas-module-apply --status     # Show module state summary
+#   yorha-module-apply              # Apply changes and rebuild
+#   yorha-module-apply --check-updates  # Check for module updates only
+#   yorha-module-apply --status     # Show module state summary
 # ============================================================================
 set -euo pipefail
 
 BASE="${ATLAS_MODULES_BASE:-$(cd "$(dirname "$0")/../.." && pwd)}"
-source "$BASE/files/lib/logging.sh"
+source "$BASE/files/lib/tui.sh"
 source "$BASE/files/lib/module-registry.sh"
 ATLAS_MODULES_BASE="$BASE"
 
@@ -21,7 +21,7 @@ ATLAS_MODULES_BASE="$BASE"
 validate_state() {
   if [[ ! -f "$ATLAS_MODULE_STATE_FILE" ]]; then
     fail "Module state file not found at $ATLAS_MODULE_STATE_FILE"
-    info "Run 'atlas-module-manager' to configure modules first."
+    info "Run 'yorha-module-manager' to configure modules first."
     exit 1
   fi
 
@@ -66,7 +66,7 @@ validate_state() {
   if [[ $issues -gt 0 ]]; then
     echo ""
     warn "Found $issues validation issue(s). Fix them before rebuilding."
-    echo -e "  ${DIM}Run 'atlas-module validate' for details.${NC}"
+    echo -e "  ${DIM}Run 'yorha-module validate' for details.${NC}"
     return 1
   fi
 
@@ -76,7 +76,7 @@ validate_state() {
 # ─── Dry Run ──────────────────────────────────────────────────────────────
 dry_run() {
   echo -e "${CYAN}════════════════════════════════════════${NC}"
-  echo -e "${CYAN}  Atlas Module Apply — Dry Run${NC}"
+  echo -e "${CYAN}  YoRHa Module Apply — Dry Run${NC}"
   echo -e "${CYAN}════════════════════════════════════════${NC}"
   echo ""
 
@@ -102,7 +102,7 @@ dry_run() {
   enabled_count=$(echo "$state" | jq '[to_entries[] | select(.value.enabled == true)] | length')
   echo -e "  ${BOLD}Summary:${NC}"
   echo -e "    Enabled modules:    ${CYAN}$enabled_count${NC}"
-  echo -e "    Flake target:       ${DIM}#atlas${NC}"
+  echo -e "    Flake target:       ${DIM}#yorha${NC}"
   echo ""
   echo -e "  ${YELLOW}This is a dry run. No changes were made.${NC}"
 }
@@ -136,7 +136,7 @@ check_updates() {
 status_report() {
   if [[ ! -f "$ATLAS_MODULE_STATE_FILE" ]]; then
     info "No module state file found."
-    echo -e "  ${DIM}Run 'atlas-module-manager' to configure modules.${NC}"
+    echo -e "  ${DIM}Run 'yorha-module-manager' to configure modules.${NC}"
     exit 0
   fi
 
@@ -195,7 +195,7 @@ case "${1:-apply}" in
     ;;
   apply|"")
     echo -e "${CYAN}════════════════════════════════════════${NC}"
-    echo -e "${CYAN}  Atlas Module Apply${NC}"
+    echo -e "${CYAN}  YoRHa Module Apply${NC}"
     echo -e "${CYAN}════════════════════════════════════════${NC}"
     echo ""
 
@@ -213,10 +213,10 @@ case "${1:-apply}" in
 
     echo ""
     info "Running nixos-rebuild switch..."
-    echo -e "  ${DIM}Flake: $BASE#atlas${NC}"
+    echo -e "  ${DIM}Flake: $BASE#yorha${NC}"
     echo ""
 
-    if sudo nixos-rebuild switch --flake "$BASE#atlas" 2>&1; then
+    if sudo nixos-rebuild switch --flake "$BASE#yorha" 2>&1; then
       echo ""
       ok "Rebuild successful!"
 
@@ -227,7 +227,7 @@ case "${1:-apply}" in
          '.modules = $modules | .metadata.last_rebuild = $now | .metadata.updated = $now' \
          "$ATLAS_MODULE_STATE_FILE" > "${ATLAS_MODULE_STATE_FILE}.tmp" && mv "${ATLAS_MODULE_STATE_FILE}.tmp" "$ATLAS_MODULE_STATE_FILE"
 
-      atlas-health quick 2>/dev/null || echo -e "  ${YELLOW}⚠  Health check found issues — run 'atlas-health' for details.${NC}"
+      yorha-health quick 2>/dev/null || echo -e "  ${YELLOW}⚠  Health check found issues — run 'yorha-health' for details.${NC}"
     else
       echo ""
       fail "Rebuild failed!"
@@ -235,7 +235,7 @@ case "${1:-apply}" in
     fi
     ;;
   *)
-    echo "Usage: atlas-module-apply [--check-updates|--status|--validate|--dry-run]"
+    echo "Usage: yorha-module-apply [--check-updates|--status|--validate|--dry-run]"
     exit 1
     ;;
 esac

@@ -122,8 +122,8 @@ header "4. TPM Enrollment (first-boot)"
 
 if [ -f "$CS_NIX" ]; then
 
-  grep -q "atlas-tpm-enroll" "$CS_NIX" && \
-    pass "Service: atlas-tpm-enroll" || fail "Service: atlas-tpm-enroll NOT FOUND"
+  grep -q "tpm-enroll" "$CS_NIX" && \
+    pass "Service: tpm-enroll" || fail "Service: tpm-enroll NOT FOUND"
 
   grep -q "systemd-cryptenroll" "$CS_NIX" && \
     pass "TPM: uses systemd-cryptenroll" || fail "TPM: missing systemd-cryptenroll"

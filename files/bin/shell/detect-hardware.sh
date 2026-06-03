@@ -14,6 +14,13 @@ set -euo pipefail
 
 MODE="${1:-human}"
 
+if [ -n "${YORHA_LIB_DIR:-}" ]; then
+  source "$YORHA_LIB_DIR/tui.sh"
+else
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+  source "$SCRIPT_DIR/files/lib/tui.sh"
+fi
+
 # ── Helper functions ────────────────────────────────────────────────────
 detect_cpu() {
     if grep -q "GenuineIntel" /proc/cpuinfo 2>/dev/null; then
@@ -130,24 +137,19 @@ if [ "$MODE" = "json" ]; then
 }
 EOF
 else
-    echo "═══════════════════════════════════════════════"
-    echo "  Atlas Hardware Detection Report"
-    echo "═══════════════════════════════════════════════"
-    echo ""
-    echo "  CPU:          $CPU"
-    echo "  GPU:          $GPU"
-    echo "  RAM:          ${RAM_MB}MB"
-    echo "  TPM:          $TPM"
-    echo "  Laptop:       $LAPTOP"
-    echo "  Architecture: $ARCH"
-    echo ""
+    tui_header "YoRHa Hardware Detection Report"
+    tui_kv "CPU"          "$CPU"
+    tui_kv "GPU"          "$GPU"
+    tui_kv "RAM"          "${RAM_MB}MB"
+    tui_kv "TPM"          "$TPM"
+    tui_kv "Laptop"       "$LAPTOP"
+    tui_kv "Architecture" "$ARCH"
     if [ ${#COMPAT_ISSUES[@]} -gt 0 ]; then
-        echo "  ── Compatibility Notes ──"
+        tui_section "Compatibility Notes"
         for issue in "${COMPAT_ISSUES[@]}"; do
-            echo "  ⚠  $issue"
+            warn "$issue"
         done
-        echo ""
     fi
-    echo "  For display information: niri msg outputs"
-    echo "═══════════════════════════════════════════════"
+    tui_hint "For display information: niri msg outputs"
+    tui_footer
 fi

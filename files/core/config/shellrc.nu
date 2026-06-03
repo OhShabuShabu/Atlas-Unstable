@@ -30,10 +30,10 @@ alias trash-put = ^trash put
 
 # NixOS shortcuts
 alias nr = atlas-rebuild
-alias nrb = nixos-rebuild build --flake /home/yusa/Atlas#atlas
+alias nrb = nixos-rebuild build --flake /home/yusa/System#atlas
 alias nix-check = nix flake check --show-trace
 alias nix-show = nix flake show
-alias test-config = bash /home/yusa/Atlas/test_config.sh
+alias test-config = bash /home/yusa/System/test_config.sh
 
 # Module manager shortcuts
 alias mod = atlas-module
@@ -84,6 +84,6 @@ alias cpu-temp = ^sensors
 # NAVIGATION SHORTCUTS
 # ============================================================================
 
-alias atlas = cd /home/yusa/Atlas
+alias atlas = cd /home/yusa/System
 alias la = ls --all
 alias ll = ls --long

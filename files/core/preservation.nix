@@ -5,12 +5,15 @@ let
   userHome = "/home/${userName}";
 
   # Folders from ~/Folder Structure/ that should be created in ~/ on boot and persist
+  # NOTE: "Encrypted Storage" is NOT in this list — it's handled by
+  #       gocryptfs via encrypted-storage. The cipher data lives
+  #       at /persistent/home/yusa/.encrypted-storage and is mounted
+  #       to ~/Encrypted Storage on demand.
   folderStructureDirs = [
     "Atlas"
     "Desktop"
     "Documents"
     "Downloads"
-    "Encrypted Storage"
     "Games"
     "Music"
     "Pictures"

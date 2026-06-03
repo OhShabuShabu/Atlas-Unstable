@@ -14,11 +14,9 @@
       name = "Papirus-Dark";
       package = pkgs.papirus-icon-theme;
     };
-
-    gtk3.extraConfig = { Settings = ''gtk-application-prefer-dark-theme=1''; };
+    colorScheme = "dark";
     gtk4 = {
       theme = config.gtk.theme;
-      extraConfig = { Settings = ''gtk-application-prefer-dark-theme=1''; };
     };
   };
 
@@ -29,9 +27,9 @@
       automount = true;
       automount-open = true;
     };
-    "org/gnome/nautilus/preferences" = {
-      show-mounts-for-internal-drives = false;
-    };
+    # REMOVED: show-mounts-for-internal-drives was removed in Nautilus 50.x
+    # System mount filtering is now handled via patched nautilus-sidebar.c
+    # (see files/patches/nautilus-hide-system-mounts.patch (overlay in flake.nix))
   };
 
 
@@ -61,6 +59,44 @@
   };
   
   xdg.mimeApps.enable = true;
+
+  # Desktop entries for YoRHa system tools — shows up in vicinae/Noctalia app launcher
+  xdg.desktopEntries."yorha-health" = {
+    name = "YoRHa Health";
+    comment = "Run system health check (security, services, storage)";
+    exec = "yorha-health";
+    terminal = true;
+    categories = [ "System" "Utility" ];
+  };
+  xdg.desktopEntries."encrypted-storage" = {
+    name = "Encrypted Storage";
+    comment = "Mount or manage the gocryptfs encrypted storage folder";
+    exec = "encrypted-storage";
+    terminal = true;
+    categories = [ "System" "Utility" ];
+  };
+  xdg.desktopEntries."snout-scan" = {
+    name = "Security Scan";
+    comment = "Run Snout quarantine scan and check security posture";
+    exec = "snout scan";
+    terminal = true;
+    categories = [ "System" "Security" ];
+  };
+  xdg.desktopEntries."yorha-hardware-detect" = {
+    name = "Hardware Report";
+    comment = "Detect and report CPU, GPU, and system hardware";
+    exec = "yorha-hardware-detect";
+    terminal = true;
+    categories = [ "System" "Utility" ];
+  };
+  xdg.desktopEntries."odysseus-logs" = {
+    name = "Odysseus Logs";
+    comment = "View real-time Odysseus container logs";
+    exec = "odysseus-logs";
+    terminal = true;
+    categories = [ "System" "Utility" ];
+  };
+
   xdg.mimeApps.defaultApplications = {
   "text/plain" = "vscodium.desktop";
   "text/css" = "vscodium.desktop";
@@ -161,13 +197,23 @@
       resize-overlay = never
     '';
 
-    # Mullvad browser profile (from external atlas-modules repo)
-    ".local/share/mullvad-browser/profiles.ini".source          = "${inputs.atlas-modules}/privacy/mullvadbrowser/profiles.ini";
-    ".local/share/mullvad-browser/installs.ini".source          = "${inputs.atlas-modules}/privacy/mullvadbrowser/installs.ini";
-    ".local/share/mullvad-browser/ipg7sh9x.default-release-1".source = "${inputs.atlas-modules}/privacy/mullvadbrowser/ipg7sh9x.default-release-1";
-
   };
   programs.home-manager.enable = true;
+
+  # Seed Mullvad browser profile from atlas-modules on first activation.
+  # MOZ_APP_NAME is "mullvadbrowser", so the profile dir is ~/.mozilla/mullvadbrowser/.
+  # home.file symlinks won't work because the Nix store is read-only at runtime.
+  home.activation.mullvadBrowserProfile = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    SRC="${inputs.atlas-modules}/privacy/mullvadbrowser"
+    if [ ! -f "$HOME/.mozilla/mullvadbrowser/profiles.ini" ]; then
+      if [ -d "$SRC" ]; then
+        mkdir -p "$HOME/.mozilla/mullvadbrowser"
+        cp -r --no-preserve=ownership "$SRC/." "$HOME/.mozilla/mullvadbrowser/"
+      else
+        echo "WARNING: Mullvad browser profile seed not found at $SRC — skipping (this is expected after garbage collection)"
+      fi
+    fi
+  '';
 
   # TODO: Migrate to sops-nix for multi-machine portability.
   #   Add to files/secrets/secrets.yaml via `sops files/secrets/secrets.yaml`:
@@ -185,6 +231,9 @@
         name = "OhShabuShabu";
         email = "greens2acc@gmail.com";
       };
+      # Trust all repos to avoid libgit2 ownership errors when nix evaluates
+      # the flake under a different user context (e.g. nix daemon as root).
+      safe.directory = "*";
     };
   };
   

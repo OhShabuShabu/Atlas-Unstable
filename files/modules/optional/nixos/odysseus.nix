@@ -10,9 +10,9 @@
 { config, pkgs, lib, ... }:
 
 let
-  cfg = config.atlas.modules.odysseus;
+  cfg = config.yorha.modules.odysseus;
 in {
-  options.atlas.modules.odysseus = {
+  options.yorha.modules.odysseus = {
     enable = lib.mkEnableOption "Odysseus self-hosted AI workspace";
 
     username = lib.mkOption {

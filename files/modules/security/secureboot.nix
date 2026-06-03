@@ -35,7 +35,7 @@ let
 
     ${pkgs.openssl}/bin/openssl req -new -x509 -newkey rsa:4096 \
       -keyout "$KEY" -out "$CERT" \
-      -days 3650 -nodes -subj "/CN=Atlas Secure Boot Key/" \
+      -days 3650 -nodes -subj "/CN=YoRHa Secure Boot Key/" \
       -sha256 2>/dev/null
 
     chmod 0600 "$KEY"
@@ -122,7 +122,7 @@ let
     fi
 
     if command -v mokutil &>/dev/null; then
-      if mokutil --list-enrolled 2>/dev/null | grep -q "Atlas Secure Boot Key"; then
+      if mokutil --list-enrolled 2>/dev/null | grep -q "YoRHa Secure Boot Key"; then
         echo "✓ Key already enrolled in MOK"
         exit 0
       fi

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# Atlas NixOS Installer
+# YoRHa NixOS Installer
 # ============================================================================
 # Full-disk installer for NixOS with LUKS encryption, Btrfs subvolumes,
 # tmpfs root, and optional modules (gaming, dev, privacy, etc.).
@@ -154,7 +154,7 @@ done
 
 # ─── Constants ──────────────────────────────────────────────────────────────
 SCRIPT_START=$(date +%s)
-readonly RAW_URL="$ATLAS_MODULES_RAW_URL"
+readonly RAW_URL="$YORHA_MODULES_RAW_URL"
 
 # ═════════════════════════════════════════════════════════════════════════════
 # MODULE DEFINITIONS (Step 8)
@@ -533,7 +533,7 @@ fi
 
 INSTALL_START=$SECONDS
 
-nixos-install --flake "$ROOTDIR#atlas-installer" \
+nixos-install --flake "$ROOTDIR#yorha-installer" \
   --root "$TARGET" \
   --no-root-passwd \
   --show-trace \
@@ -586,10 +586,10 @@ fi
 
 info "Copying configuration to installed system (persistent storage)..."
 mkdir -p "$TARGET/persistent/home/yusa"
-cp -r "$ROOTDIR" "$TARGET/persistent/home/yusa/Atlas"
+cp -r "$ROOTDIR" "$TARGET/persistent/home/yusa/System"
 # The 'yusa' user in the installed system has UID 1000:GID 100 (users group)
-chown -R 1000:100 "$TARGET/persistent/home/yusa/Atlas" 2>/dev/null || true
-ok "Config copied to /persistent/home/yusa/Atlas"
+chown -R 1000:100 "$TARGET/persistent/home/yusa/System" 2>/dev/null || true
+ok "Config copied to /persistent/home/yusa/System"
 
 # ═════════════════════════════════════════════════════════════════════════════
 # STEP 8: Optional Modules (multi-select)
@@ -597,7 +597,7 @@ ok "Config copied to /persistent/home/yusa/Atlas"
 step 8 "Optional Modules (Gaming, Dev, Privacy, etc.)"
 spacer
 
-readonly OPT_DIR="$TARGET/persistent/home/yusa/Atlas/files/modules/optional"
+readonly OPT_DIR="$TARGET/persistent/home/yusa/System/files/modules/optional"
 SELECTED_MODULES=()
 
 if [[ "$AUTO" -eq 0 ]]; then
@@ -731,7 +731,7 @@ fi
 # Persist the selected module state so the post-install module manager
 # picks up the correct enable/disable state on first boot.
 info "Initializing module state..."
-STATE_DIR="$TARGET/persistent/etc/atlas-modules"
+STATE_DIR="$TARGET/persistent/etc/yorha-modules"
 mkdir -p "$STATE_DIR"
 STATE_FILE="$STATE_DIR/state.json"
 
@@ -756,7 +756,7 @@ for id in "${MODULE_IDS[@]}"; do
     --argjson enabled "$enabled" \
     --argjson installed "$installed" \
     --arg version "${MODULE_VERSION[$id]}" \
-    --arg source "$ATLAS_MODULES_RAW_URL" \
+    --arg source "$YORHA_MODULES_RAW_URL" \
     '.modules[$id] = {enabled: $enabled, installed: $installed, version: $version, source: $source}')
 done
 echo "$STATE_JSON" > "$STATE_FILE"
@@ -774,18 +774,18 @@ info "${DIM}This installs all selected optional modules.${NC}"
 echo
 
 if command -v nixos-enter &>/dev/null; then
-  nixos-enter --root "$TARGET" -c "nixos-rebuild switch --flake /persistent/home/yusa/Atlas#atlas" \
+  nixos-enter --root "$TARGET" -c "nixos-rebuild switch --flake /persistent/home/yusa/System#yorha" \
     > /tmp/nixos-rebuild.log 2>&1 &
   timer_until $! "nixos-rebuild"
   if wait $! 2>/dev/null; then
     ok "Full configuration applied (including optional modules)"
   else
     warn "nixos-rebuild had issues — run it manually after first boot:"
-    echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/Atlas#atlas${NC}"
+    echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/System#yorha${NC}"
   fi
 else
   warn "nixos-enter not found — run nixos-rebuild manually after first boot:"
-  echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/Atlas#atlas${NC}"
+  echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/System#yorha${NC}"
 fi
 
 # ─── Next Steps ───────────────────────────────────────────────────────────
@@ -802,7 +802,7 @@ echo -e "    ${CYAN}2.${NC} Boot into your new system"
 echo -e "    ${CYAN}3.${NC} Log in with ${YELLOW}username: yusa${NC}"
 if [[ ${#SELECTED_MODULES[@]} -eq 0 ]]; then
   echo -e "    ${CYAN}4.${NC} Apply the full configuration and add optional modules:"
-  echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/Atlas#atlas${NC}"
+  echo -e "       ${DIM}sudo nixos-rebuild switch --flake /home/yusa/System#yorha${NC}"
 fi
 echo
-echo -e "  ${DIM}For detailed documentation, see: /home/yusa/Atlas/README.md${NC}"
+echo -e "  ${DIM}For detailed documentation, see: /home/yusa/System/README.md${NC}"

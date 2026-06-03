@@ -2,23 +2,23 @@
 # ATLAS MODULE MANAGER — NixOS Module
 # ============================================================================
 # Provides:
-#   - atlas-module-manager TUI command (fzf/gum/dialog/newt/TTY fallback)
-#   - atlas-module-apply command (apply changes + rebuild)
-#   - atlas-module command (unified CLI for all module operations)
-#   - atlas-module-verify command (module load verification)
+#   - yorha-module-manager TUI command (fzf/gum/dialog/newt/TTY fallback)
+#   - yorha-module-apply command (apply changes + rebuild)
+#   - yorha-module command (unified CLI for all module operations)
+#   - yorha-module-verify command (module load verification)
 #   - Desktop entry for launching the module manager
 #   - Systemd timer for module update checks
 #   - Systemd path unit for module change monitoring
-#   - Persistent state directory at /persistent/etc/atlas-modules
+#   - Persistent state directory at /persistent/etc/yorha-modules
 # ============================================================================
 { config, pkgs, lib, ... }:
 
 let
-  cfg = config.services.atlas-module-manager;
+  cfg = config.services.yorha-module-manager;
 
-  discoverScript = pkgs.writeShellScriptBin "atlas-module-discover" ''
-    if [[ -d "/persistent/home/yusa/Atlas/atlas-unstable" ]]; then
-      echo "/persistent/home/yusa/Atlas/atlas-unstable"
+  discoverScript = pkgs.writeShellScriptBin "yorha-module-discover" ''
+    if [[ -d "/persistent/home/yusa/System/YoRHA" ]]; then
+      echo "/persistent/home/yusa/System/YoRHA"
     elif [[ -n "''${FLAKE:-}" ]]; then
       echo "''${FLAKE%/}"
     else
@@ -26,56 +26,56 @@ let
     fi
   '';
 
-  moduleManagerScript = pkgs.writeShellScriptBin "atlas-module-manager" ''
+  moduleManagerScript = pkgs.writeShellScriptBin "yorha-module-manager" ''
     set -euo pipefail
     export PATH="/run/wrappers/bin:/run/current-system/sw/bin:$PATH"
-    BASE="$(${discoverScript}/bin/atlas-module-discover)"
+    BASE="$(${discoverScript}/bin/yorha-module-discover)"
     source "$BASE/files/lib/module-registry.sh"
-    ATLAS_MODULES_BASE="$BASE"
-    exec ${pkgs.bash}/bin/bash "$BASE/files/bin/atlas-module-manager.sh"
+    YORHA_MODULES_BASE="$BASE"
+    exec ${pkgs.bash}/bin/bash "$BASE/files/bin/yorha-module-manager.sh"
   '';
 
-  moduleApplyScript = pkgs.writeShellScriptBin "atlas-module-apply" ''
+  moduleApplyScript = pkgs.writeShellScriptBin "yorha-module-apply" ''
     set -euo pipefail
     export PATH="/run/wrappers/bin:/run/current-system/sw/bin:$PATH"
-    BASE="$(${discoverScript}/bin/atlas-module-discover)"
+    BASE="$(${discoverScript}/bin/yorha-module-discover)"
     source "$BASE/files/lib/module-registry.sh"
-    ATLAS_MODULES_BASE="$BASE"
-    exec ${pkgs.bash}/bin/bash "$BASE/files/bin/atlas-module-apply.sh" "$@"
+    YORHA_MODULES_BASE="$BASE"
+    exec ${pkgs.bash}/bin/bash "$BASE/files/bin/yorha-module-apply.sh" "$@"
   '';
 
-  moduleCliScript = pkgs.writeShellScriptBin "atlas-module" ''
+  moduleCliScript = pkgs.writeShellScriptBin "yorha-module" ''
     set -euo pipefail
     export PATH="/run/wrappers/bin:/run/current-system/sw/bin:$PATH"
-    BASE="$(${discoverScript}/bin/atlas-module-discover)"
+    BASE="$(${discoverScript}/bin/yorha-module-discover)"
     source "$BASE/files/lib/module-registry.sh"
-    ATLAS_MODULES_BASE="$BASE"
-    exec ${pkgs.bash}/bin/bash "$BASE/files/bin/atlas-module.sh" "$@"
+    YORHA_MODULES_BASE="$BASE"
+    exec ${pkgs.bash}/bin/bash "$BASE/files/bin/yorha-module.sh" "$@"
   '';
 
-  moduleVerifyScript = pkgs.writeShellScriptBin "atlas-module-verify" ''
+  moduleVerifyScript = pkgs.writeShellScriptBin "yorha-module-verify" ''
     set -euo pipefail
     export PATH="/run/wrappers/bin:/run/current-system/sw/bin:$PATH"
-    BASE="$(${discoverScript}/bin/atlas-module-discover)"
+    BASE="$(${discoverScript}/bin/yorha-module-discover)"
     source "$BASE/files/lib/module-registry.sh"
-    ATLAS_MODULES_BASE="$BASE"
-    exec ${pkgs.bash}/bin/bash "$BASE/files/bin/atlas-module-verify.sh" "$@"
+    YORHA_MODULES_BASE="$BASE"
+    exec ${pkgs.bash}/bin/bash "$BASE/files/bin/yorha-module-verify.sh" "$@"
   '';
 
   desktopEntry = pkgs.makeDesktopItem {
-    name = "atlas-module-manager";
-    desktopName = "Atlas Module Manager";
+    name = "yorha-module-manager";
+    desktopName = "YoRHa Module Manager";
     comment = "Manage optional system and user modules";
     icon = "system-software-install";
-    exec = "${moduleManagerScript}/bin/atlas-module-manager";
+    exec = "${moduleManagerScript}/bin/yorha-module-manager";
     terminal = true;
     categories = [ "System" "Settings" ];
-    keywords = [ "atlas" "modules" "nixos" "configuration" ];
+    keywords = [ "yorha" "modules" "nixos" "configuration" ];
   };
 
 in {
-  options.services.atlas-module-manager = {
-    enable = lib.mkEnableOption "Atlas Module Manager";
+  options.services.yorha-module-manager = {
+    enable = lib.mkEnableOption "YoRHa Module Manager";
 
     autoUpdate = lib.mkOption {
       type = lib.types.bool;
@@ -123,23 +123,23 @@ in {
     ] ++ lib.optional cfg.enableDesktopEntry desktopEntry;
 
     systemd.tmpfiles.rules = [
-      "d /persistent/etc/atlas-modules 0775 yusa users -"
+      "d /persistent/etc/yorha-modules 0775 yusa users -"
     ];
 
-    systemd.services.atlas-module-update-check = lib.mkIf cfg.autoUpdate {
-      description = "Atlas Module Update Check";
+    systemd.services.yorha-module-update-check = lib.mkIf cfg.autoUpdate {
+      description = "YoRHa Module Update Check";
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
       serviceConfig = {
         Type = "oneshot";
-        ExecStart = "${pkgs.bash}/bin/bash -c '${moduleApplyScript}/bin/atlas-module-apply --check-updates 2>&1 | ${pkgs.systemd}/bin/systemd-cat -t atlas-modules'";
+        ExecStart = "${pkgs.bash}/bin/bash -c '${moduleApplyScript}/bin/yorha-module-apply --check-updates 2>&1 | ${pkgs.systemd}/bin/systemd-cat -t yorha-modules'";
         User = "root";
       };
     };
 
-    systemd.timers.atlas-module-update-check = lib.mkIf cfg.autoUpdate {
-      description = "Atlas Module Update Check Timer";
+    systemd.timers.yorha-module-update-check = lib.mkIf cfg.autoUpdate {
+      description = "YoRHa Module Update Check Timer";
       wantedBy = [ "timers.target" ];
       timerConfig = {
         OnCalendar = cfg.updateInterval;
@@ -148,19 +148,19 @@ in {
       };
     };
 
-    systemd.services.atlas-module-health = {
-      description = "Atlas Module Health Check";
+    systemd.services.yorha-module-health = {
+      description = "YoRHa Module Health Check";
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
       serviceConfig = {
         Type = "oneshot";
-        ExecStart = "${pkgs.bash}/bin/bash -c '${moduleApplyScript}/bin/atlas-module-apply --validate 2>&1 | ${pkgs.systemd}/bin/systemd-cat -t atlas-modules'";
+        ExecStart = "${pkgs.bash}/bin/bash -c '${moduleApplyScript}/bin/yorha-module-apply --validate 2>&1 | ${pkgs.systemd}/bin/systemd-cat -t yorha-modules'";
         User = "root";
       };
     };
 
-    systemd.timers.atlas-module-health = {
-      description = "Atlas Module Health Check Timer";
+    systemd.timers.yorha-module-health = {
+      description = "YoRHa Module Health Check Timer";
       wantedBy = [ "timers.target" ];
       timerConfig = {
         OnCalendar = "daily";
@@ -169,37 +169,37 @@ in {
       };
     };
 
-    systemd.paths.atlas-modules = lib.mkIf cfg.enablePathMonitor {
+    systemd.paths.yorha-modules = lib.mkIf cfg.enablePathMonitor {
       wantedBy = [ "multi-user.target" ];
       pathConfig = {
         PathModified = [
-          "/persistent/etc/atlas-modules"
+          "/persistent/etc/yorha-modules"
         ];
-        Unit = "atlas-modules-summary.service";
+        Unit = "yorha-modules-summary.service";
       };
     };
 
-    systemd.services.atlas-modules-summary = lib.mkIf cfg.enablePathMonitor {
+    systemd.services.yorha-modules-summary = lib.mkIf cfg.enablePathMonitor {
       after = [ "network.target" ];
       serviceConfig = {
         Type = "oneshot";
-        ExecStart = "${pkgs.bash}/bin/bash -c 'echo \"Module state changed: \$(date)\" | ${pkgs.systemd}/bin/systemd-cat -t atlas-modules -p info'";
+        ExecStart = "${pkgs.bash}/bin/bash -c 'echo \"Module state changed: \$(date)\" | ${pkgs.systemd}/bin/systemd-cat -t yorha-modules -p info'";
       };
     };
 
-    systemd.services.atlas-module-verify = lib.mkIf cfg.enableVerifyTimer {
-      description = "Atlas Module Load Verification";
+    systemd.services.yorha-module-verify = lib.mkIf cfg.enableVerifyTimer {
+      description = "YoRHa Module Load Verification";
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
       serviceConfig = {
         Type = "oneshot";
-        ExecStart = "${pkgs.bash}/bin/bash -c '${moduleVerifyScript}/bin/atlas-module-verify --quick 2>&1 | ${pkgs.systemd}/bin/systemd-cat -t atlas-modules-verify'";
+        ExecStart = "${pkgs.bash}/bin/bash -c '${moduleVerifyScript}/bin/yorha-module-verify --quick 2>&1 | ${pkgs.systemd}/bin/systemd-cat -t yorha-modules-verify'";
         User = "root";
       };
     };
 
-    systemd.timers.atlas-module-verify = lib.mkIf cfg.enableVerifyTimer {
-      description = "Atlas Module Load Verification Timer";
+    systemd.timers.yorha-module-verify = lib.mkIf cfg.enableVerifyTimer {
+      description = "YoRHa Module Load Verification Timer";
       wantedBy = [ "timers.target" ];
       timerConfig = {
         OnCalendar = "weekly";

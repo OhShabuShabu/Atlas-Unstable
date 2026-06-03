@@ -91,7 +91,7 @@
 
       if ! $JSON_MODE; then
         echo "============================================================"
-        echo "  Atlas Security Posture Verification"
+        echo "  YoRHa Security Posture Verification"
         echo "  $(date '+%Y-%m-%d %H:%M:%S')"
         echo "============================================================"
       fi

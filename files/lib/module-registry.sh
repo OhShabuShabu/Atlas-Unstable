@@ -9,7 +9,7 @@
 # ============================================================================
 
 # Raw URL for module downloads
-readonly ATLAS_MODULES_RAW_URL="https://raw.githubusercontent.com/OhShabuShabu/Atlas-Modules/main"
+readonly YORHA_MODULES_RAW_URL="https://raw.githubusercontent.com/OhShabuShabu/Atlas-Modules/main"
 
 # ============================================================================
 # SECTION 1: Base Module Metadata
@@ -54,7 +54,7 @@ MODULE_DESC=(
   [19]="media             Media codecs, VA-API, VLC, FFmpeg"
 )
 
-# Relative file path within the atlas-modules repository
+# Relative file path within the yorha-modules repository
 MODULE_FILE=(
   [1]="modules/nixos/performance.nix"
   [2]="modules/nixos/privacy.nix"
@@ -278,7 +278,7 @@ _add_dynamic_module() {
   MODULE_REQUIREMENTS[$id]="RAM: varies | Disk: varies"
 
   local desc="Auto-discovered module"
-  local info="Auto-discovered module $name from the Atlas-Modules repository. Install using: atlas-module install $id"
+  local info="Auto-discovered module $name from the Atlas-Modules repository. Install using: yorha-module install $id"
   local icon="🧩"
   local reqs="RAM: varies | Disk: varies"
 
@@ -367,8 +367,8 @@ discover_remote_catalog() {
 # ============================================================================
 # Module State File Path
 # ============================================================================
-ATLAS_MODULE_STATE_DIR="${ATLAS_MODULE_STATE_DIR:-/persistent/etc/atlas-modules}"
-ATLAS_MODULE_STATE_FILE="${ATLAS_MODULE_STATE_FILE:-$ATLAS_MODULE_STATE_DIR/state.json}"
+YORHA_MODULE_STATE_DIR="${YORHA_MODULE_STATE_DIR:-/persistent/etc/yorha-modules}"
+YORHA_MODULE_STATE_FILE="${YORHA_MODULE_STATE_FILE:-$YORHA_MODULE_STATE_DIR/state.json}"
 
 # ============================================================================
 # Categories (grouped module IDs) — rebuilt dynamically from MODULE_CATEGORY
@@ -509,7 +509,7 @@ validate_deps() {
   [[ $issues -eq 0 ]]
 }
 
-# Download a single module from the atlas-modules repository
+# Download a single module from the yorha-modules repository
 # Usage: download_module <id> <dest_dir>
 download_module() {
   local id="$1"

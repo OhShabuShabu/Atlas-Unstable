@@ -1,0 +1,43 @@
+diff --git a/src/nautilus-sidebar.c b/src/nautilus-sidebar.c
+index 7403f6c..34a2aac 100644
+--- a/src/nautilus-sidebar.c
++++ b/src/nautilus-sidebar.c
+@@ -529,6 +529,24 @@ get_desktop_directory_uri (void)
+     return g_filename_to_uri (name, NULL, NULL);
+ }
+ 
++static gboolean
++is_internal_system_mount (GFile *root)
++{
++    g_autofree char *path = g_file_get_path (root);
++
++    if (path == NULL)
++        return FALSE;
++
++    if (g_str_equal (path, "/boot") ||
++        g_str_equal (path, "/nix") ||
++        g_str_equal (path, "/persistent"))
++    {
++        return TRUE;
++    }
++
++    return FALSE;
++}
++
+ typedef struct
+ {
+     NautilusSidebar *sidebar;
+@@ -994,6 +1015,13 @@ update_places (NautilusSidebar *sidebar)
+             continue;
+         }
+ 
++        if (is_internal_system_mount (root))
++        {
++            g_object_unref (root);
++            g_object_unref (mount);
++            continue;
++        }
++
+         start_icon = g_mount_get_symbolic_icon (mount);
+         mount_uri = g_file_get_uri (root);
+         name = g_mount_get_name (mount);

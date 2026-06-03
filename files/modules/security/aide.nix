@@ -18,8 +18,6 @@ let
     report_url=file:/var/log/aide/report.log
   '';
 
-  # INFO: Directories to monitor with attributes - updated with SHA512
-  # NOTE: p=permissions, i=inode, u=user, g=group, n=ACL, xattrs=xattrs, sha512=checksum
   monitoredDirs = ''
     /bin p+i+u+g+n+acl+xattrs+sha512
     /sbin p+i+u+g+n+acl+xattrs+sha512
@@ -29,12 +27,24 @@ let
     /usr/lib p+i+u+g+n+acl+xattrs+sha512
     /var/lib p+i+u+g+n+acl+xattrs+sha512
     /etc p+i+u+g+n+acl+xattrs+sha512
+    !/var/lib/aide
+    !/var/log/aide
+  '';
+
+  # INFO: Exclude volatile/proc filesystems
+  excludeDirs = ''
+    /proc no
+    /sys no
+    /dev no
+    /run no
+    /tmp no
+    /mnt no
+    /media no
   '';
 in
 
 {
-  # INFO: AIDE configuration file
-  environment.etc."aide.conf".text = aideConfig + monitoredDirs;
+  environment.etc."aide.conf".text = aideConfig + monitoredDirs + excludeDirs;
 
   # INFO: Create required directories
   systemd.tmpfiles.rules = [

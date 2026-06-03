@@ -48,21 +48,7 @@
     # INFO: Snout security monitoring daemon
     ../modules/security/snout.nix
 
-    # DISABLED: Firmware tinkering detection services
-    # See: tpm-sealing (TPM PCR attestation), secureboot (Secure Boot verification),
-    #      tpm-monitoring (runtime PCR/UEFI monitoring), firmware-check (BIOS version check)
-    # ../modules/security/tpm-sealing.nix
-
-    # DISABLED: Secure Boot kernel signing (part of firmware integrity)
-    # ../modules/security/secureboot.nix
-
-    # DISABLED: TPM/UEFI monitoring & tamper detection
-    # ../modules/security/tpm-monitoring.nix
-
-    # DISABLED: Firmware version attestation (detects unauthorized BIOS/UEFI updates)
-    # ../modules/security/firmware-check.nix
-
-    # INFO: Feature modules (from external atlas-modules repo)
+    # INFO: Feature modules (from external yorha-modules repo)
     ../modules/optional/nixos
 
     # INFO: Module manager — TUI, desktop entry, state management
@@ -129,11 +115,11 @@
 
     # GPU initrd kernel modules moved to hardware/gpu/<vendor>.nix for per-machine selection.
     # Only include the driver for the actual hardware — all three bundles add ~200MB+ firmware
-    # to every initrd, overwhelming small EFI partitions on non-Atlas machines.
+    # to every initrd, overwhelming small EFI partitions on non-YoRHa machines.
 
     # LUKS devices and fileSystems are provided by either:
-    #   - current-system.nix (for `nixos-rebuild switch --flake .#atlas`)
-    #   - disko.nix       (for fresh install via `.#atlas-installer`)
+    #   - current-system.nix (for `nixos-rebuild switch --flake .#yorha`)
+    #   - disko.nix       (for fresh install via `.#yorha-installer`)
 
     # Plymouth boot splash — Hyprland macOS style theme
     plymouth = {
@@ -162,14 +148,12 @@
   # ============================================================================
   # SECTION 2: NETWORK CONFIGURATION
   # ============================================================================
-  # Host name — defined in profiles/atlas.nix
+  # Host name — defined in profiles/yorha.nix
   # Use NetworkManager with systemd-resolved for DNSSEC + DNS-over-TLS
   networking.networkmanager.enable = true;
   networking.networkmanager.dns = "systemd-resolved";
 
-  # Disable DHCP client (static IP)
   networking.useDHCP = false;
-  networking.dhcpcd.enable = false;
 
   # Mullvad VPN daemon — handled by privacy module (files/modules/optional/nixos/privacy.nix)
 
@@ -212,8 +196,8 @@
   # ============================================================================
   # SECTION 3: HOME MANAGER
   # ============================================================================
-  # Enable Atlas Module Manager
-  services.atlas-module-manager.enable = true;
+  # Enable YoRHa Module Manager
+  services.yorha-module-manager.enable = true;
 
   # Enable Home Manager
   home-manager.useUserPackages = true;
@@ -263,11 +247,20 @@
   # Run dynamically linked executables (bun, etc.)
   programs.nix-ld.enable = true;
 
+  # INFO: System-wide git config — safe.directory needed so Nix (via libgit2)
+  # can evaluate local flakes when run as root through nixos-rebuild (sudo).
+  # Without this, libgit2 refuses: "repository path is not owned by current user".
+  programs.git = {
+    enable = true;
+    config = {
+      safe.directory = [ "*" ];
+    };
+  };
 
   # ============================================================================
   # SECTION 5: TIMEZONE & LOCALIZATION
   # ============================================================================
-  # Timezone, locale, domain — defined in profiles/atlas.nix
+  # Timezone, locale, domain — defined in profiles/yorha.nix
 
 
   # ============================================================================
@@ -286,7 +279,7 @@
     ];
     homeMode = "0750";
     openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEZUNUi+15sIyPF4CrpeVjsfRE2JlYwIQlDtaCifRuvA yusa@atlas"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEZUNUi+15sIyPF4CrpeVjsfRE2JlYwIQlDtaCifRuvA yusa@yorha"
     ];
   };
 
@@ -311,7 +304,7 @@
   # to do, giving us proper lifecycle management, restart on failure, and
   # journald logging.
 
-  systemd.user.services.atlas-awww = {
+  systemd.user.services.awww = {
     description = "Awww Wallpaper Daemon";
     wantedBy = [ "graphical-session.target" ];
     partOf = [ "graphical-session.target" ];
@@ -325,7 +318,7 @@
     };
   };
 
-  systemd.user.services.atlas-vicinae = {
+  systemd.user.services.vicinae = {
     description = "Vicinae Application Launcher";
     wantedBy = [ "graphical-session.target" ];
     partOf = [ "graphical-session.target" ];
@@ -340,7 +333,7 @@
     };
   };
 
-  systemd.user.services.atlas-xwayland-satellite = {
+  systemd.user.services.xwayland-satellite = {
     description = "XWayland Satellite (X11 compatibility)";
     wantedBy = [ "graphical-session.target" ];
     partOf = [ "graphical-session.target" ];
@@ -355,8 +348,8 @@
   };
 
   # Startup sound — plays once then exits
-  systemd.user.services.atlas-startup-sound = {
-    description = "Atlas Startup Sound";
+  systemd.user.services.startup-sound = {
+    description = "YoRHa Startup Sound";
     wantedBy = [ "graphical-session.target" ];
     partOf = [ "graphical-session.target" ];
     after = [ "graphical-session.target" ];
@@ -370,7 +363,7 @@
   # OpenRGB — delayed RGB lighting config, runs after desktop is settled
   services.udev.packages = [ pkgs.openrgb ];
 
-  systemd.user.services.atlas-openrgb = {
+  systemd.user.services.openrgb = {
     description = "OpenRGB Lighting Configuration";
     wantedBy = [ "graphical-session.target" ];
     partOf = [ "graphical-session.target" ];
@@ -635,7 +628,7 @@
     };
   };
 
-  # Domain — defined in profiles/atlas.nix
+  # Domain — defined in profiles/yorha.nix
 
   # FIX: Enable USBGuard for USB device authorization
   #      Allow all USB devices (relaxed policy); tighten with:
@@ -671,11 +664,18 @@
     # Mass storage devices (USB drives, external HDDs)
     SUBSYSTEM=="block", ACTION=="add", ATTR{removable}=="1", RUN+="${pkgs.systemd}/bin/udevadm trigger"
 
-    # Hide system partitions from file manager sidebar (disko-generated during install)
-    # Only non-system disks (external, secondary, USB) should appear in Nautilus
+    # NOTE: Hide system install disk from Nautilus sidebar via udisks2.
+    #   UDISKS_PRESENTATION_HIDE tells udisks2 not to expose a device to file
+    #   manager UIs.  We match three ways to cover the full storage stack:
+    #     1. Kernel name — catch the whole NVMe disk + all partitions
+    #     2. Partition labels — catch partitions by GPT name (disk-main-*)
+    #     3. Device-mapper name — catch LUKS container "crypt"
+    #   NOTE: After rebuild, run `sudo udevadm trigger` or reboot for new rules
+    #   to apply to already-discovered devices.
+    SUBSYSTEM=="block", KERNEL=="nvme0n1*", ENV{UDISKS_PRESENTATION_HIDE}="1"
     SUBSYSTEM=="block", ENV{ID_PART_ENTRY_NAME}=="disk-main-esp", ENV{UDISKS_PRESENTATION_HIDE}="1"
     SUBSYSTEM=="block", ENV{ID_PART_ENTRY_NAME}=="disk-main-root", ENV{UDISKS_PRESENTATION_HIDE}="1"
-    ENV{DM_NAME}=="crypt", ENV{UDISKS_PRESENTATION_HIDE}="1"
+    SUBSYSTEM=="block", ENV{DM_NAME}=="crypt", ENV{UDISKS_PRESENTATION_HIDE}="1"
   '';
 
   # FIX: Create common-password PAM file for Lynis detection of pwquality
@@ -836,11 +836,19 @@
     # Hardware control
     wtype
     wlrctl
+    gocryptfs           # Per-directory encryption overlay for Encrypted Storage
     inotify-tools       # File system event monitoring (snout-watcher, metadata-stripper)
     tpm2-tools          # TPM 2.0 command suite for key sealing, PCR operations, attestation
 
+    # Encrypted storage (gocryptfs) — TTY mount/unmount script
+    (pkgs.writeShellScriptBin "encrypted-storage" ''
+      export YORHA_LIB_DIR="${../lib}"
+      exec ${../bin/encrypted-storage.sh} "$@"
+    '')
+
     # Hardware detection and compatibility report
-    (pkgs.writeShellScriptBin "atlas-hardware-detect" ''
+    (pkgs.writeShellScriptBin "yorha-hardware-detect" ''
+      export YORHA_LIB_DIR="${../lib}"
       exec ${../bin/shell/detect-hardware.sh} "$@"
     '')
 
@@ -920,7 +928,7 @@
     # INFO: Rebuild wrapper — stops tamper-detection services before rebuild to
     #       prevent them from triggering a shutdown mid-operation. Runs a quick
     #       health check after successful rebuild.
-    (pkgs.writeShellScriptBin "atlas-rebuild" ''
+    (pkgs.writeShellScriptBin "yorha-rebuild" ''
       set -euo pipefail
 
       # Stop all services that detect tinkering (kernel/auditd left alone)
@@ -933,17 +941,17 @@
         secureboot-verify \
         mullvad-daemon 2>/dev/null || true
 
-      FLAKE="''${FLAKE:-.#atlas}"
+      FLAKE="''${FLAKE:-.#yorha}"
 
       echo "=== Detection services stopped, running nixos-rebuild ==="
       if sudo nixos-rebuild switch --flake "$FLAKE" "$@"; then
         echo "=== Build succeeded — running health check ==="
-        atlas-health quick 2>/dev/null || echo "⚠  Health check found issues — run 'atlas-health' for details."
+        yorha-health quick 2>/dev/null || echo "⚠  Health check found issues — run 'yorha-health' for details."
       fi
     '')
 
     # INFO: Unified system health checker — single entry point for status
-    (pkgs.writeShellScriptBin "atlas-health" ''
+    (pkgs.writeShellScriptBin "yorha-health" ''
       set -euo pipefail
 
       RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
@@ -956,10 +964,10 @@
       MODE="''${1:-full}"
 
       if [[ "$MODE" == "quick" ]]; then
-        echo -e "''${BOLD}Atlas Quick Health''${NC}"
+        echo -e "''${BOLD}YoRHa Quick Health''${NC}"
       else
         echo -e "''${BOLD}══════════════════════════════════════════''${NC}"
-        echo -e "''${BOLD}  Atlas System Health''${NC}"
+        echo -e "''${BOLD}  YoRHa System Health''${NC}"
         echo -e "''${BOLD}══════════════════════════════════════════''${NC}"
       fi
 
@@ -976,7 +984,7 @@
       # ── Security services ────────────────────────────────────────
       echo -e "''${BOLD}Security:''${NC}"
       for svc in snort-daemon snout-watcher.service clamav-daemon aide-check.timer; do
-        if systemctl is-active --quiet "$svc" 2>/dev/null; then
+        if sudo systemctl is-active --quiet "$svc" 2>/dev/null; then
           ok "$svc"
         else
           fail "$svc (inactive)"
@@ -985,7 +993,7 @@
 
       # ── Desktop user services ────────────────────────────────────
       echo -e "\n''${BOLD}Desktop:''${NC}"
-      for svc in atlas-awww atlas-vicinae atlas-xwayland-satellite; do
+      for svc in awww vicinae xwayland-satellite; do
         if systemctl --user is-active --quiet "$svc" 2>/dev/null; then
           ok "$svc"
         else
@@ -999,7 +1007,7 @@
         df -h / /nix /persistent /boot 2>/dev/null | awk 'NR==1; NR>1 {printf "  %s  %s used / %s (%s)\n", $1, $3, $2, $5}'
 
         echo -e "\n''${BOLD}LUKS:''${NC}"
-        if cryptsetup status crypt 2>/dev/null | grep -q "active"; then
+        if sudo cryptsetup status crypt 2>/dev/null | grep -q "active"; then
           ok "LUKS container 'crypt' is active"
         else
           fail "LUKS container not active (check encryption)"
@@ -1008,10 +1016,10 @@
 
       # ── Last security scan results ───────────────────────────────
       echo -e "\n''${BOLD}Last Scans:''${NC}"
-      if [[ -f /var/log/clamav/scan.log ]]; then
-        tail -3 /var/log/clamav/scan.log 2>/dev/null | head -1 | sed 's/^/  ClamAV: /'
+      if sudo test -f /var/log/clamav/scan.log 2>/dev/null; then
+        sudo tail -3 /var/log/clamav/scan.log 2>/dev/null | head -1 | sed 's/^/  ClamAV: /' || true
       fi
-      if journalctl -u aide-check.service --no-pager -n 1 2>/dev/null | grep -q "OK\|completed"; then
+      if sudo journalctl -u aide-check.service --no-pager -n 1 2>/dev/null | grep -q "OK\|completed"; then
         ok "AIDE last check passed"
       else
         warn "AIDE: no recent check logged"
@@ -1069,6 +1077,9 @@
   # ============================================================================
   # Docker — required by Odysseus and general container workloads
   virtualisation.docker.enable = true;
+  virtualisation.docker.daemon.settings = {
+    iptables = false;
+  };
 
   # ============================================================================
   # SECTION 25: SYSTEM VERSION

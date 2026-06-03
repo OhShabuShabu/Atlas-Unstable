@@ -13,8 +13,8 @@ let
   baseUrl = "https://raw.githubusercontent.com/OhShabuShabu/Atlas-Modules/main";
   moduleDir = type: "modules/${type}/";
 
-  stateFilePath = "/persistent/etc/atlas-modules/state.json";
-  stateDir = "/persistent/etc/atlas-modules";
+  stateFilePath = "/persistent/etc/yorha-modules/state.json";
+  stateDir = "/persistent/etc/yorha-modules";
 
   modules = {
     "1" = {
@@ -336,6 +336,10 @@ let
     in builtins.foldl' addToCategory { } (builtins.attrNames modules);
 
   # ─── Read Module State ──────────────────────────────────────────────────
+  # NOTE: State is stored at /persistent/etc/yorha-modules/state.json at runtime.
+  # Build-time evaluation cannot read runtime paths, so we default to empty state
+  # (opt-out model: unknown modules = enabled). The bash-based module manager
+  # (module-registry.sh) handles actual runtime state filtering.
   readModuleState = { };
 
   # ─── Helper: is module enabled? ─────────────────────────────────────────

@@ -6,25 +6,25 @@
 # Works entirely from a TTY.
 #
 # Usage:
-#   atlas-module list                        # List all modules with status
-#   atlas-module enable <id>                 # Enable a module
-#   atlas-module disable <id>                # Disable a module
-#   atlas-module install <id> [id ...]       # Download and install modules
-#   atlas-module remove <id> [id ...]        # Remove modules
-#   atlas-module update [id]                 # Update module(s)
-#   atlas-module info <id>                   # Show module details
-#   atlas-module status [id]                 # Show module status
-#   atlas-module validate                    # Validate module state
-#   atlas-module apply                       # Apply changes and rebuild
-#   atlas-module search <query>              # Search modules by name/tag
-#   atlas-module category <name>             # List modules in category
-#   atlas-module verify [id]                 # Verify module(s) are loaded
-#   atlas-module tui                         # Launch TTY-friendly TUI (fzf/dialog/whiptail)
+#   yorha-module list                        # List all modules with status
+#   yorha-module enable <id>                 # Enable a module
+#   yorha-module disable <id>                # Disable a module
+#   yorha-module install <id> [id ...]       # Download and install modules
+#   yorha-module remove <id> [id ...]        # Remove modules
+#   yorha-module update [id]                 # Update module(s)
+#   yorha-module info <id>                   # Show module details
+#   yorha-module status [id]                 # Show module status
+#   yorha-module validate                    # Validate module state
+#   yorha-module apply                       # Apply changes and rebuild
+#   yorha-module search <query>              # Search modules by name/tag
+#   yorha-module category <name>             # List modules in category
+#   yorha-module verify [id]                 # Verify module(s) are loaded
+#   yorha-module tui                         # Launch TTY-friendly TUI (fzf/dialog/whiptail)
 # ============================================================================
 set -euo pipefail
 
 BASE="${ATLAS_MODULES_BASE:-$(cd "$(dirname "$0")/../.." && pwd)}"
-source "$BASE/files/lib/logging.sh"
+source "$BASE/files/lib/tui.sh"
 source "$BASE/files/lib/module-registry.sh"
 ATLAS_MODULES_BASE="$BASE"
 
@@ -322,7 +322,7 @@ cmd_validate() {
   if [[ $issues -eq 0 ]]; then
     ok "Module state is valid."
   else
-    warn "Validation found issues. Run 'atlas-module-manager' to fix them."
+    warn "Validation found issues. Run 'yorha-module-manager' to fix them."
     return 1
   fi
 }
@@ -389,26 +389,26 @@ case "${1:-help}" in
     cmd_list "${2:-}"
     ;;
   enable)
-    [[ -z "${2:-}" ]] && { fail "Usage: atlas-module enable <id>"; exit 1; }
+    [[ -z "${2:-}" ]] && { fail "Usage: yorha-module enable <id>"; exit 1; }
     cmd_enable "$2"
     ;;
   disable)
-    [[ -z "${2:-}" ]] && { fail "Usage: atlas-module disable <id>"; exit 1; }
+    [[ -z "${2:-}" ]] && { fail "Usage: yorha-module disable <id>"; exit 1; }
     cmd_disable "$2"
     ;;
   install)
-    shift; [[ $# -eq 0 ]] && { fail "Usage: atlas-module install <id> [id ...]"; exit 1; }
+    shift; [[ $# -eq 0 ]] && { fail "Usage: yorha-module install <id> [id ...]"; exit 1; }
     cmd_install "$@"
     ;;
   remove|rm)
-    shift; [[ $# -eq 0 ]] && { fail "Usage: atlas-module remove <id> [id ...]"; exit 1; }
+    shift; [[ $# -eq 0 ]] && { fail "Usage: yorha-module remove <id> [id ...]"; exit 1; }
     cmd_remove "$@"
     ;;
   update)
     shift; cmd_update "$@"
     ;;
   info)
-    [[ -z "${2:-}" ]] && { fail "Usage: atlas-module info <id>"; exit 1; }
+    [[ -z "${2:-}" ]] && { fail "Usage: yorha-module info <id>"; exit 1; }
     cmd_info "$2"
     ;;
   status)
@@ -418,24 +418,24 @@ case "${1:-help}" in
     cmd_validate
     ;;
   apply)
-    exec atlas-module-apply
+    exec yorha-module-apply
     ;;
   search)
-    [[ -z "${2:-}" ]] && { fail "Usage: atlas-module search <query>"; exit 1; }
+    [[ -z "${2:-}" ]] && { fail "Usage: yorha-module search <query>"; exit 1; }
     cmd_search "$2"
     ;;
   category|cat)
-    [[ -z "${2:-}" ]] && { fail "Usage: atlas-module category <name>"; exit 1; }
+    [[ -z "${2:-}" ]] && { fail "Usage: yorha-module category <name>"; exit 1; }
     cmd_category "$2"
     ;;
   verify)
-    exec atlas-module-verify "${2:-}"
+    exec yorha-module-verify "${2:-}"
     ;;
   tui)
-    exec atlas-module-manager
+    exec yorha-module-manager
     ;;
   help|--help|-h)
-    echo "Usage: atlas-module <command> [args]"
+    echo "Usage: yorha-module <command> [args]"
     echo ""
     echo "Commands:"
     echo "  list                    List all modules with status"
@@ -455,7 +455,7 @@ case "${1:-help}" in
     ;;
   *)
     fail "Unknown command: $1"
-    echo "Usage: atlas-module <command> [args]"
+    echo "Usage: yorha-module <command> [args]"
     exit 1
     ;;
 esac

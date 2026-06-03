@@ -2,9 +2,9 @@
 # Place home-manager module .nix files (e.g., dev.nix, tools.nix) in this
 # directory. They will be automatically imported based on registry state.
 #
-# Module state is managed via: atlas-module (CLI) or atlas-module-manager (TUI).
+# Module state is managed via: yorha-module (CLI) or yorha-module-manager (TUI).
 # Registry source: ../../../lib/module-registry.nix
-# State file: /persistent/etc/atlas-modules/state.json
+# State file: /persistent/etc/yorha-modules/state.json
 { config, pkgs, lib, ... }:
 
 let

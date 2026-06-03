@@ -10,9 +10,9 @@ let
       scan)
         echo "=== Snout Security Scan ==="
         echo "Quarantine:"
-        if [ -d /etc/quarantine ] && [ "$(ls -A /etc/quarantine 2>/dev/null)" ]; then
-          echo "  Files: $(ls /etc/quarantine | wc -l)"
-          if ${pkgs.clamav}/bin/clamscan --recursive --quiet /etc/quarantine 2>/dev/null; then
+        if [ -d /etc/quarantine ] && [ "$(sudo ls -A /etc/quarantine 2>/dev/null)" ]; then
+          echo "  Files: $(sudo ls /etc/quarantine | wc -l)"
+          if sudo ${pkgs.clamav}/bin/clamscan --recursive --quiet /etc/quarantine 2>/dev/null; then
             echo "  Status: clean"
           else
             echo "  WARNING: threats found"
@@ -27,14 +27,14 @@ let
           echo "  Database: not initialized"
         fi
         echo "Snout daemon:"
-        if systemctl is-active --quiet snout-watcher.path 2>/dev/null; then
+        if sudo systemctl is-active --quiet snout-watcher.path 2>/dev/null; then
           echo "  Running"
         else
           echo "  Stopped"
         fi
         echo "Recent events:"
         if [ -f /var/log/snout/events.log ]; then
-          ${pkgs.coreutils}/bin/tail -10 /var/log/snout/events.log 2>/dev/null || true
+          sudo ${pkgs.coreutils}/bin/tail -10 /var/log/snout/events.log 2>/dev/null || true
         fi
         ;;
       status)

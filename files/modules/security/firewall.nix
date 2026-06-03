@@ -9,9 +9,7 @@
 # WARN: Default DENY mode - only explicitly allowed traffic passes
 
 let
-  # INFO: Default allowed TCP ports (HTTP/HTTPS)
-  # NOTE: Add any additional ports needed for your services
-  defaultTcpPorts = [ 22 80 443 ];
+  defaultTcpPorts = [ 22 ];
 
   # INFO: Default allowed UDP port ranges for VoIP/gaming
   # NOTE: These ranges are commonly used for gaming/voice chat
