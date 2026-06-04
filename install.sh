@@ -496,7 +496,43 @@ sed -i '/description = "yusa";/a\    initialPassword = "'"$PW"'";' \
   ok "Password injected (NixOS will hash on first build)" || \
   warn "Could not inject password into configuration.nix"
 
+# Save password for sops secret generation before unsetting PW
+SAVED_PW="$PW"
 unset PW
+spacer
+
+# ─── Sops Secret Generation ─────────────────────────────────────────────────
+# Generate yusa-password-hash in the encrypted sops file so that
+# sops-install-secrets can validate the manifest during the build.
+sub_header "Generating sops secrets"
+
+AGE_KEYS=$(grep -oE 'age1[a-z0-9]+' "$ROOTDIR/.sops.yaml" | paste -sd ',' -)
+
+# Use Python (available on NixOS live ISO) to generate a SHA-512 crypt hash
+PW_HASH=$(python3 -c "
+import crypt, os, sys
+pw = sys.argv[1]
+salt = '\$6\$' + os.urandom(16).hex()
+print(crypt.crypt(pw, salt))
+" "$SAVED_PW") || PW_HASH="$SAVED_PW"
+
+echo "yusa-password-hash: $PW_HASH" > /tmp/yorha-plain-secret.yaml
+CLEANUP_FILES+=("/tmp/yorha-plain-secret.yaml")
+
+TMP_SOPS_OUT=$(umask 077 && mktemp -p /tmp yorha-sops-output.XXXXXXXX)
+CLEANUP_FILES+=("$TMP_SOPS_OUT")
+
+nix run nixpkgs#sops \
+  --extra-experimental-features "nix-command flakes" \
+  -- \
+  --encrypt \
+  --age "$AGE_KEYS" \
+  /tmp/yorha-plain-secret.yaml > "$TMP_SOPS_OUT" 2>/tmp/sops-encrypt.log && \
+  mv "$TMP_SOPS_OUT" "$ROOTDIR/files/secrets/secrets.yaml" && \
+  ok "Password hash encrypted in secrets.yaml" || \
+  warn "sops encryption failed (see /tmp/sops-encrypt.log) — password won't persist across reboots via sops"
+
+unset PW_HASH SAVED_PW
 spacer
 
 # ─── nixos-install ──────────────────────────────────────────────────────────
