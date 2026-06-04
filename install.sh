@@ -154,13 +154,10 @@ done
 
 # ─── Constants ──────────────────────────────────────────────────────────────
 SCRIPT_START=$(date +%s)
-readonly RAW_URL="$YORHA_MODULES_RAW_URL"
 
-# ═════════════════════════════════════════════════════════════════════════════
-# MODULE DEFINITIONS (Step 8)
-# ═════════════════════════════════════════════════════════════════════════════
-# Shared module registry — same data used by post-install module manager.
+# Shared module registry — must be loaded before constants that depend on it.
 source "$ROOTDIR/files/lib/module-registry.sh"
+readonly RAW_URL="$YORHA_MODULES_RAW_URL"
 
 # ═════════════════════════════════════════════════════════════════════════════
 # STEP 1: Environment Checks
