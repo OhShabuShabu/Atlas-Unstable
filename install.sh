@@ -508,13 +508,16 @@ sub_header "Generating sops secrets"
 
 AGE_KEYS=$(grep -oE 'age1[a-z0-9]+' "$ROOTDIR/.sops.yaml" | paste -sd ',' -)
 
-# Use Python (available on NixOS live ISO) to generate a SHA-512 crypt hash
-PW_HASH=$(python3 -c "
+# Generate a SHA-512 crypt hash using Python via nix (follows existing
+# nix run pattern used for disko and sops elsewhere in the script)
+PW_HASH=$(nix run nixpkgs#python3Minimal \
+  --extra-experimental-features "nix-command flakes" \
+  -- -c "
 import crypt, os, sys
 pw = sys.argv[1]
 salt = '\$6\$' + os.urandom(16).hex()
 print(crypt.crypt(pw, salt))
-" "$SAVED_PW") || PW_HASH="$SAVED_PW"
+" "$SAVED_PW" 2>/dev/null) || PW_HASH="$SAVED_PW"
 
 echo "yusa-password-hash: $PW_HASH" > /tmp/yorha-plain-secret.yaml
 CLEANUP_FILES+=("/tmp/yorha-plain-secret.yaml")
