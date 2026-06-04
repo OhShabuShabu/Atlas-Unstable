@@ -472,30 +472,16 @@ mount "$BOOT_PART" "$TARGET/boot"
 ok "Mounted /boot (ESP)"
 spacer
 
-# ─── Password Prompt & Injection ────────────────────────────────────────────
+# ─── Password Injection ────────────────────────────────────────────────────
+# Default password is "changeme" — NixOS hashes it on first build.
+# Override with -p/--password flag.
 sub_header "Setting user password"
-if [[ "$AUTO" -eq 0 ]]; then
-  info "Set a password for user '${BOLD}yusa${NC}':"
-  while :; do
-    read -r -s -p "  ${CYAN}Password:${NC} " PW1
-    echo
-    read -r -s -p "  ${CYAN}Confirm:${NC}  " PW2
-    echo
-    if [[ -z "$PW1" ]]; then
-      warn "Password cannot be empty."
-    elif [[ "$PW1" != "$PW2" ]]; then
-      warn "Passwords do not match."
-    else
-      break
-    fi
-  done
-  PW="${PW1}"
-elif [[ -n "$AUTO_PASSWORD" ]]; then
+if [[ -n "$AUTO_PASSWORD" ]]; then
   PW="$AUTO_PASSWORD"
-  info "Auto-mode: using provided password"
+  info "Using provided password"
 else
-  fail "Auto-mode requires -p/--password flag for security"
-  exit 1
+  PW="changeme"
+  info "Using default password 'changeme' for user 'yusa'"
 fi
 ok "Password set"
 
@@ -598,7 +584,9 @@ readonly OPT_DIR="$TARGET/persistent/home/yusa/System/files/modules/optional"
 SELECTED_MODULES=()
 
 if [[ "$AUTO" -eq 0 ]]; then
-  # Toggle state for each module (indexed by module ID, unset = off)
+  # Build sequential display index mapping 1..N to module IDs
+  # (module IDs can have gaps: 1-19, 1000+ from auto-discovery)
+  DISPLAY_IDS=("${MODULE_IDS[@]}")
   declare -A TOGGLED
 
   echo -e "  ${BOLD}Select optional modules to install:${NC}"
@@ -606,22 +594,26 @@ if [[ "$AUTO" -eq 0 ]]; then
   spacer
 
   # Calculate display height for cursor-up redraw: module entries + spacer line + prompt line
-  readonly MODULE_DISPLAY_LINES=$(( ${#MODULE_IDS[@]} + 2 ))
+  readonly MODULE_DISPLAY_LINES=$(( ${#DISPLAY_IDS[@]} + 2 ))
 
   while :; do
-    for id in "${MODULE_IDS[@]}"; do
+    for i in "${!DISPLAY_IDS[@]}"; do
+      id="${DISPLAY_IDS[$i]}"
+      num=$((i + 1))
       if [[ "${TOGGLED[$id]:-0}" -eq 1 ]]; then
-        echo -e "    ${GREEN}[x]${NC} ${CYAN}$id${NC}) ${MODULE_DESC[$id]}"
+        echo -e "    ${GREEN}[x]${NC} ${CYAN}$num${NC}) ${MODULE_DESC[$id]}"
       else
-        echo -e "    ${DIM}[ ]${NC} ${CYAN}$id${NC}) ${MODULE_DESC[$id]}"
+        echo -e "    ${DIM}[ ]${NC} ${CYAN}$num${NC}) ${MODULE_DESC[$id]}"
       fi
     done
     spacer
     read -rp "$(echo -e "${CYAN}  Toggle number (or Enter to confirm): ${NC}")" ANS
     if [[ -z "$ANS" ]]; then
       break
-    elif [[ "$ANS" =~ ^[0-9]+$ ]] && [[ "$ANS" -ge 1 ]] && [[ "$ANS" -le 9 ]]; then
-      TOGGLED[$ANS]=$((1 - ${TOGGLED[$ANS]:-0}))
+    elif [[ "$ANS" =~ ^[0-9]+$ ]] && [[ "$ANS" -ge 1 ]] && [[ "$ANS" -le "${#DISPLAY_IDS[@]}" ]]; then
+      idx=$((ANS - 1))
+      id="${DISPLAY_IDS[$idx]}"
+      TOGGLED[$id]=$((1 - ${TOGGLED[$id]:-0}))
       # Move cursor back up to redraw — uses actual module count for accuracy
       printf "\033[${MODULE_DISPLAY_LINES}A\033[J"
     fi
@@ -735,15 +727,14 @@ STATE_FILE="$STATE_DIR/state.json"
 # Build the state JSON from selected modules
 STATE_JSON='{"modules": {}, "metadata": {"created": "'$(date -Iseconds)'", "updated": "'$(date -Iseconds)'", "version": "1"}}'
 for id in "${MODULE_IDS[@]}"; do
-  local file="${MODULE_FILE[$id]}"
-  local filename
+  file="${MODULE_FILE[$id]}"
   filename=$(basename "$file")
-  local subdir="${MODULE_SUBDIR[$id]}"
-  local dest_dir="$OPT_DIR/$subdir"
-  local installed=false
+  subdir="${MODULE_SUBDIR[$id]}"
+  dest_dir="$OPT_DIR/$subdir"
+  installed=false
   [[ -f "$dest_dir/$filename" ]] && installed=true
 
-  local enabled=false
+  enabled=false
   for s in "${SELECTED_MODULES[@]:-}"; do
     [[ "$s" == "$id" ]] && enabled=true && break
   done
