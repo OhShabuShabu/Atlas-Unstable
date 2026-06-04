@@ -37,9 +37,9 @@ cleanup() {
       rm -f "$f"
     fi
   done
-  # Remove injected password from the config file
+  # Remove injected password from the user module file
   sed -i '/^\s*initialPassword\s*=/d' \
-    "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true
+    "$ROOTDIR/files/features/user.nix" 2>/dev/null || true
   # Remove temporary UUID marker
   rm -f "$ROOTDIR/.luk-uuid" 2>/dev/null || true
 }
@@ -486,15 +486,15 @@ fi
 ok "Password set"
 
 # Inject plaintext as initialPassword — NixOS hashes it during the build.
-# The cleanup EXIT trap strips this line from configuration.nix afterwards.
+# The cleanup EXIT trap strips this line from user.nix afterwards.
 # Clean stale password lines first (crash-recovery guard).
 sed -i '/^\s*initialPassword\s*=/d' \
-  "$ROOTDIR/files/core/configuration.nix" 2>/dev/null || true
+  "$ROOTDIR/files/features/user.nix" 2>/dev/null || true
 
 sed -i '/description = "yusa";/a\    initialPassword = "'"$PW"'";' \
-  "$ROOTDIR/files/core/configuration.nix" && \
+  "$ROOTDIR/files/features/user.nix" && \
   ok "Password injected (NixOS will hash on first build)" || \
-  warn "Could not inject password into configuration.nix"
+  warn "Could not inject password into user.nix"
 
 # Save password for sops secret generation before unsetting PW
 SAVED_PW="$PW"
