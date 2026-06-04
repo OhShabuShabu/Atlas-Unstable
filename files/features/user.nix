@@ -3,7 +3,7 @@
     users.users.yusa = {
       isNormalUser = true;
       description = "yusa";
-      hashedPasswordFile = config.sops.secrets.yusa-password-hash.path;
+      hashedPasswordFile = lib.mkIf (config.sops.secrets ? yusa-password-hash) config.sops.secrets.yusa-password-hash.path;
       extraGroups = [
         "networkmanager" "wheel" "docker" "mullvad"
       ];
