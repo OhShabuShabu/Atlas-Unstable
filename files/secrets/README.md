@@ -15,7 +15,7 @@ This directory stores encrypted secrets managed by [sops-nix](https://github.com
 
 1. **Build and deploy** the system so SSH host keys exist:
    ```bash
-   nixos-rebuild switch --flake .#atlas
+   nixos-rebuild switch --flake .#yorha
    ```
 
 2. **Get your age public key** from the SSH host key:
@@ -89,14 +89,14 @@ Accessible at `/run/secrets/my_api_key` (for NixOS) or `$XDG_RUNTIME_DIR/secrets
 
 ## How to bootstrap a new machine
 
-When setting up Atlas on a new machine:
+When setting up YoRHa on a new machine:
 
 1. **First build** — the system will build but sops-nix activation will skip decryption (the secrets file has no referenced secrets yet)
 2. **Generate host keys** — SSH keys are created at first boot
 3. **Get age public key** — run `ssh-to-age` as described above
 4. **Add key to `.sops.yaml`** — commit the updated file
 5. **Re-encrypt secrets** — run `sops updatekeys files/secrets/secrets.yaml`
-6. **Rebuild** — `nixos-rebuild switch --flake .#atlas` — secrets decrypt successfully
+6. **Rebuild** — `nixos-rebuild switch --flake .#yorha` — secrets decrypt successfully
 
 ## How to rotate keys
 
@@ -122,7 +122,7 @@ If you need to rotate the SSH host key (and therefore the age identity):
 
 5. **Rebuild** to apply:
    ```bash
-   nixos-rebuild switch --flake .#atlas
+   nixos-rebuild switch --flake .#yorha
    ```
 
 ### Removing an old key from the key group

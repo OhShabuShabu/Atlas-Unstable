@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# ATLAS MODULE APPLY — Apply changes and rebuild
+# YORHA MODULE APPLY — Apply changes and rebuild
 # ============================================================================
 # Applies module state changes and runs nixos-rebuild switch.
 # Can also check for module updates.
@@ -12,21 +12,21 @@
 # ============================================================================
 set -euo pipefail
 
-BASE="${ATLAS_MODULES_BASE:-$(cd "$(dirname "$0")/../.." && pwd)}"
+BASE="${YORHA_MODULES_BASE:-$(cd "$(dirname "$0")/../.." && pwd)}"
 source "$BASE/files/lib/tui.sh"
 source "$BASE/files/lib/module-registry.sh"
-ATLAS_MODULES_BASE="$BASE"
+YORHA_MODULES_BASE="$BASE"
 
 # ─── Validate State ────────────────────────────────────────────────────────
 validate_state() {
-  if [[ ! -f "$ATLAS_MODULE_STATE_FILE" ]]; then
-    fail "Module state file not found at $ATLAS_MODULE_STATE_FILE"
+  if [[ ! -f "$YORHA_MODULE_STATE_FILE" ]]; then
+    fail "Module state file not found at $YORHA_MODULE_STATE_FILE"
     info "Run 'yorha-module-manager' to configure modules first."
     exit 1
   fi
 
   local state
-  state=$(jq -c '.modules' "$ATLAS_MODULE_STATE_FILE" 2>/dev/null || echo "{}")
+  state=$(jq -c '.modules' "$YORHA_MODULE_STATE_FILE" 2>/dev/null || echo "{}")
   local issues=0
 
   for id in "${MODULE_IDS[@]}"; do
@@ -81,7 +81,7 @@ dry_run() {
   echo ""
 
   local state
-  state=$(jq -c '.modules' "$ATLAS_MODULE_STATE_FILE" 2>/dev/null || echo "{}")
+  state=$(jq -c '.modules' "$YORHA_MODULE_STATE_FILE" 2>/dev/null || echo "{}")
 
   echo -e "  ${BOLD}Would rebuild with:${NC}"
   local count=0
@@ -124,7 +124,7 @@ check_updates() {
     fi
 
     # Check if we can reach the remote
-    if curl -sI "$ATLAS_MODULES_RAW_URL/$file" >/dev/null 2>&1; then
+    if curl -sI "$YORHA_MODULES_RAW_URL/$file" >/dev/null 2>&1; then
       available=$((available + 1))
     fi
   done
@@ -134,14 +134,14 @@ check_updates() {
 
 # ─── Status Report ─────────────────────────────────────────────────────────
 status_report() {
-  if [[ ! -f "$ATLAS_MODULE_STATE_FILE" ]]; then
+  if [[ ! -f "$YORHA_MODULE_STATE_FILE" ]]; then
     info "No module state file found."
     echo -e "  ${DIM}Run 'yorha-module-manager' to configure modules.${NC}"
     exit 0
   fi
 
   local state
-  state=$(jq -c '.modules' "$ATLAS_MODULE_STATE_FILE" 2>/dev/null || echo "{}")
+  state=$(jq -c '.modules' "$YORHA_MODULE_STATE_FILE" 2>/dev/null || echo "{}")
   local enabled=0
   local disabled=0
   local installed=0
@@ -169,8 +169,8 @@ status_report() {
   echo -e "    Installed:  ${CYAN}$installed${NC}"
   echo -e "    Enabled:    ${GREEN}$enabled${NC}"
   echo -e "    Disabled:   ${YELLOW}$disabled${NC}"
-  echo -e "    State file: ${DIM}$ATLAS_MODULE_STATE_FILE${NC}"
-  echo -e "    Last rebuild: ${DIM}$(jq -r '.metadata.last_rebuild // "never"' "$ATLAS_MODULE_STATE_FILE" 2>/dev/null)${NC}"
+  echo -e "    State file: ${DIM}$YORHA_MODULE_STATE_FILE${NC}"
+  echo -e "    Last rebuild: ${DIM}$(jq -r '.metadata.last_rebuild // "never"' "$YORHA_MODULE_STATE_FILE" 2>/dev/null)${NC}"
 }
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -221,11 +221,11 @@ case "${1:-apply}" in
       ok "Rebuild successful!"
 
       local state
-      state=$(jq -c '.modules' "$ATLAS_MODULE_STATE_FILE" 2>/dev/null || echo "{}")
+      state=$(jq -c '.modules' "$YORHA_MODULE_STATE_FILE" 2>/dev/null || echo "{}")
       jq --arg now "$(date -Iseconds)" \
          --argjson modules "$state" \
          '.modules = $modules | .metadata.last_rebuild = $now | .metadata.updated = $now' \
-         "$ATLAS_MODULE_STATE_FILE" > "${ATLAS_MODULE_STATE_FILE}.tmp" && mv "${ATLAS_MODULE_STATE_FILE}.tmp" "$ATLAS_MODULE_STATE_FILE"
+         "$YORHA_MODULE_STATE_FILE" > "${YORHA_MODULE_STATE_FILE}.tmp" && mv "${YORHA_MODULE_STATE_FILE}.tmp" "$YORHA_MODULE_STATE_FILE"
 
       yorha-health quick 2>/dev/null || echo -e "  ${YELLOW}⚠  Health check found issues — run 'yorha-health' for details.${NC}"
     else

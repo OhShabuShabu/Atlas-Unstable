@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# ATLAS MODULE — Unified CLI for Module Operations
+# YORHA MODULE — Unified CLI for Module Operations
 # ============================================================================
 # Unified command-line interface for all module management operations.
 # Works entirely from a TTY.
@@ -23,10 +23,10 @@
 # ============================================================================
 set -euo pipefail
 
-BASE="${ATLAS_MODULES_BASE:-$(cd "$(dirname "$0")/../.." && pwd)}"
+BASE="${YORHA_MODULES_BASE:-$(cd "$(dirname "$0")/../.." && pwd)}"
 source "$BASE/files/lib/tui.sh"
 source "$BASE/files/lib/module-registry.sh"
-ATLAS_MODULES_BASE="$BASE"
+YORHA_MODULES_BASE="$BASE"
 
 cmd_list() {
   local state; state=$(read_state)
@@ -125,7 +125,7 @@ cmd_install() {
     printf "  ${CYAN}→${NC} Installing ${BOLD}%s${NC} ... " "$(get_module_name $id)"
     if download_module "$id" "$dest_dir"; then
       ok "$filename"
-      state=$(echo "$state" | jq ".\"$id\".enabled = true | .\"$id\".installed = true | .\"$id\".source = \"$ATLAS_MODULES_RAW_URL\" | .\"$id\".version = \"${MODULE_VERSION[$id]}\"")
+      state=$(echo "$state" | jq ".\"$id\".enabled = true | .\"$id\".installed = true | .\"$id\".source = \"$YORHA_MODULES_RAW_URL\" | .\"$id\".version = \"${MODULE_VERSION[$id]}\"")
       # Resolve dependencies
       local deps="${MODULE_DEPS[$id]}"
       if [[ -n "$deps" ]]; then
@@ -258,7 +258,7 @@ cmd_info() {
   echo -e "  ${BOLD}Details:${NC}"
   echo -e "  $info_text" | fold -w 72 | sed 's/^/  /'
   echo ""
-  echo -e "  ${DIM}Source: $ATLAS_MODULES_RAW_URL/$file${NC}"
+  echo -e "  ${DIM}Source: $YORHA_MODULES_RAW_URL/$file${NC}"
 }
 
 cmd_status() {
@@ -282,8 +282,8 @@ cmd_status() {
   echo -e "  ${BOLD}Enabled:${NC}          ${GREEN}$enabled${NC}"
   echo -e "  ${BOLD}Disabled:${NC}         ${YELLOW}$disabled${NC}"
   echo ""
-  echo -e "  ${BOLD}State file:${NC}       ${DIM}$ATLAS_MODULE_STATE_FILE${NC}"
-  local last_rebuild; last_rebuild=$(jq -r '.metadata.last_rebuild // "never"' "$ATLAS_MODULE_STATE_FILE" 2>/dev/null)
+  echo -e "  ${BOLD}State file:${NC}       ${DIM}$YORHA_MODULE_STATE_FILE${NC}"
+  local last_rebuild; last_rebuild=$(jq -r '.metadata.last_rebuild // "never"' "$YORHA_MODULE_STATE_FILE" 2>/dev/null)
   echo -e "  ${BOLD}Last rebuild:${NC}     ${DIM}$last_rebuild${NC}"
   # Dependency validation
   echo ""

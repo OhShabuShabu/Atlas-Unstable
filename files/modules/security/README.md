@@ -1,6 +1,6 @@
 # Security Module Reference
 
-This directory contains 17 specialized security hardening modules for the Atlas system.
+This directory contains 17 specialized security hardening modules for the YoRHa system.
 
 ## Modules Overview
 
@@ -73,7 +73,7 @@ All modules are enabled by default. To disable a module:
 1. Edit `files/core/configuration.nix`
 2. Find the module import you want to disable
 3. Comment it out: `# ../modules/security/module-name.nix`
-4. Rebuild: `sudo nixos-rebuild switch --flake .#atlas`
+4. Rebuild: `sudo nixos-rebuild switch --flake .#yorha`
 
 **WARNING**: Disabling security modules reduces system hardening. Only disable if:
 - A module causes compatibility issues

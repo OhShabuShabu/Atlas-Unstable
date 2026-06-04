@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# ATLAS MODULE VERIFY — Module Load Verification
+# YORHA MODULE VERIFY — Module Load Verification
 # ============================================================================
 # Verifies that enabled modules are actually loaded and active on the system.
 # Checks:
@@ -18,10 +18,10 @@
 # ============================================================================
 set -euo pipefail
 
-BASE="${ATLAS_MODULES_BASE:-$(cd "$(dirname "$0")/../.." && pwd)}"
+BASE="${YORHA_MODULES_BASE:-$(cd "$(dirname "$0")/../.." && pwd)}"
 source "$BASE/files/lib/tui.sh"
 source "$BASE/files/lib/module-registry.sh"
-ATLAS_MODULES_BASE="$BASE"
+YORHA_MODULES_BASE="$BASE"
 
 OPT_NIXOS_DIR="$(get_module_dir nixos)"
 OPT_HOME_DIR="$(get_module_dir home)"

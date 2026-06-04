@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# ATLAS MODULE MANAGER — TUI Interface
+# YORHA MODULE MANAGER — TUI Interface
 # ============================================================================
 # fzf-based TUI for browsing, enabling/disabling, downloading, and removing
 # optional modules. Works entirely from a TTY.
@@ -11,10 +11,10 @@ set -euo pipefail
 export PATH="/run/wrappers/bin:/run/current-system/sw/bin:$PATH"
 
 # ─── Paths ──────────────────────────────────────────────────────────────────
-BASE="${ATLAS_MODULES_BASE:-$(cd "$(dirname "$0")/../.." && pwd)}"
+BASE="${YORHA_MODULES_BASE:-$(cd "$(dirname "$0")/../.." && pwd)}"
 source "$BASE/files/lib/tui.sh"
 source "$BASE/files/lib/module-registry.sh"
-ATLAS_MODULES_BASE="$BASE"
+YORHA_MODULES_BASE="$BASE"
 
 OPT_NIXOS_DIR="$(get_module_dir nixos)"
 OPT_HOME_DIR="$(get_module_dir home)"
@@ -61,9 +61,9 @@ command -v whiptail &>/dev/null && HAS_WHIPTAIL=true
 
 # ─── TUI Backend Selection ─────────────────────────────────────────────────
 # Priority: fzf > gum > dialog > whiptail > basic_tty
-# User can force a backend: ATLAS_MODULE_UI=fzf|gum|dialog|whiptail|tty
+# User can force a backend: YORHA_MODULE_UI=fzf|gum|dialog|whiptail|tty
 select_backend() {
-  local forced="${ATLAS_MODULE_UI:-}"
+  local forced="${YORHA_MODULE_UI:-}"
   if [[ -n "$forced" ]]; then
     echo "$forced"
     return
@@ -269,7 +269,7 @@ tty_install_modules() {
     printf "  ${CYAN}→${NC} Installing ${BOLD}%s${NC} ... " "$(get_module_name $id)"
     if download_module "$id" "$dest_dir"; then
       ok "$filename"
-      state=$(echo "$state" | jq ".\"$id\".enabled = true | .\"$id\".installed = true | .\"$id\".source = \"$ATLAS_MODULES_RAW_URL\" | .\"$id\".version = \"${MODULE_VERSION[$id]}\"")
+      state=$(echo "$state" | jq ".\"$id\".enabled = true | .\"$id\".installed = true | .\"$id\".source = \"$YORHA_MODULES_RAW_URL\" | .\"$id\".version = \"${MODULE_VERSION[$id]}\"")
       local deps="${MODULE_DEPS[$id]}"
       if [[ -n "$deps" ]]; then
         for dep in $deps; do
@@ -437,7 +437,7 @@ tty_module_info() {
   [[ -n "$reqs" ]] && echo -e "  Requirements: ${DIM}$reqs${NC}"
   echo -e "  ${DIM}$info_text${NC}"
   spacer
-  echo -e "  Source: ${DIM}$ATLAS_MODULES_RAW_URL/$file${NC}"
+  echo -e "  Source: ${DIM}$YORHA_MODULES_RAW_URL/$file${NC}"
 
   local installed=false; is_module_installed "$sel" && installed=true
   local state; state=$(read_state)
@@ -956,7 +956,7 @@ install_modules() {
     [[ -z "$id" ]] && continue
 
     # Enable the module in state
-    new_state=$(echo "$new_state" | jq ".\"$id\".enabled = true | .\"$id\".installed = true | .\"$id\".source = \"$ATLAS_MODULES_RAW_URL\" | .\"$id\".version = \"${MODULE_VERSION[$id]}\"")
+    new_state=$(echo "$new_state" | jq ".\"$id\".enabled = true | .\"$id\".installed = true | .\"$id\".source = \"$YORHA_MODULES_RAW_URL\" | .\"$id\".version = \"${MODULE_VERSION[$id]}\"")
 
     # Resolve dependencies
     local deps="${MODULE_DEPS[$id]}"
@@ -972,7 +972,7 @@ install_modules() {
           printf "  ${CYAN}→${NC} Installing dependency ${BOLD}${MODULE_DESC[$dep]%% *}${NC} ... "
           if download_module "$dep" "$dep_dest"; then
             ok "Downloaded $dep_filename"
-            new_state=$(echo "$new_state" | jq ".\"$dep\".enabled = true | .\"$dep\".installed = true | .\"$dep\".source = \"$ATLAS_MODULES_RAW_URL\" | .\"$dep\".version = \"${MODULE_VERSION[$dep]}\"")
+            new_state=$(echo "$new_state" | jq ".\"$dep\".enabled = true | .\"$dep\".installed = true | .\"$dep\".source = \"$YORHA_MODULES_RAW_URL\" | .\"$dep\".version = \"${MODULE_VERSION[$dep]}\"")
           fi
         else
           ok "Dependency ${MODULE_DESC[$dep]%% *} already installed"
@@ -1253,7 +1253,7 @@ module_info() {
           echo -e '  \033[1mDescription:\033[0m'
           printf '  %s\n' '{8}' | fold -w 55 | sed 's/^/  /'
           echo ''
-          echo -e '  Source:     ${ATLAS_MODULES_RAW_URL}/{9}'
+          echo -e '  Source:     ${YORHA_MODULES_RAW_URL}/{9}'
         " \
         --bind "enter:accept" \
         --bind "esc:cancel" \

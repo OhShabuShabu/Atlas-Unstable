@@ -1,7 +1,7 @@
 # Atlas Persistence Audit Report
 
 **Date:** 2026-05-28  
-**System:** Atlas NixOS (impermanent — `/`, `/home`, `/tmp` on tmpfs)  
+**System:** YoRHa NixOS (impermanent — `/`, `/home`, `/tmp` on tmpfs)  
 **Persistence Backend:** `preservation` (nix-community module) + btrfs subvols  
 **Persistent Storage:** `/persistent` (bind-mount origin), `/var` (btrfs subvol)
 
@@ -188,7 +188,7 @@ None — all previously persisted paths are retained.
 ### 6.1 Static tests (test_config.sh)
 
 ```
-PASS: 485  FAIL: 0  WARN: 21 (all from missing atlas-modules repo, not persistence-related)
+PASS: 485  FAIL: 0  WARN: 21 (all from missing yorha-modules repo, not persistence-related)
 ```
 
 ### 6.2 Runtime validation (validate-persistence.sh)
@@ -209,7 +209,7 @@ Checks performed:
 
 ### 6.3 Rebuild safety
 
-The `atlas-rebuild` script (in configuration.nix) stops tamper-detection services before rebuild:
+The `yorha-rebuild` script (in configuration.nix) stops tamper-detection services before rebuild:
 ```
 snort-daemon, snort-monitor, snout-watcher, aide-check, 
 firmware-version-check, tpm-attestation-check, secureboot-verify, mullvad-daemon
@@ -232,7 +232,7 @@ firmware-version-check, tpm-attestation-check, secureboot-verify, mullvad-daemon
 
 ## 8. Future Considerations
 
-1. **Container state**: If Docker/Podman/libvirt are enabled in atlas-modules, their directories on `/var/lib/` are already persistent via the `/var` subvol. No additional config needed.
+1. **Container state**: If Docker/Podman/libvirt are enabled in yorha-modules, their directories on `/var/lib/` are already persistent via the `/var` subvol. No additional config needed.
 
 2. **Browser profiles**: If Firefox/Librewolf are added, `~/.mozilla/` or `~/.librewolf/` should be added to the persistence list.
 

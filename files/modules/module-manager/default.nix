@@ -1,5 +1,5 @@
 # ============================================================================
-# ATLAS MODULE MANAGER — NixOS Module
+# YORHA MODULE MANAGER — NixOS Module
 # ============================================================================
 # Provides:
 #   - yorha-module-manager TUI command (fzf/gum/dialog/newt/TTY fallback)

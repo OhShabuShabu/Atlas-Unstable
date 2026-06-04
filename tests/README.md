@@ -1,4 +1,4 @@
-# Atlas Daemon Behavioral Test Suite
+# YoRHa Daemon Behavioral Test Suite
 
 Tests all custom daemons and services for **behavioral correctness** — not just
 static existence checks. Tests are safe to run without root, use isolated temp
@@ -40,7 +40,7 @@ bash tests/test_scripts.sh
 | `test_ima_evm.sh` | IMA measurement policy, EVM HMAC key setup, evm-sign-binary CLI, kernel params | None |
 | `test_luks_tpm.sh` | LUKS keyfile unseal/enroll, TPM PCR policy, swapfile creation, cryptenroll | None |
 | `test_systemd.sh` | Auto-discovered service definitions, timers, path units, hardening matrix, deps, types, restart policies | None |
-| `test_scripts.sh` | atlas-health, detect-hardware, fix_rgb_color, CLI command parsing | `python3` |
+| `test_scripts.sh` | yorha-health, detect-hardware, fix_rgb_color, CLI command parsing | `python3` |
 
 Tools marked **optional** gracefully skip their behavioral tests if unavailable.
 

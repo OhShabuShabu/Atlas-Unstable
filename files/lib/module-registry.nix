@@ -1,13 +1,15 @@
 # ============================================================================
-# ATLAS MODULE REGISTRY (Nix)
+# YORHA MODULE REGISTRY (Nix)
 # ============================================================================
 # Shared module metadata for both installer and post-install module manager.
 # Keep in sync with module-registry.sh
 #
 # Usage:
-#   let registry = import ../../lib/module-registry.nix;
+#   let registry = import ../../lib/module-registry.nix { inherit lib; };
 #   in registry.modules  # attrset
 # ============================================================================
+
+{ lib, ... }:
 
 let
   baseUrl = "https://raw.githubusercontent.com/OhShabuShabu/Atlas-Modules/main";

@@ -712,7 +712,7 @@ elif ls "$OPT_DIR/nixos/"gpu-*.nix &>/dev/null; then
 else
   warn "No supported GPU detected — initrd will use basic framebuffer mode (VESA)."
   warn "This means no GPU acceleration in early boot. GPU drivers will load after boot."
-  warn "Manually download from atlas-modules: gpu-amd.nix, gpu-intel.nix, gpu-nvidia.nix"
+  warn "Manually download from yorha-modules: gpu-amd.nix, gpu-intel.nix, gpu-nvidia.nix"
   warn "Place in files/modules/optional/nixos/"
 fi
 

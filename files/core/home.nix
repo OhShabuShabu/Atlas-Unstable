@@ -200,11 +200,11 @@
   };
   programs.home-manager.enable = true;
 
-  # Seed Mullvad browser profile from atlas-modules on first activation.
+  # Seed Mullvad browser profile from yorha-modules on first activation.
   # MOZ_APP_NAME is "mullvadbrowser", so the profile dir is ~/.mozilla/mullvadbrowser/.
   # home.file symlinks won't work because the Nix store is read-only at runtime.
   home.activation.mullvadBrowserProfile = lib.hm.dag.entryAfter ["writeBoundary"] ''
-    SRC="${inputs.atlas-modules}/privacy/mullvadbrowser"
+    SRC="${inputs.yorha-modules}/privacy/mullvadbrowser"
     if [ ! -f "$HOME/.mozilla/mullvadbrowser/profiles.ini" ]; then
       if [ -d "$SRC" ]; then
         mkdir -p "$HOME/.mozilla/mullvadbrowser"
@@ -215,15 +215,7 @@
     fi
   '';
 
-  # TODO: Migrate to sops-nix for multi-machine portability.
-  #   Add to files/secrets/secrets.yaml via `sops files/secrets/secrets.yaml`:
-  #     git-name: OhShabuShabu
-  #     git-email: greens2acc@gmail.com
-  #   Then use:
-  #     sops.secrets.git-name = { sopsFile = ../secrets/secrets.yaml; };
-  #     sops.secrets.git-email = { sopsFile = ../secrets/secrets.yaml; };
-  #     programs.git.settings.user.name = config.sops.secrets.git-name.path;
-  #     programs.git.settings.user.email = config.sops.secrets.git-email.path;
+  # Git identity is not secret - update per-machine.
   programs.git = {
     enable = true;
     settings = {

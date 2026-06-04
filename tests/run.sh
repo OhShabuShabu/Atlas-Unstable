@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# ATLAS DAEMON BEHAVIORAL TEST SUITE
+# YORHA DAEMON BEHAVIORAL TEST SUITE
 # ============================================================================
 # Run: bash tests/run.sh
 #

@@ -9,9 +9,9 @@
 { config, pkgs, lib, ... }:
 
 let
-  cfg = config.atlas.modules.fonts;
+  cfg = config.yorha.modules.fonts;
 in {
-  options.atlas.modules.fonts = {
+  options.yorha.modules.fonts = {
     enable = lib.mkEnableOption "font configuration";
     nerdy = lib.mkOption {
       type = lib.types.bool;

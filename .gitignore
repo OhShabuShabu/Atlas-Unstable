@@ -1,5 +1,4 @@
 *.log
-*.lock
 
 # Nix/NixOS build artifacts
 result
@@ -52,9 +51,6 @@ __pycache__/
 
 # opencode local session state
 .omo/
-
-# AI agent instructions (local only)
-AGENTS.md
 
 # Changelogs (local only)
 CHANGELOG_SNORT.md

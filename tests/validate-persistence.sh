@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# ATLAS PERSISTENCE VALIDATION — Runtime checks for impermanence setup
+# YORHA PERSISTENCE VALIDATION — Runtime checks for impermanence setup
 # ============================================================================
 # This script verifies that persistence is actually working on a running system.
 # Run AFTER a rebuild + reboot to confirm state survives.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# ATLAS TUI THEME LIBRARY
+# YORHA TUI THEME LIBRARY
 # ============================================================================
 # Extends logging.sh with consistent box-drawing, status display, and layout
 # helpers.  Every YoRHa script that produces terminal output should source

@@ -25,17 +25,9 @@
     ./quarantine.nix
     ./metadata-stripper.nix
     ./sops.nix
-    # DISABLED: Firmware tinkering detection
-    # ./tpm-sealing.nix
     ./luks-keyfile.nix
-    # DISABLED: Secure Boot (firmware integrity)
-    # ./secureboot.nix
     ./memory-wipe.nix
     ./ima-evm.nix
-    # DISABLED: TPM/UEFI monitoring (firmware tamper detection)
-    # ./tpm-monitoring.nix
-    # DISABLED: Firmware version attestation
-    # ./firmware-check.nix
     ./luks-test.nix
   ];
 

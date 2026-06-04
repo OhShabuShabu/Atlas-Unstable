@@ -10,7 +10,7 @@ let
   #       at /persistent/home/yusa/.encrypted-storage and is mounted
   #       to ~/Encrypted Storage on demand.
   folderStructureDirs = [
-    "Atlas"
+    "YoRHa"
     "Desktop"
     "Documents"
     "Downloads"

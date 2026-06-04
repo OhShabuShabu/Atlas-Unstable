@@ -9,7 +9,7 @@
 set -uo pipefail
 
 # ─── Globals ─────────────────────────────────────────────────────────────────
-BASE="${ATLAS_BASE:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+BASE="${YORHA_BASE:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 PASS=0; FAIL=0; SKIP=0
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; BLUE='\033[0;34m'; NC='\033[0m'

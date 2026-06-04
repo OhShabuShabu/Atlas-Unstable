@@ -29,30 +29,29 @@ alias trash-put = ^trash put
 # ============================================================================
 
 # NixOS shortcuts
-alias nr = atlas-rebuild
-alias nrb = nixos-rebuild build --flake /home/yusa/System#atlas
+alias nr = yorha-rebuild
 alias nix-check = nix flake check --show-trace
 alias nix-show = nix flake show
-alias test-config = bash /home/yusa/System/test_config.sh
+alias test-config = bash (ls | where name =~ test_config.sh | get name.0)
 
 # Module manager shortcuts
-alias mod = atlas-module
-alias mod-list = atlas-module list
-alias mod-enable = atlas-module enable
-alias mod-disable = atlas-module disable
-alias mod-install = atlas-module install
-alias mod-remove = atlas-module remove
-alias mod-update = atlas-module update
-alias mod-info = atlas-module info
-alias mod-status = atlas-module status
-alias mod-validate = atlas-module validate
-alias mod-apply = atlas-module-apply
-alias mod-manager = atlas-module-manager
+alias mod = yorha-module
+alias mod-list = yorha-module list
+alias mod-enable = yorha-module enable
+alias mod-disable = yorha-module disable
+alias mod-install = yorha-module install
+alias mod-remove = yorha-module remove
+alias mod-update = yorha-module update
+alias mod-info = yorha-module info
+alias mod-status = yorha-module status
+alias mod-validate = yorha-module validate
+alias mod-apply = yorha-module-apply
+alias mod-manager = yorha-module-manager
 
 # System health
-alias health = atlas-health
-alias health-quick = atlas-health quick
-alias hardware-detect = atlas-hardware-detect
+alias health = yorha-health
+alias health-quick = yorha-health quick
+alias hardware-detect = yorha-hardware-detect
 
 # Nix searching and profiling
 alias nix-search = nix search nixpkgs
@@ -84,6 +83,6 @@ alias cpu-temp = ^sensors
 # NAVIGATION SHORTCUTS
 # ============================================================================
 
-alias atlas = cd /home/yusa/System
+alias atlas = ls | where name =~ 'flake.nix' | get name.0 | path dirname
 alias la = ls --all
 alias ll = ls --long

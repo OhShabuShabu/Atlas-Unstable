@@ -2,7 +2,7 @@
 # ============================================================================
 # SHELL SCRIPT & CLI BEHAVIORAL TESTS
 # ============================================================================
-# Tests shell scripts defined in the project: atlas-rebuild, atlas-health,
+# Tests shell scripts defined in the project: yorha-rebuild, yorha-health,
 # snortctl, snout, quarantine-list, quarantine-purge, detect-hardware,
 # fix_rgb_color.py.  Tests script logic, argument parsing, and output format.
 # ============================================================================
@@ -14,14 +14,14 @@ header "SHELL SCRIPTS — CLI BEHAVIOR"
 
 TEMP_DIR=$(_mktemp /tmp/script-test.XXXXXX)
 
-# ─── 1. atlas-health ──────────────────────────────────────────────────────
-header "1. atlas-health Command"
+# ─── 1. yorha-health ──────────────────────────────────────────────────────
+header "1. yorha-health Command"
 
 CFG="$BASE/files/core/configuration.nix"
-HEALTH_SCRIPT=$("$BASE/tests/tools/extract_nix_block.py" "$CFG" 'writeShellScriptBin "atlas-health"' 2>/dev/null || echo "")
+HEALTH_SCRIPT=$("$BASE/tests/tools/extract_nix_block.py" "$CFG" 'writeShellScriptBin "yorha-health"' 2>/dev/null || echo "")
 
 if [ -n "$HEALTH_SCRIPT" ]; then
-  pass "atlas-health script extracted from configuration.nix"
+  pass "yorha-health script extracted from configuration.nix"
 
   # Check key sections
   echo "$HEALTH_SCRIPT" | grep -qi "security" && pass "health: reports security services" || fail "health: missing security section"
@@ -34,7 +34,7 @@ if [ -n "$HEALTH_SCRIPT" ]; then
     echo "$HEALTH_SCRIPT" | grep -q "$svc" && pass "health: checks $svc" || warn "health: $svc not checked individually (may be grouped)"
   done
 else
-  skip "atlas-health script extraction failed"
+  skip "yorha-health script extraction failed"
 fi
 
 # ─── 2. detect-hardware.sh ────────────────────────────────────────────────

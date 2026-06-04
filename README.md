@@ -1,4 +1,4 @@
-# Atlas
+# YoRHa
 
 > A production-quality NixOS configuration with the Noctalia desktop shell,
 > enterprise-grade security hardening, gaming optimizations, and a privacy-first
@@ -20,29 +20,29 @@
 
 | Action | Command |
 |--------|---------|
-| Rebuild system | `atlas-rebuild` (stops tamper-detection, rebuilds, runs health check) |
-| Check system health | `atlas-health` |
-| Quick health snapshot | `atlas-health quick` |
+| Rebuild system | `yorha-rebuild` (stops tamper-detection, rebuilds, runs health check) |
+| Check system health | `yorha-health` |
+| Quick health snapshot | `yorha-health quick` |
 | Run config tests | `test-config` |
 
 ### Updating
 
 ```bash
 # Update all flake inputs and rebuild
-atlas-rebuild --upgrade
+yorha-rebuild --upgrade
 
 # Update only the flake lock (review changes first)
 nix flake update
-atlas-rebuild
+yorha-rebuild
 ```
 
 ### Common Tasks
 
 | Task | Command |
 |------|---------|
-| Add system package | Edit `files/core/configuration.nix` → `environment.systemPackages` → `atlas-rebuild` |
-| Add user package | Edit `files/core/home.nix` → `home.packages` → `atlas-rebuild` |
-| Enable optional module | Download `.nix` to `files/modules/optional/{nixos,home}/` → `atlas-rebuild` |
+| Add system package | Edit `files/core/configuration.nix` → `environment.systemPackages` → `yorha-rebuild` |
+| Add user package | Edit `files/core/home.nix` → `home.packages` → `yorha-rebuild` |
+| Enable optional module | Download `.nix` to `files/modules/optional/{nixos,home}/` → `yorha-rebuild` |
 | Check flake syntax | `nix-check` |
 | View security logs | `security-logs` |
 | Run security scan | `lynis-scan` |
@@ -51,14 +51,14 @@ atlas-rebuild
 
 ---
 
-## System Health (`atlas-health`)
+## System Health (`yorha-health`)
 
 A unified status tool that checks everything in one place:
 
 ```
-$ atlas-health
+$ yorha-health
 ══════════════════════════════════════════
-  Atlas System Health
+  YoRHa System Health
 ══════════════════════════════════════════
 
 System:
@@ -74,9 +74,9 @@ Security:
   ✓ aide-check.timer
 
 Desktop:
-  ✓ atlas-awww
-  ✓ atlas-vicinae
-  ✓ atlas-xwayland-satellite
+  ✓ yorha-awww
+  ✓ yorha-vicinae
+  ✓ yorha-xwayland-satellite
   ✓ polkit-gnome-authentication-agent-1
 
 Disk:
@@ -97,8 +97,8 @@ Last Scans:
 
 ```bash
 # System health & monitoring
-atlas-health              # Full system health check
-atlas-health quick        # Quick health summary
+yorha-health              # Full system health check
+yorha-health quick        # Quick health summary
 
 # Snout security monitoring
 snout scan                # Run security scan
@@ -138,7 +138,7 @@ If a rebuild breaks something:
 3. Boot into the working configuration
 4. To revert permanently:
    ```bash
-   sudo nixos-rebuild switch --flake .#atlas --rollback
+   sudo nixos-rebuild switch --flake .#yorha --rollback
    ```
 
 ### NixOS Rebuild Failed
@@ -154,7 +154,7 @@ nix flake check --show-trace
 
 # Revert changes and rebuild
 git checkout -- files/core/configuration.nix
-atlas-rebuild
+yorha-rebuild
 ```
 
 ### Nix Store Filling Up
@@ -217,7 +217,7 @@ If you forget it, recovery requires:
 
 ```
 .
-├── flake.nix                              # Flake entry point (inputs + outputs)
+├── flake.nix                              # Flake entry point (flake-parts + haumea)
 ├── install.sh                             # Full-disk installer (NixOS live ISO)
 ├── test_config.sh                         # 300+ offline static tests
 ├── AGENTS.md                              # Guide for AI coding assistants
@@ -238,9 +238,10 @@ If you forget it, recovery requires:
 │   │   └── .icons/                        # Cursor themes
 │   ├── modules/
 │   │   ├── security/                      # 24+ hardening submodules
-│   │   └── optional/                      # External atlas-modules integration
+│   │   └── optional/                      # External yorha-modules integration
 │   ├── hardware/                          # GPU/CPU/audio auto-importers
-│   ├── profiles/                          # System profiles (atlas)
+│   ├── profiles/                          # System profiles (yorha)
+│   ├── defaults/                          # Configuration profiles (loaded via haumea)
 │   ├── lib/                               # Shared Nix library modules
 │   ├── bin/                               # Shell & Python scripts
 │   ├── audio/                             # Sound effects

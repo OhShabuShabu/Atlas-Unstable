@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# ATLAS SHARED LOGGING LIBRARY
+# YORHA SHARED LOGGING LIBRARY
 # ============================================================================
 # Standardized logging and output formatting for all YoRHa scripts.
 # Provides consistent colors, status indicators, and output formatting.

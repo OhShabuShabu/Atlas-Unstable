@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# ATLAS MODULE REGISTRY (Bash)
+# YORHA MODULE REGISTRY (Bash)
 # ============================================================================
 # Shared module metadata for both installer and post-install module manager.
 # Keep in sync with module-registry.nix
@@ -392,9 +392,9 @@ _build_categories_list
 
 # Ensure state file and directory exist with default structure
 ensure_state() {
-  if [[ ! -f "$ATLAS_MODULE_STATE_FILE" ]]; then
-    mkdir -p "$ATLAS_MODULE_STATE_DIR"
-    cat > "$ATLAS_MODULE_STATE_FILE" <<EOF
+  if [[ ! -f "$YORHA_MODULE_STATE_FILE" ]]; then
+    mkdir -p "$YORHA_MODULE_STATE_DIR"
+    cat > "$YORHA_MODULE_STATE_FILE" <<EOF
 {
   "modules": {},
   "metadata": {
@@ -410,7 +410,7 @@ EOF
 # Read module state from state file, return JSON for modules
 read_state() {
   ensure_state
-  jq -c '.modules' "$ATLAS_MODULE_STATE_FILE" 2>/dev/null || echo "{}"
+  jq -c '.modules' "$YORHA_MODULE_STATE_FILE" 2>/dev/null || echo "{}"
 }
 
 # Write module state to state file atomically
@@ -419,7 +419,7 @@ write_state() {
   jq --arg now "$(date -Iseconds)" \
      --argjson modules "$modules_json" \
      '.modules = $modules | .metadata.updated = $now' \
-     "$ATLAS_MODULE_STATE_FILE" > "${ATLAS_MODULE_STATE_FILE}.tmp" && mv "${ATLAS_MODULE_STATE_FILE}.tmp" "$ATLAS_MODULE_STATE_FILE"
+     "$YORHA_MODULE_STATE_FILE" > "${YORHA_MODULE_STATE_FILE}.tmp" && mv "${YORHA_MODULE_STATE_FILE}.tmp" "$YORHA_MODULE_STATE_FILE"
 }
 
 # ============================================================================
@@ -430,7 +430,7 @@ write_state() {
 # Usage: get_module_dir <subdir>
 get_module_dir() {
   local subdir="$1"
-  local base="${ATLAS_MODULES_BASE:-$(cd "$(dirname "$0")/../.." && pwd)}"
+  local base="${YORHA_MODULES_BASE:-$(cd "$(dirname "$0")/../.." && pwd)}"
   echo "$base/files/modules/optional/$subdir"
 }
 
@@ -517,7 +517,7 @@ download_module() {
   local file="${MODULE_FILE[$id]:-}"
   [[ -z "$file" ]] && return 1
   local filename; filename=$(basename "$file")
-  local url="$ATLAS_MODULES_RAW_URL/$file"
+  local url="$YORHA_MODULES_RAW_URL/$file"
 
   mkdir -p "$dest_dir"
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# ATLAS NIXOS CONFIGURATION TEST SUITE
+# YORHA NIXOS CONFIGURATION TEST SUITE
 # ============================================================================
 # Run: bash test_config.sh
 # Tests all aspects of the YoRHa NixOS configuration for errors.
@@ -10,9 +10,10 @@
 set -uo pipefail
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
-BASE="${ATLAS_BASE:-$(cd "$(dirname "$0")" && pwd)}"
-# External modules repo — override with ATLAS_MODULES_PATH env var
-YORHA_MODULES="${YORHA_MODULES_PATH:-/home/yusa/atlas-modules}"
+BASE="${YORHA_BASE:-$(cd "$(dirname "$0")" && pwd)}"
+# External modules repo — override with YORHA_MODULES_PATH env var
+# Default: assume yorha-modules is a sibling of this repo
+YORHA_MODULES="${YORHA_MODULES_PATH:-$(dirname "$BASE")/yorha-modules}"
 YORHA_MODULES_AVAILABLE=false
 [ -d "$YORHA_MODULES" ] && YORHA_MODULES_AVAILABLE=true
 [ "$YORHA_MODULES_AVAILABLE" = false ] && echo -e "  ${YELLOW}⚠ External modules not found at $YORHA_MODULES — skipping those tests${NC}"
@@ -39,7 +40,7 @@ header "1. FLAKE STRUCTURE"
 grep -q 'nixpkgs.*nixos-unstable' "$BASE/flake.nix" && pass "nixpkgs pinned to nixos-unstable" || fail "nixpkgs not pinned to nixos-unstable"
 grep -q 'home-manager.*master' "$BASE/flake.nix" && pass "home-manager pinned to master" || fail "home-manager not pinned to master"
 grep -q 'noctalia' "$BASE/flake.nix" && pass "noctalia flake input present" || fail "noctalia missing from flake inputs"
-grep -q 'atlas-modules' "$BASE/flake.nix" && pass "atlas-modules flake input present" || fail "atlas-modules missing from flake inputs"
+grep -q 'yorha-modules' "$BASE/flake.nix" && pass "yorha-modules flake input present" || fail "yorha-modules missing from flake inputs"
 grep -q 'sops-nix' "$BASE/flake.nix" && pass "sops-nix flake input present" || fail "sops-nix missing from flake inputs"
 python3 -c "import json; json.load(open('$BASE/flake.lock'))" 2>/dev/null && pass "flake.lock is valid JSON" || fail "flake.lock is not valid JSON"
 
@@ -102,7 +103,7 @@ mlgrep "$BASE/files/bin/yorha-module-verify.sh" 'list_checks' && pass "yorha-mod
 # UI backend selection in module manager
 mlgrep "$BASE/files/bin/yorha-module-manager.sh" 'select_backend' && pass "yorha-module-manager.sh has select_backend function" || fail "yorha-module-manager.sh missing select_backend"
 mlgrep "$BASE/files/bin/yorha-module-manager.sh" 'tty_main_menu' && pass "yorha-module-manager.sh has tty_main_menu fallback" || fail "yorha-module-manager.sh missing tty_main_menu"
-mlgrep "$BASE/files/bin/yorha-module-manager.sh" 'ATLAS_MODULE_UI' && pass "yorha-module-manager.sh supports ATLAS_MODULE_UI env" || fail "yorha-module-manager.sh missing ATLAS_MODULE_UI support"
+mlgrep "$BASE/files/bin/yorha-module-manager.sh" 'YORHA_MODULE_UI' && pass "yorha-module-manager.sh supports YORHA_MODULE_UI env" || fail "yorha-module-manager.sh missing YORHA_MODULE_UI support"
 
 # Verify subcommand in unified CLI
 mlgrep "$BASE/files/bin/yorha-module.sh" 'yorha-module-verify' && pass "yorha-module.sh has verify subcommand" || fail "yorha-module.sh missing verify subcommand"
@@ -184,7 +185,7 @@ for nf in $NIX_FILES; do
   nix-instantiate --parse "$nf" 2>/dev/null && pass "$REL parses" || fail "$REL PARSE ERROR"
 done
 if [ "$YORHA_MODULES_AVAILABLE" = true ]; then
-  ATLAS_MODULES_NIX=$(find "$YORHA_MODULES" -name '*.nix' -not -path '*/.git/*' -not -path '*/flake.lock' | sort)
+  YORHA_MODULES_NIX=$(find "$YORHA_MODULES" -name '*.nix' -not -path '*/.git/*' -not -path '*/flake.lock' | sort)
   for nf in $YORHA_MODULES_NIX; do
     REL="${nf#$YORHA_MODULES/}"
     nix-instantiate --parse "$nf" 2>/dev/null && pass "$REL parses (external)" || fail "$REL PARSE ERROR (external)"

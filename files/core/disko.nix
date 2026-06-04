@@ -5,10 +5,10 @@ let
     env = builtins.getEnv "DISKO_DEVICE";
   in if env != "" then env else "/dev/REPLACE_ME";
 
-  lukUuidFile = ../.luk-uuid;
-  lukUuid = if builtins.pathExists lukUuidFile then builtins.readFile lukUuidFile else "";
-  lukUuidClean = lib.strings.removeSuffix "\n" (lib.strings.removeSuffix "\r" lukUuid);
-  lukDevice = if lukUuidClean != "" then "/dev/disk/by-uuid/${lukUuidClean}" else "/dev/disk/by-partlabel/disk-main-root";
+  luksUuidFile = ../.luks-uuid;
+  luksUuid = if builtins.pathExists luksUuidFile then builtins.readFile luksUuidFile else "";
+  luksUuidClean = lib.strings.removeSuffix "\n" (lib.strings.removeSuffix "\r" luksUuid);
+  lukDevice = if luksUuidClean != "" then "/dev/disk/by-uuid/${luksUuidClean}" else "/dev/disk/by-partlabel/disk-main-root";
 in {
   # VM disk drivers (bare metal uses NVMe/AHCI from hardware-configuration.nix)
   boot.initrd.availableKernelModules = [ "virtio_blk" "virtio_pci" "virtio_scsi" "ata_piix" ];

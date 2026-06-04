@@ -1,11 +1,18 @@
-# SOPS configuration for Atlas NixOS
+# SOPS configuration for YoRHa NixOS
 #
 # HOW TO SET UP AGE KEYS:
-# 1. Build and deploy the system (nixos-rebuild switch --flake .#atlas)
+# 1. Build and deploy the system (nixos-rebuild switch --flake .#yorha)
 # 2. Get the age public key from your SSH host key:
 #      cat /etc/ssh/ssh_host_ed25519_key.pub | nix shell nixpkgs#ssh-to-age -c ssh-to-age
 # 3. Replace <age-public-key> below with the output of step 2
 # 4. Run: sops updatekeys files/secrets/secrets.yaml
+#
+# POPULATING SECRETS:
+# 1. Generate password hash: mkpasswd -m yescrypt
+# 2. Edit secrets: sops files/secrets/secrets.yaml
+# 3. Add:
+#      yusa-password-hash: <generated-yescrypt-hash>
+# 4. Save and rebuild: sudo nixos-rebuild switch --flake .#yorha
 #
 # ADDING ADDITIONAL USERS:
 # - To allow another machine/user to decrypt secrets, add their age key as
@@ -16,5 +23,5 @@ creation_rules:
   - path_regex: files/secrets/.*\.yaml
     key_groups:
       - age:
-        - &atlas age13ekrjwe9q4ypswjfjfdyftle2j50fwqxc66qtz3283l0th2xm4qstqzern
+        - &yorha age13ekrjwe9q4ypswjfjfdyftle2j50fwqxc66qtz3283l0th2xm4qstqzern
         - &yusa age1lmgwn38jcjufmxqqauzqtnzc7d6hyw4lrpu6dwnae8qj6j4w630s6s0tt3

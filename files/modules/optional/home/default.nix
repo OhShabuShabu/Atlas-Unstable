@@ -8,7 +8,7 @@
 { config, pkgs, lib, ... }:
 
 let
-  registry = import ../../../lib/module-registry.nix;
+  registry = import ../../../lib/module-registry.nix { inherit lib; };
   dir = ./.;
   entries = builtins.readDir dir;
   allNixFiles = builtins.filter

@@ -3,6 +3,10 @@ input {
 
     keyboard {
         xkb {
+            rules "evdev"
+            model "pc105"
+            layout "de"
+            variant "nodeadkeys"
         }
         numlock
     }
