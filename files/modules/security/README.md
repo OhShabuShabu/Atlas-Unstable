@@ -51,7 +51,7 @@ This directory contains 17 specialized security hardening modules for the YoRHa 
 
 ### Access Control & Audit
 - **password-policy.nix** — Strong password requirements
-  - Minimum 14 characters, complexity rules
+  - Minimum 12 characters, complexity rules
   - **Impact**: Resists brute-force attacks
 
 - **process-accounting.nix** — Process audit logging

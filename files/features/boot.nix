@@ -10,16 +10,17 @@
 
       loader.systemd-boot.configurationLimit = 3;
 
-      initrd.availableKernelModules =
-        let tpmPresent = builtins.tryEval (builtins.pathExists "/sys/class/tpm/tpm0");
-        in lib.mkIf (tpmPresent.success && tpmPresent.value) [ "tpm_tis" "tpm_crb" "tpm" ];
+      initrd.availableKernelModules = lib.mkAfter (
+        let tpmPresent = builtins.pathExists "/sys/class/tpm/tpm0";
+        in lib.optionals tpmPresent [ "tpm_tis" "tpm_crb" "tpm" ]
+      );
 
-      initrd.kernelModules = [ "overlay" "xt_addrtype" ];
+      initrd.kernelModules = lib.mkAfter [ "overlay" "xt_addrtype" ];
 
       kernelModules =
-        let tpmPresent = builtins.tryEval (builtins.pathExists "/sys/class/tpm/tpm0");
+        let tpmPresent = builtins.pathExists "/sys/class/tpm/tpm0";
         in [ "xt_addrtype" "i2c-dev" ]
-           ++ lib.optionals (tpmPresent.success && tpmPresent.value) [ "tpm_tis" "tpm_crb" "tpm" ]
+           ++ lib.optionals tpmPresent [ "tpm_tis" "tpm_crb" "tpm" ]
            ++ [
              "nft_ct" "nft_fib" "nft_fib_inet" "nft_nat" "nft_reject" "nft_reject_inet"
              "nft_chain_nat" "nft_connlimit" "nft_dup_ipv4" "nft_dup_ipv6"

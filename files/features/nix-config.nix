@@ -5,7 +5,7 @@
     nix.settings.auto-optimise-store = lib.mkDefault false;
 
     nix.settings.max-jobs = "auto";
-    nix.settings.cores = 0;
+    nix.settings.cores = 4;
     nix.settings.keep-derivations = false;
 
     nix.settings.min-free = let memMB = config.hardware.memory.totalMB;
@@ -20,14 +20,22 @@
     nix.gc.dates = "weekly";
     nix.gc.options = "--delete-older-than 30d";
 
+    # Required by: nvidia.nix (GPU driver), privacy.nix (Mullvad),
+    # packages.nix (unfree packages may be installed)
     nixpkgs.config.allowUnfree = true;
 
     programs.nix-ld.enable = true;
+    programs.nix-ld.libraries = with pkgs; [ zlib libGL stdenv.cc.cc ];
 
     programs.git = {
       enable = true;
       config = {
-        safe.directory = [ "*" ];
+        # Trust specific directories instead of global wildcard
+        # Wildcard defeats git's ownership verification (security risk)
+        safe.directory = [
+          "/nix/store"
+          "/etc/nixos"
+        ];
       };
     };
   };

@@ -88,6 +88,7 @@
     PrivateTmp = true;
     ProtectSystem = "strict";
     ProtectHome = true;
+    ReadWritePaths = [ "/var/lib/polkit-1" ];
   };
 
   # FIX: Harden cups (print service - minimal needed to run)
@@ -96,6 +97,7 @@
     PrivateTmp = true;
     ProtectSystem = "strict";
     ProtectHome = true;
+    ReadWritePaths = [ "/var/spool/cups" "/var/log/cups" "/run/cups" ];
   };
 
   # NOTE: OpenSSH hardening intentionally minimal:

@@ -23,10 +23,9 @@ lib.mkIf (config.hardware.gpu.vendor == "intel") {
   boot.initrd.kernelModules = [ "i915" ];
   boot.initrd.availableKernelModules = [ "i915" ];
 
-  # Explicit i915 modeset + early KMS kernel parameters
+  # Explicit i915 modeset — let KMS auto-detect native resolution
   boot.kernelParams = [
     "i915.modeset=1"
-    "video=1920x1080@60"
   ];
 
   environment.systemPackages = with pkgs; [

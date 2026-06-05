@@ -48,7 +48,7 @@ in {
   flake.nixosConfigurations = {
     yorha = inputs.nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
-      specialArgs = { inherit inputs; noctalia = inputs.noctalia; };
+      specialArgs = { inherit inputs; };
       modules = sharedModules ++ [
         ./../files/core/current-system.nix
       ];
@@ -56,7 +56,7 @@ in {
 
     yorha-installer = inputs.nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
-      specialArgs = { inherit inputs; noctalia = inputs.noctalia; };
+      specialArgs = { inherit inputs; };
       modules = sharedModules ++ [
         inputs.disko.nixosModules.disko
         ./../files/core/disko.nix

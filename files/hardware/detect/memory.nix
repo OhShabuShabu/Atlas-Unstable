@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ config, lib, ... }:
 
 # ============================================================================
 # MEMORY DETECTION
@@ -42,6 +42,22 @@ let
     else "low";                                # < 4GB
     
 in {
+  config = {
+    hardware.memory.swapSizeMB = lib.mkDefault (
+      if config.hardware.memory.totalMB >= 32768 then 8192
+      else if config.hardware.memory.totalMB >= 16384 then 8192
+      else if config.hardware.memory.totalMB >= 8192 then 4096
+      else if config.hardware.memory.totalMB >= 4096 then 4096
+      else 2048
+    );
+    hardware.memory.tmpfsPercent = lib.mkDefault (
+      if config.hardware.memory.totalMB >= 32768 then 10
+      else if config.hardware.memory.totalMB >= 16384 then 15
+      else if config.hardware.memory.totalMB >= 8192 then 20
+      else 25
+    );
+  };
+
   options.hardware.memory = {
     totalMB = lib.mkOption {
       type = lib.types.int;
@@ -70,13 +86,7 @@ in {
 
     swapSizeMB = lib.mkOption {
       type = lib.types.int;
-      default = 
-        if totalMB >= 32768 then 8192      # 32GB+ RAM: 8GB swap
-        else if totalMB >= 16384 then 8192 # 16-32GB RAM: 8GB swap  
-        else if totalMB >= 8192 then 4096  # 8-16GB RAM: 4GB swap
-        else if totalMB >= 4096 then 4096  # 4-8GB RAM: 4GB swap
-        else 2048;                          # < 4GB RAM: 2GB swap
-      defaultText = lib.literalExpression "Auto-calculated from totalMB: 25-50% of RAM";
+      defaultText = lib.literalExpression "Auto-calculated from config.hardware.memory.totalMB";
       description = ''
         Recommended swap file size in megabytes.
         Scales with detected RAM to provide adequate headroom
@@ -86,12 +96,7 @@ in {
 
     tmpfsPercent = lib.mkOption {
       type = lib.types.int;
-      default = 
-        if totalMB >= 32768 then 10  # 32GB+: 10% for tmpfs (saves RAM)
-        else if totalMB >= 16384 then 15
-        else if totalMB >= 8192 then 20
-        else 25;                       # < 8GB: 25% for tmpfs
-      defaultText = lib.literalExpression "Scales inversely with RAM";
+      defaultText = lib.literalExpression "Scales inversely with totalMB";
       description = ''
         Percentage of total RAM to allocate for tmpfs mounts.
         Higher on low-RAM systems (needs more headroom), lower on

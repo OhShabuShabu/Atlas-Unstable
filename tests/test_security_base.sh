@@ -46,7 +46,7 @@ if [ -f "$SYSCTL" ]; then
   check_sysctl_value "$SYSCTL" "net.ipv4.icmp_echo_ignore_all" "1" "ICMP echo: ignored" || true
   check_sysctl_value "$SYSCTL" "net.ipv4.conf.all.rp_filter" "1" "RP filter: enabled" || true
   check_sysctl_value "$SYSCTL" "net.ipv4.conf.all.accept_source_route" "0" "Source routing: disabled" || true
-  check_sysctl_value "$SYSCTL" "net.ipv6.conf.all.accept_ra" "0" "IPv6 RA: disabled" || true
+  check_sysctl_value "$SYSCTL" "net.ipv6.conf.all.accept_ra" "2" "IPv6 RA: accepted (for SLAAC)" || true
   check_sysctl_value "$SYSCTL" "net.core.bpf_jit_harden" "2" "BPF JIT: hardened" || true
 
   # ── Filesystem protection ────────────────────────────────────────────
@@ -94,11 +94,15 @@ if [ -f "$KBOOT" ]; then
   check_boot_param "$KBOOT" "init_on_free=1" || true
   check_boot_param "$KBOOT" "page_poison=1" || true
   check_boot_param "$KBOOT" "page_alloc.shuffle=1" || true
-  check_boot_param "$KBOOT" "pti=on" || true
   check_boot_param "$KBOOT" "randomize_kstack_offset=on" || true
   check_boot_param "$KBOOT" "debugfs=off" || true
-  check_boot_param "$KBOOT" "audit_backlog_limit=16384" || true
-  check_boot_param "$KBOOT" "loglevel=3" || true
+  # NOTE: pti=on is set via security.forcePageTableIsolation in hardening.nix,
+  #       audit_backlog_limit=16384 via security.audit.backlogLimit in hardening.nix,
+  #       splash via boot.plymouth.enable in boot.nix — verified separately below.
+  HARDENING="$BASE/files/features/hardening.nix"
+  check_nix_value "$HARDENING" "forcePageTableIsolation" "pti=on (via forcePageTableIsolation)" || true
+  check_nix_value "$HARDENING" "backlogLimit = 16384" "audit_backlog_limit=16384 (via backlogLimit)" || true
+  check_nix_value "$BASE/files/features/boot.nix" "plymouth" "splash (via plymouth)" || true
 
   # ── Module blocking ──────────────────────────────────────────────────
   header "  2b. Kernel Module Blocking"
@@ -139,11 +143,12 @@ if [ -f "$FIRE" ]; then
   check_nix_value "$FIRE" 'enable = true' "Firewall: enabled" || true
   check_nix_value "$FIRE" 'allowedTCPPorts' "Firewall: allowed TCP ports defined" || true
   check_nix_value "$FIRE" '22' "Firewall: SSH port 22 open" || true
-  check_nix_value "$FIRE" '80' "Firewall: HTTP port 80 open" || true
-  check_nix_value "$FIRE" '443' "Firewall: HTTPS port 443 open" || true
+  # NOTE: HTTP 80 / HTTPS 443 are intentionally closed — this is a workstation.
+  #       HTTP 80 / HTTPS 443 are NOT in defaultTcpPorts.
   check_nix_value "$FIRE" 'allowedUDPPortRanges' "Firewall: UDP port ranges defined" || true
-  check_nix_value "$FIRE" '4000' "Firewall: UDP 4000 included" || true
-  check_nix_value "$FIRE" '8000' "Firewall: UDP 8000 included" || true
+  # NOTE: UDP 27000-27100 (Steam) and 50000-65535 (Discord) replace the old 4000/8000 ranges.
+  check_nix_value "$FIRE" '27000' "Firewall: UDP 27000 (Steam) included" || true
+  check_nix_value "$FIRE" '50000' "Firewall: UDP 50000 (Discord) included" || true
   check_nix_value "$FIRE" 'virbr0' "Firewall: trusted interface virbr0" || true
   check_nix_value "$FIRE" 'checkReversePath.*strict' "Firewall: strict reverse path filtering" || false
   check_nix_value "$FIRE" 'logRefusedConnections = true' "Firewall: log refused connections" || true
@@ -191,7 +196,7 @@ if [ -f "$PASSWD" ]; then
   check_nix_value "$PASSWD" 'PASS_WARN_AGE.*7' "PASS_WARN_AGE = 7" || true
   check_nix_value "$PASSWD" 'PASS_MIN_LEN.*12' "PASS_MIN_LEN = 12" || true
   check_nix_value "$PASSWD" 'ENCRYPT_METHOD.*YESCRYPT' "YESCRYPT: password hashing" || true
-  check_nix_value "$PASSWD" 'YESCRYPT_COST_FACTOR.*10' "YESCRYPT cost: 10" || true
+  check_nix_value "$PASSWD" 'YESCRYPT_COST_FACTOR.*14' "YESCRYPT cost: 14" || true
   check_nix_value "$PASSWD" 'SHA_CRYPT_MIN_ROUNDS.*10000' "SHA crypt rounds: 10000" || true
   check_nix_value "$PASSWD" 'enableGnomeKeyring.*false' "GNOME keyring: disabled" || true
 else

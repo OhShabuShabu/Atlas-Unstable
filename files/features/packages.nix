@@ -98,9 +98,6 @@
           snort-daemon snort-monitor
           snout-watcher.service snout-watcher.path
           aide-check.service aide-check.timer
-          firmware-version-check
-          tpm-attestation-check
-          secureboot-verify
           mullvad-daemon
         )
 

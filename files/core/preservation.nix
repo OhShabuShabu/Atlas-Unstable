@@ -3,6 +3,7 @@ let
   # ── User identity ──────────────────────────────────────────────────
   userName = "yusa";
   userHome = "/home/${userName}";
+  userGroup = config.users.users.${userName}.group or "users";
 
   # Folders from ~/Folder Structure/ that should be created in ~/ on boot and persist
   # NOTE: "Encrypted Storage" is NOT in this list — it's handled by
@@ -167,32 +168,32 @@ in
   systemd.tmpfiles.settings."home-dir" = {
     "${userHome}".d = {
       user = "${userName}";
-      group = "users";
+      group = "${userGroup}";
       mode = "0755";
     };
     "${userHome}/.config".d = {
       user = "${userName}";
-      group = "users";
+      group = "${userGroup}";
       mode = "0755";
     };
     "${userHome}/.local".d = {
       user = "${userName}";
-      group = "users";
+      group = "${userGroup}";
       mode = "0755";
     };
     "${userHome}/.local/share".d = {
       user = "${userName}";
-      group = "users";
+      group = "${userGroup}";
       mode = "0755";
     };
     "${userHome}/.local/state".d = {
       user = "${userName}";
-      group = "users";
+      group = "${userGroup}";
       mode = "0755";
     };
     "${userHome}/.cache".d = {
       user = "${userName}";
-      group = "users";
+      group = "${userGroup}";
       mode = "0755";
     };
   };

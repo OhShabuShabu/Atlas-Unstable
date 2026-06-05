@@ -68,7 +68,8 @@
       after = [ "graphical-session.target" ];
       serviceConfig = {
         Type = "oneshot";
-        ExecStart = "${pkgs.bash}/bin/bash -c 'sleep 12 && ${pkgs.openrgb}/bin/openrgb -d 0 -c $(${pkgs.python3}/bin/python3 ${./../bin/python/fix_rgb_color.py} $(tr -d \"#\" < ${./../config/primary_color.txt}))'";
+        ExecStartPre = "${pkgs.coreutils}/bin/cp -f ${./../config/primary_color.txt} %t/primary_color.txt";
+        ExecStart = "${pkgs.bash}/bin/bash -c 'sleep 12 && ${pkgs.openrgb}/bin/openrgb -d 0 -c $(${pkgs.python3}/bin/python3 ${./../bin/python/fix_rgb_color.py} $(tr -d \"#\" < %t/primary_color.txt))'";
         RemainAfterExit = false;
       };
     };

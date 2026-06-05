@@ -88,7 +88,7 @@ in
         THREATS=$(echo "$SCAN_RESULT" | grep -c "FOUND" 2>/dev/null || echo "0")
 
         if [ "$THREATS" -gt 0 ]; then
-          THREAT_LIST=$(grep "FOUND" "$LOG_FILE" | sed 's/.*FOUND//' | head -3 | tr '\n' ' ')
+          THREAT_LIST=$(echo "$SCAN_RESULT" | grep "FOUND" | sed 's/.*FOUND//' | head -3 | tr '\n' ' ')
           "$NOTIFY" critical "ClamAV Alert" "Threats quarantined: $THREAT_LIST"
           echo "ALERT: $THREATS threats quarantined at $(date)" >> "$LOG_FILE"
 

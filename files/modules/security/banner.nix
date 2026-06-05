@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ config, lib, ... }:
 {
   # ============================================================================
   # SECTION 7: SECURITY BANNER
@@ -12,4 +12,15 @@
     *        Unauthorized access is strictly prohibited and will be prosecuted.  *
     *****************************************************************************
   '';
+
+  environment.etc."issue.net".text = ''
+    *****************************************************************************
+    *        WARNING: Authorized Access Only!                                   *
+    *        This system is restricted to authorized users only.                 *
+    *        All activities on this system are monitored and recorded.           *
+    *        Unauthorized access is strictly prohibited and will be prosecuted.  *
+    *****************************************************************************
+  '';
+
+  services.openssh.settings.Banner = lib.mkDefault "/etc/issue.net";
 }

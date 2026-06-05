@@ -16,7 +16,8 @@ let
   bootParams = [
     # Boot experience
     "quiet"
-    "splash"
+    # NOTE: "splash" is added automatically by boot.plymouth.enable (boot.nix).
+    #       Including it here would duplicate the param in /proc/cmdline.
     "video=1920x1080"               # Native resolution for Plymouth/KMS
 
     # Systemd early boot config
@@ -34,7 +35,8 @@ let
     "init_on_free=1"                    # INFO: Zero memory on free
     "page_poison=1"                      # FIX: Poison free pages (from hardened profile)
     "page_alloc.shuffle=1"              # INFO: Randomize page allocator
-    "pti=on"                             # INFO: Page Table Isolation
+    # NOTE: pti=on is set via security.forcePageTableIsolation (hardening.nix).
+    #       Setting it here would duplicate the param in /proc/cmdline.
     "randomize_kstack_offset=on"         # INFO: Randomize kernel stack
     # WARN: Breaks older binaries (GPU drivers, X11)
     # "vsyscall=none"                     # INFO: Disable vsyscalls
@@ -55,9 +57,8 @@ let
     # "random.trust_bootloader=off"       # INFO: Don't trust bootloader RNG entropy
     "console=tty0"                      # INFO: Restrict console to main display
 
-    # FIX: Increase kernel audit backlog to prevent audit_log_subj_ctx errors
-    #      Default 8192 overflows on busy systems causing audit context logging failures
-    "audit_backlog_limit=16384"
+    # NOTE: audit_backlog_limit=16384 is set via security.audit.backlogLimit
+    #       (hardening.nix). Setting it here would duplicate the param in /proc/cmdline.
   ];
 
   # INFO: Modules to block via modprobe (returns /bin/false)

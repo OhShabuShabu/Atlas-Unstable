@@ -205,10 +205,7 @@ case "${1:-apply}" in
     sudo systemctl stop \
       snort-daemon snort-monitor \
       snout-watcher.service snout-watcher.path \
-      aide-check.service aide-check.timer \
-      firmware-version-check \
-      tpm-attestation-check \
-      secureboot-verify 2>/dev/null || true
+      aide-check.service aide-check.timer 2>/dev/null || true
     ok "Services stopped"
 
     echo ""

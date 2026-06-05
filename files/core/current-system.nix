@@ -87,6 +87,8 @@ in {
     description = "Create btrfs-compatible swapfile";
     before = [ "persistent-swapfile.swap" "swap.target" ];
     requiredBy = [ "persistent-swapfile.swap" "swap.target" ];
+    after = [ "persistent.mount" ];
+    requires = [ "persistent.mount" ];
     unitConfig.DefaultDependencies = false;
     serviceConfig = {
       Type = "oneshot";
@@ -97,7 +99,7 @@ in {
           exit 0
         fi
         rm -f /persistent/swapfile
-        truncate -s 0 /persistent/swapfile
+        touch /persistent/swapfile
         ${pkgs.e2fsprogs}/bin/chattr +C /persistent/swapfile
         ${pkgs.util-linux}/bin/fallocate -l ${toString swapSize}M /persistent/swapfile
         chmod 0600 /persistent/swapfile

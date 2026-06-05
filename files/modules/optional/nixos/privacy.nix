@@ -24,9 +24,11 @@ in {
     services.mullvad-vpn.enable = true;
 
     networking.firewall = {
+      # Only allow WireGuard outbound connections.
+      # Do NOT open DNS ports 53/853 inbound — that would turn the machine into an
+      # open resolver, enabling DNS amplification attacks.
       enable = true;
-      allowedTCPPorts = [ 53 853 ];
-      allowedUDPPorts = [ 53 853 51820 ];
+      allowedUDPPorts = [ 51820 ];
     };
 
     # Metadata stripping

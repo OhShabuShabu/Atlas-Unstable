@@ -51,8 +51,11 @@ in {
 
     hasVirtualization = lib.mkOption {
       type = lib.types.bool;
-      default = detected != "generic";
-      defaultText = lib.literalExpression "true if CPU vendor detected";
+      default = let
+        hasVMX = builtins.match ".*vmx.*" cpuInfo != null;
+        hasSVM = builtins.match ".*svm.*" cpuInfo != null;
+      in hasVMX || hasSVM;
+      defaultText = lib.literalExpression "Detected VMX or SVM CPU flags from /proc/cpuinfo";
       description = "Whether the CPU supports hardware virtualization extensions (VMX/SVM).";
       readOnly = true;
     };

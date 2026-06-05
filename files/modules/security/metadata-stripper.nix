@@ -13,17 +13,6 @@ let
     "${userHome}/Desktop"
   ];
 
-  # exiftool flags to strip GPS, camera, and identifying metadata
-  stripFlags = with pkgs; ''
-    ${exiftool}/bin/exiftool -overwrite_original \
-      -all= -gps:all= -makernotes:all= -ThumbnailImage- \
-      -XMP-iptcCore:all= -Software= -Artist= -Copyright= \
-      -SerialNumber= -CameraSerialNumber= -OwnerName= \
-      -r -ext jpg -ext jpeg -ext png -ext gif -ext tiff -ext webp \
-      -ext mp4 -ext mov -ext avi -ext mkv \
-      "$@"
-  '';
-
   exiftool = pkgs.exiftool;
 in
 
@@ -64,7 +53,8 @@ in
           [ -d "$dir" ] || continue
           # Strip metadata from files modified in the last 5 minutes
           count=$($EXIF -overwrite_original \
-            -all= -gps:all= -makernotes:all= -ThumbnailImage- \
+            -all= -TagsFromFile @ -Orientation -n \
+            -gps:all= -makernotes:all= -ThumbnailImage- \
             -XMP-iptcCore:all= -Software= -Artist= -Copyright= \
             -SerialNumber= -CameraSerialNumber= -OwnerName= \
             -r -ext jpg -ext jpeg -ext png -ext gif -ext tiff -ext webp \
@@ -110,7 +100,8 @@ in
         for dir in $STRIP_DIRS; do
           [ -d "$dir" ] || continue
           count=$($EXIF -overwrite_original \
-            -all= -gps:all= -makernotes:all= -ThumbnailImage- \
+            -all= -TagsFromFile @ -Orientation -n \
+            -gps:all= -makernotes:all= -ThumbnailImage- \
             -XMP-iptcCore:all= -Software= -Artist= -Copyright= \
             -SerialNumber= -CameraSerialNumber= -OwnerName= \
             -r -ext jpg -ext jpeg -ext png -ext gif -ext tiff -ext webp \

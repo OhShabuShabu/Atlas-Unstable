@@ -532,10 +532,17 @@ let
 in
 
 {
+  users.users.snort = {
+    isSystemUser = true;
+    group = "snort";
+    description = "Snort IDS daemon user";
+  };
+  users.groups.snort = {};
+
   environment.systemPackages = [ snortPkg snortBin snortMonitorDaemon notifyScript ];
 
   systemd.tmpfiles.rules = [
-    "d /var/log/snort 0750 root root -"
+    "d /var/log/snort 0750 snort snort -"
   ];
 
   systemd.services.snort-daemon = {
@@ -550,7 +557,8 @@ in
       ExecReload = "${snortPkg}/bin/snort -c ${snortConfig}/snort.lua -T 2>/dev/null && kill -HUP $MAINPID";
       Restart = "on-failure";
       RestartSec = 10;
-      User = "root";
+      User = "snort";
+      AmbientCapabilities = [ "CAP_NET_RAW" "CAP_NET_ADMIN" ];
       NoNewPrivileges = true;
       ProtectSystem = "full";
       ReadWritePaths = [ "/var/log/snort" ];
@@ -580,7 +588,7 @@ in
       ExecStart = "${snortMonitorDaemon}/bin/snort-monitor";
       Restart = "on-failure";
       RestartSec = 5;
-      User = "root";
+      User = "snort";
       NoNewPrivileges = true;
       ProtectSystem = "full";
       ReadWritePaths = [ "/var/log/snort" ];

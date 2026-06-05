@@ -2,7 +2,7 @@
   flake.modules.nixos.network = { pkgs, lib, config, ... }: {
     networking.networkmanager.enable = true;
     networking.networkmanager.dns = "systemd-resolved";
-    networking.useDHCP = false;
+    networking.useDHCP = false; # NetworkManager is the sole DHCP client — prevents networkd conflicts
 
     services.openssh = {
       enable = true;

@@ -390,7 +390,7 @@ tty_apply_changes() {
   echo -e "  ${DIM}(This may take several minutes)${NC}"
   spacer
   # Stop tamper-detection services before rebuild
-  sudo systemctl stop snort-daemon snort-monitor snout-watcher.service snout-watcher.path aide-check.service aide-check.timer firmware-version-check tpm-attestation-check secureboot-verify 2>/dev/null || true
+  sudo systemctl stop snort-daemon snort-monitor snout-watcher.service snout-watcher.path aide-check.service aide-check.timer 2>/dev/null || true
   sudo nixos-rebuild switch --flake "$BASE#yorha" 2>&1 | tee /tmp/yorha-module-rebuild.log
   local rebuild_exit=${PIPESTATUS[0]}
   if [[ $rebuild_exit -eq 0 ]]; then
@@ -1182,10 +1182,7 @@ apply_changes() {
   sudo systemctl stop \
     snort-daemon snort-monitor \
     snout-watcher.service snout-watcher.path \
-    aide-check.service aide-check.timer \
-    firmware-version-check \
-    tpm-attestation-check \
-    secureboot-verify 2>/dev/null || true
+    aide-check.service aide-check.timer 2>/dev/null || true
 
   sudo nixos-rebuild switch --flake "$BASE#yorha" 2>&1 | tee /tmp/yorha-module-rebuild.log
   local rebuild_exit=${PIPESTATUS[0]}

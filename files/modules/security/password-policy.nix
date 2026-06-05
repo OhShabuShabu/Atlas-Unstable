@@ -37,7 +37,7 @@
     # FIX: Use YESCRYPT - modern password hashing (2024+)
     #      More secure than SHA512, resistant to GPU cracking
     ENCRYPT_METHOD = "YESCRYPT";
-    YESCRYPT_COST_FACTOR = "10";
+    YESCRYPT_COST_FACTOR = "14";
 
     # Disable legacy hashing methods
     MD5_CRYPT_ENAB = "false";

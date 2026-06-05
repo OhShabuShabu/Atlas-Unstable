@@ -69,8 +69,11 @@ let
     "net.ipv4.conf.all.accept_source_route" = 0;
     "net.ipv6.conf.all.accept_source_route" = 0;
     "net.ipv6.conf.default.accept_source_route" = 0;
-    "net.ipv6.conf.all.accept_ra" = 0;        # INFO: Disable router advertisements
-    "net.ipv6.conf.default.accept_ra" = 0;
+    # NOTE: accept_ra is set to 2 (accept RAs even with forwarding=1) instead of 0
+    #       so SLAAC-based IPv6 works on standard networks. The old value of 0
+    #       broke IPv6 connectivity entirely without static configuration.
+    "net.ipv6.conf.all.accept_ra" = 2;
+    "net.ipv6.conf.default.accept_ra" = 2;
   };
 
   # INFO: Additional Lynis-recommended settings
@@ -99,8 +102,11 @@ let
     "net.ipv4.tcp_syn_retries" = 3;
     "net.ipv4.tcp_synack_retries" = 3;
     "net.ipv4.tcp_max_syn_backlog" = 2048;
-    # FIX: Disable TCP timestamps (info leak reduction)
-    "net.ipv4.tcp_timestamps" = 0;
+    # NOTE: TCP timestamps are kept enabled (1) because disabling them breaks
+    #       TCP window scaling (RFC 1323/7323), significantly reducing throughput
+    #       on high-bandwidth/high-latency links. The info leak via timestamps is
+    #       minimal and mitigated by other protections (kptr_restrict, dmesg_restrict).
+    "net.ipv4.tcp_timestamps" = 1;
     # FIX: Disable Ctrl-Alt-Del (Lynis KRNL-6000)
     "kernel.ctrl-alt-del" = 0;
     # FIX: Kernel panic behaviour

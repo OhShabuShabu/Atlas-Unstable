@@ -33,12 +33,7 @@
   };
 
 
-  # Force dark mode for X11/XWayland apps via xsettings
-  xdg.configFile."xsettingsd/Xwayland.conf".text = ''
-    Net/ThemeName "Adwaita-dark"
-    Net/IconThemeName "Papirus-Dark"
-    Gtk/ApplicationPreferDarkTheme 1
-  '';
+  # Dark theme applied via GTK_THEME env var below — xsettingsd not installed
   home.sessionVariables = {
     GTK_THEME = "Adwaita-dark";
     QT_QPA_PLATFORM = "wayland;xcb";
@@ -223,9 +218,13 @@
         name = "yusa";
         email = "local@YoRHa.os";
       };
-      # Trust all repos to avoid libgit2 ownership errors when nix evaluates
-      # the flake under a different user context (e.g. nix daemon as root).
-      safe.directory = "*";
+      # Scope git directory trust to specific paths to preserve ownership verification.
+      # The flake evaluation under different user contexts (e.g. nix daemon as root)
+      # needs the nix store and home directory trusted.
+      safe.directory = [
+        config.home.homeDirectory
+        "/nix/store"
+      ];
     };
   };
   
