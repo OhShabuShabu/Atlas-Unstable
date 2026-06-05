@@ -11,11 +11,14 @@
 let
   defaultTcpPorts = [ 22 ];
 
-  # INFO: Default allowed UDP port ranges for VoIP/gaming
-  # NOTE: These ranges are commonly used for gaming/voice chat
+  # INFO: Default allowed UDP port ranges
+  # NOTE: Most games and VoIP use ephemeral ports via UDP hole-punching.
+  #       These ranges cover common services that need explicit opening.
+  #       Steam: 27000-27100 (matchmaking/voice)
+  #       Discord: 50000-65535 (voice)
   defaultUdpPorts = [
-    { from = 4000; to = 4007; }   # Common VoIP range
-    { from = 8000; to = 8010; }   # Additional gaming range
+    { from = 27000; to = 27100; }  # Steam matchmaking + voice
+    { from = 50000; to = 65535; }  # Discord voice
   ];
 in
 

@@ -33,13 +33,13 @@ let
 
   # INFO: Exclude volatile/proc filesystems
   excludeDirs = ''
-    /proc no
-    /sys no
-    /dev no
-    /run no
-    /tmp no
-    /mnt no
-    /media no
+    !/proc
+    !/sys
+    !/dev
+    !/run
+    !/tmp
+    !/mnt
+    !/media
   '';
 in
 
@@ -93,17 +93,18 @@ in
       RemainAfterExit = true;
       ExecStart = pkgs.writeShellScript "aide-check.sh" ''
         #!/bin/bash
-        set -e
-
         AIDE_DB="/var/lib/aide/aide.db.gz"
         LOG_FILE="/var/log/aide/check.log"
         
         # INFO: Only run check if database exists
         if [ -f "$AIDE_DB" ]; then
           echo "Running AIDE integrity check at $(date)" > "$LOG_FILE"
+          set +e
           ${pkgs.aide}/bin/aide --check >> "$LOG_FILE" 2>&1
+          AIDE_EXIT=$?
+          set -e
           
-          if [ $? -eq 0 ]; then
+          if [ "$AIDE_EXIT" -eq 0 ]; then
             echo "No changes detected" >> "$LOG_FILE"
           else
             echo "WARNING: Changes detected! Review $LOG_FILE" | tee /dev/stderr

@@ -8,12 +8,12 @@ let
   luksUuidFile = ../.luks-uuid;
   luksUuid = if builtins.pathExists luksUuidFile then builtins.readFile luksUuidFile else "";
   luksUuidClean = lib.strings.removeSuffix "\n" (lib.strings.removeSuffix "\r" luksUuid);
-  lukDevice = if luksUuidClean != "" then "/dev/disk/by-uuid/${luksUuidClean}" else "/dev/disk/by-partlabel/disk-main-root";
+  luksDevice = if luksUuidClean != "" then "/dev/disk/by-uuid/${luksUuidClean}" else "/dev/disk/by-partlabel/disk-main-root";
 in {
   # VM disk drivers (bare metal uses NVMe/AHCI from hardware-configuration.nix)
   boot.initrd.availableKernelModules = [ "virtio_blk" "virtio_pci" "virtio_scsi" "ata_piix" ];
   boot.initrd.luks.devices."crypt" = {
-    device = lib.mkForce lukDevice;
+    device = lib.mkForce luksDevice;
     crypttabExtraOpts = [ "tpm2-device=auto" ];
   };
 

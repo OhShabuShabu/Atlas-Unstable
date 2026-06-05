@@ -2,19 +2,15 @@
 
 let
   secretsFile = ../../secrets/secrets.yaml;
-  hasYusaPasswordHash =
-    builtins.pathExists secretsFile &&
-    builtins.any (line: lib.hasPrefix "yusa-password-hash:" line)
-      (lib.splitString "\n" (builtins.readFile secretsFile));
 in {
-  sops = {
+  sops = lib.mkIf (builtins.pathExists secretsFile) {
     defaultSopsFile = secretsFile;
 
     age = {
       sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
     };
 
-    secrets = lib.mkIf hasYusaPasswordHash {
+    secrets = {
       yusa-password-hash = {
         neededForUsers = true;
       };

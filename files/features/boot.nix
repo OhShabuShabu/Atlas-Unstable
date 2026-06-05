@@ -29,7 +29,6 @@
              "nft_redir" "nft_reject_bridge" "nft_reject_ipv4" "nft_reject_ipv6"
              "nft_reject_netdev" "nft_socket" "nft_synproxy" "nft_tproxy"
              "nft_tunnel" "nft_xfrm"
-             "xt_addrtype"
            ];
 
       plymouth = {
@@ -48,8 +47,6 @@
       };
     };
 
-    hardware.enableRedistributableFirmware = true;
-
-    boot.tmp.cleanOnBoot = true;
+    # Note: hardware.enableRedistributableFirmware set in files/hardware/default.nix
   };
 }

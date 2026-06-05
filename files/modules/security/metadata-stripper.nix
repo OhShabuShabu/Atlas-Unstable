@@ -1,15 +1,16 @@
-{ pkgs, lib, ... }:
+{ pkgs, lib, config, ... }:
 
 let
   notifications = import ../../lib/notifications.nix { inherit pkgs; };
   notifyScript = notifications.notifyScript;
+  userHome = config.users.users.yusa.home or "/home/yusa";
 
   # Directories to watch for new files and scan daily
   watchDirs = [
-    "/home/yusa/Pictures"
-    "/home/yusa/Downloads"
-    "/home/yusa/Documents"
-    "/home/yusa/Desktop"
+    "${userHome}/Pictures"
+    "${userHome}/Downloads"
+    "${userHome}/Documents"
+    "${userHome}/Desktop"
   ];
 
   # exiftool flags to strip GPS, camera, and identifying metadata

@@ -43,10 +43,10 @@ let
     echo "SHUTDOWN-WIPE: Starting forensic cleanup..."
     ${pkgs.util-linux}/bin/logger -p auth.info -t shutdown-wipe "Forensic cleanup starting"
 
-    # Wipe /var/log (structure preserved, content shredded)
+    # Wipe /var/log: only old rotated logs; preserve active audit trail
     if [ -d /var/log ]; then
       find /var/log -type f \
-        ! -name "*.gz" \
+        -name "*.gz" \
         -exec ${pkgs.coreutils}/bin/shred -vfz -n 1 {} \; 2>/dev/null || true
     fi
 
@@ -78,6 +78,7 @@ in
     description = "DRAM Memory Wipe — Cold Boot Attack Prevention";
     before = shutdownTargets;
     wants = shutdownTargets;
+    unitConfig.DefaultDependencies = false;
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
@@ -96,6 +97,7 @@ in
     before = shutdownTargets;
     wants = shutdownTargets;
     after = [ "dram-wiper.service" ];
+    unitConfig.DefaultDependencies = false;
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
@@ -109,9 +111,7 @@ in
     };
   };
 
-  # INFO: Disable hibernation (prevents hibernation image attacks)
-  boot.kernelParams = [ "nohibernate" ];
-
+  # INFO: Disable hibernation — via systemd targets below (nohibernate kernel param is not valid)
   # INFO: Disable suspend-to-idle (S2Idle — leaves memory powered)
   systemd.targets.sleep.enable = false;
   systemd.targets.suspend.enable = false;

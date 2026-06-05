@@ -146,7 +146,7 @@ in {
         echo "tpm-enroll: enrolling TPM2 for $LUKS_DEVICE ..."
         ${pkgs.systemd}/bin/systemd-cryptenroll \
           --tpm2-device=auto \
-          --tpm2-pcrs=0+7 \
+          --tpm2-pcrs=0+1+7 \
           --password-file="$PASSWORD_FILE" \
           "$LUKS_DEVICE"
 

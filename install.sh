@@ -41,7 +41,7 @@ cleanup() {
   sed -i '/^\s*initialPassword\s*=/d' \
     "$ROOTDIR/files/features/user.nix" 2>/dev/null || true
   # Remove temporary UUID marker
-  rm -f "$ROOTDIR/.luk-uuid" 2>/dev/null || true
+  rm -f "$ROOTDIR/.luks-uuid" 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -545,7 +545,7 @@ echo
 
 # Export variables expected by disko.nix at evaluation time
 export DISKO_DEVICE="$DISK"
-echo "$LUKS_UUID" > "$ROOTDIR/.luk-uuid"
+echo "$LUKS_UUID" > "$ROOTDIR/.luks-uuid"
 
 if [[ -n "$CACHE_URL" ]]; then
   SUBSTITUTERS="$CACHE_URL https://cache.nixos.org"

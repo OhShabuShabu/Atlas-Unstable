@@ -205,14 +205,25 @@ let
     fi
 
     # Auto-enroll the keyfile into LUKS slot 1
-    echo "LUKS-ENROLL: Adding keyfile to LUKS slot 1..."
-    if "${pkgs.cryptsetup}/bin/cryptsetup" luksAddKey "$LUKS_DEV" "$RAW_KEY" 2>/dev/null; then
+    # NOTE: cryptsetup luksAddKey requires the EXISTING key to authorize the
+    #       addition. Without a TTY at boot, we cannot provide the existing
+    #       passphrase. The --batch-mode flag is used to avoid hanging on
+    #       the password prompt; the call will then exit non-zero with a
+    #       clear error, and the user must enroll manually.
+    echo "LUKS-ENROLL: Attempting keyfile enrollment into LUKS slot 1..."
+    if "${pkgs.cryptsetup}/bin/cryptsetup" luksAddKey \
+        --batch-mode \
+        "$LUKS_DEV" "$RAW_KEY" </dev/null 2>&1; then
       echo "LUKS-ENROLL: Keyfile enrolled successfully"
       $LOGGER -p auth.info -t luks-enroll "Keyfile enrolled in LUKS slot 1"
     else
-      echo "LUKS-ENROLL: Failed to add keyfile (wrong passphrase or device)" >&2
-      $LOGGER -p auth.err -t luks-enroll "Keyfile enrollment FAILED"
-      exit 1
+      rc=$?
+      echo "LUKS-ENROLL: Auto-enroll failed (rc=$rc) — needs interactive passphrase" >&2
+      echo "LUKS-ENROLL: After boot, run:" >&2
+      echo "LUKS-ENROLL:   sudo cryptsetup luksAddKey $LUKS_DEV $RAW_KEY" >&2
+      $LOGGER -p auth.warning -t luks-enroll "Auto-enroll failed (rc=$rc) — manual enrollment required"
+      # Exit 0 so we don't break multi-user.target; user can enroll manually
+      exit 0
     fi
   '';
 in

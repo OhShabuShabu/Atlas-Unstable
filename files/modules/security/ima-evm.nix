@@ -23,7 +23,6 @@ let
   imaPolicy = ''
     # Don't measure pseudo-filesystems
     dont_measure fsmagic=0x01021994  # selinuxfs
-    dont_measure fsmagic=0x1021994   # securityfs
     dont_measure fsmagic=0x9fa0      # procfs
     dont_measure fsmagic=0x62656572  # sysfs
     dont_measure fsmagic=0x64626720  # debugfs
@@ -147,6 +146,18 @@ in
     "ima_hash=sha256"         # Use SHA256 for measurements
     "evm=fix"                 # EVM log-only mode (safe — no enforcement)
   ];
+
+  # INFO: EVM key setup service (was dead code — now registered)
+  systemd.services.evm-key-setup = {
+    description = "EVM HMAC key generation and kernel keyring loading";
+    after = [ "local-fs.target" ];
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${evmKeyService}";
+    };
+  };
 
   # INFO: IMA/EVM related packages + EVM signing utility
   environment.systemPackages = with pkgs; [

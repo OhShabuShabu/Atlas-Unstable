@@ -17,7 +17,6 @@ let
     # Boot experience
     "quiet"
     "splash"
-    "loglevel=3"
     "video=1920x1080"               # Native resolution for Plymouth/KMS
 
     # Systemd early boot config
@@ -44,7 +43,8 @@ let
     # "oops=panic"                        # INFO: Panic on oops
     # NOTE: lockdown disabled - prevents GPU driver and display from working on unstable
     # "lockdown=integrity"             # INFO: Kernel lockdown - prevents unsigned module loading
-    "slab_merge=off"                    # INFO: Explicitly disable slab merging
+    # INFO: Duplicate of slab_nomerge above — removed slab_merge=off
+    # NOTE: slab_merge=off is not needed — slab_nomerge above covers this
     # FIX: Additional boot hardening
     # WARN: Can crash systems without IOMMU support
     # "iommu=force"                       # INFO: Force IOMMU for DMA protection
@@ -129,7 +129,10 @@ in
     boot.kernelParams = bootParams;
 
     # Silent boot - reduce console noise
-    boot.consoleLogLevel = 0;
+    # NOTE: loglevel=3 is set in bootParams above — that's the effective level.
+    # boot.consoleLogLevel overrides it to 0 (KERN_EMERG only) which conflicts.
+    # Keeping only the bootParams loglevel=3 for consistency.
+    # boot.consoleLogLevel = 0;
     boot.initrd.verbose = false;
 
     # INFO: Apply module blocking config

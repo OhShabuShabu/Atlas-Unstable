@@ -118,7 +118,7 @@
   # FIX: Harden syslog/rsyslogd (Lynis BOOT-5264, exposure score 9.6)
   # ProtectSystem=full omitted — rsyslog needs RW access to /var/log.
   # /var/lib/rsyslog must exist or systemd mount namespacing fails.
-  systemd.services.syslog = lib.mkIf (config.services.rsyslogd.enable or false) {
+  systemd.services.rsyslogd = lib.mkIf (config.services.rsyslogd.enable or false) {
     serviceConfig = {
       NoNewPrivileges = true;
       PrivateTmp = true;

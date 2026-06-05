@@ -1,4 +1,4 @@
-{ pkgs, lib, ... }:
+{ pkgs, lib, config, ... }:
 
 let
   notifications = import ../../lib/notifications.nix { inherit pkgs; };
@@ -38,6 +38,20 @@ in
     serviceConfig = {
       Restart = "on-failure";
       NoNewPrivileges = true;
+      ProtectSystem = "strict";
+      ProtectHome = true;
+      PrivateTmp = lib.mkForce true;
+      PrivateDevices = lib.mkForce true;
+      ProtectKernelTunables = lib.mkForce true;
+      ProtectKernelModules = lib.mkForce true;
+      ProtectControlGroups = lib.mkForce true;
+      RestrictNamespaces = lib.mkForce true;
+      LockPersonality = lib.mkForce true;
+      RestrictRealtime = lib.mkForce true;
+      RestrictSUIDSGID = lib.mkForce true;
+      RemoveIPC = lib.mkForce true;
+      CapabilityBoundingSet = [ "CAP_DAC_OVERRIDE" "CAP_CHOWN" "CAP_FOWNER" ];
+      SystemCallArchitectures = "native";
     };
   };
 
@@ -61,15 +75,17 @@ in
 
         echo "=== ClamAV Scan $(date) ===" >> "$LOG_FILE"
 
-        $CLAMSCAN --recursive --detect-pua=yes \
+        SCAN_OUTPUT=$($CLAMSCAN --recursive --detect-pua=yes \
           --exclude-dir="/proc" --exclude-dir="/sys" --exclude-dir="/dev" \
           --exclude-dir="$QUARANTINE" \
-          --exclude-dir="/home/yusa/.steam" \
-          --exclude-dir="/home/yusa/.local/share/Steam" \
+          --exclude-dir="${config.users.users.yusa.home}/.steam" \
+          --exclude-dir="${config.users.users.yusa.home}/.local/share/Steam" \
           --move="$QUARANTINE" \
-          --log="$LOG_FILE" $SCAN_DIRS 2>&1 | tail -50 >> "$LOG_FILE"
+          --log="$LOG_FILE" $SCAN_DIRS 2>&1; echo "EXIT:$?")
+        SCAN_RESULT=$(echo "$SCAN_OUTPUT" | head -n -1)
+        echo "$SCAN_RESULT" | tail -50 >> "$LOG_FILE"
 
-        THREATS=$(grep -c "FOUND" "$LOG_FILE" 2>/dev/null || echo "0")
+        THREATS=$(echo "$SCAN_RESULT" | grep -c "FOUND" 2>/dev/null || echo "0")
 
         if [ "$THREATS" -gt 0 ]; then
           THREAT_LIST=$(grep "FOUND" "$LOG_FILE" | sed 's/.*FOUND//' | head -3 | tr '\n' ' ')

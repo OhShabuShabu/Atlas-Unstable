@@ -30,7 +30,7 @@
       '')
 
       pavucontrol
-      pulseaudio
+      # NOTE: pulseaudio intentionally omitted — PipeWire is the system audio service
 
       jq
       polkit_gnome
@@ -85,7 +85,7 @@
         echo "See configuration.nix for full import command."
       '')
       (pkgs.writeShellScriptBin "odysseus-down" ''
-        systemctl stop odysseus
+        sudo systemctl stop odysseus
       '')
       (pkgs.writeShellScriptBin "odysseus-logs" ''
         journalctl -fu odysseus
@@ -94,21 +94,39 @@
       (pkgs.writeShellScriptBin "yorha-rebuild" ''
         set -euo pipefail
 
-        sudo systemctl stop \
-          snort-daemon snort-monitor \
-          snout-watcher.service snout-watcher.path \
-          aide-check.service aide-check.timer \
-          firmware-version-check \
-          tpm-attestation-check \
-          secureboot-verify \
-          mullvad-daemon 2>/dev/null || true
+        STOPPED_SERVICES=(
+          snort-daemon snort-monitor
+          snout-watcher.service snout-watcher.path
+          aide-check.service aide-check.timer
+          firmware-version-check
+          tpm-attestation-check
+          secureboot-verify
+          mullvad-daemon
+        )
+
+        for svc in "''${STOPPED_SERVICES[@]}"; do
+          sudo systemctl stop "$svc" 2>/dev/null || true
+        done
 
         FLAKE="''${FLAKE:-.#yorha}"
 
         echo "=== Detection services stopped, running nixos-rebuild ==="
+        BUILD_FAILED=0
         if sudo nixos-rebuild switch --flake "$FLAKE" "$@"; then
-          echo "=== Build succeeded — running health check ==="
+          echo "=== Build succeeded — restarting stopped services ==="
+        else
+          BUILD_FAILED=1
+          echo "=== Build FAILED — restarting security services to restore protection ==="
+        fi
+        for svc in "''${STOPPED_SERVICES[@]}"; do
+          sudo systemctl restart "$svc" 2>/dev/null || true
+        done
+        if [ "$BUILD_FAILED" -eq 0 ]; then
+          echo "=== Running health check ==="
           yorha-health quick 2>/dev/null || echo "⚠  Health check found issues — run 'yorha-health' for details."
+        else
+          echo "=== Build failed. Security services have been restarted. ==="
+          exit 1
         fi
       '')
 

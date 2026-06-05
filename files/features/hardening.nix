@@ -17,7 +17,7 @@
 
     security.audit = {
       enable = true;
-      backlogLimit = 8192;
+      backlogLimit = 16384;
     };
     security.auditd.enable = true;
 
@@ -60,10 +60,7 @@
       {
         groups = [ "wheel" ];
         commands = [
-          {
-            command = "ALL";
-            options = [ "NOPASSWD" ];
-          }
+          { command = "ALL"; options = [ "SETENV" ]; }
         ];
       }
     ];
@@ -97,8 +94,9 @@
     fileSystems."/proc" = {
       device = "proc";
       fsType = "proc";
-      options = [ "nosuid" "noexec" "nodev" "hidepid=2" ];
+      options = [ "nosuid" "noexec" "nodev" "hidepid=2" "gid=proc" ];
     };
+    users.groups.proc = {};
 
     systemd.services."NetworkManager-dispatcher".serviceConfig = {
       NoNewPrivileges = true;
@@ -107,7 +105,7 @@
       ProtectKernelTunables = true;
       ProtectKernelModules = true;
       ProtectControlGroups = true;
-      RestrictAddressFamilies = [ "AF_UNIX" "AF_INET" "AF_INET6" "AF_NETLINK" ];
+      RestrictAddressFamilies = lib.mkDefault [ "AF_UNIX" "AF_INET" "AF_INET6" "AF_NETLINK" ];
       RestrictNamespaces = true;
       RestrictRealtime = true;
       LockPersonality = true;
@@ -160,23 +158,14 @@
     services.usbguard = {
       enable = true;
       rules = "allow";
-      implicitPolicyTarget = "allow";
+      implicitPolicyTarget = "block";
       presentDevicePolicy = "apply-policy";
       IPCAllowedUsers = [ "root" "yusa" ];
       IPCAllowedGroups = [ "wheel" ];
       dbus.enable = true;
     };
 
-    environment.etc."usbguard/usbguard-daemon.conf".text = ''
-      RuleFile=/var/lib/usbguard/rules.conf
-      ImplicitPolicyTarget=allow
-      PresentDevicePolicy=apply-policy
-      PresentControllerPolicy=keep
-      IPCAllowedUsers=root yusa
-      IPCAllowedGroups=wheel
-      DeviceRulesWithPort=false
-      AuditBackend=LinuxAudit
-    '';
+
 
     services.udev.extraRules = ''
       SUBSYSTEM=="usb", ACTION=="add", RUN+="${pkgs.systemd}/bin/systemctl --no-block start systemd-udev-trigger.service"
@@ -186,14 +175,6 @@
       SUBSYSTEM=="block", ENV{ID_PART_ENTRY_NAME}=="disk-main-root", ENV{UDISKS_PRESENTATION_HIDE}="1"
       SUBSYSTEM=="block", ENV{DM_NAME}=="crypt", ENV{UDISKS_PRESENTATION_HIDE}="1"
     '';
-
-    environment.etc."pam.d/common-password".text = ''
-      password requisite ${pkgs.libpwquality.lib}/lib/security/pam_pwquality.so try_first_pass
-    '';
-
-    systemd.tmpfiles.rules = [
-      "L+ /lib/security/pam_pwquality.so - - - - ${pkgs.libpwquality.lib}/lib/security/pam_pwquality.so"
-    ];
 
     systemd.services.fix-home-perms = {
       description = "Fix home directory permissions for Lynis compliance";
